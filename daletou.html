@@ -377,7 +377,8 @@
       if(cost>1000)return toast('投注金额不能超过 1000 元');
       if(cost>budget)return toast('当前注数超过你设置的预算');
       const fronts=generateBalancedSets(35,5,n,rng,350,passesPatternFilters), backs=generateBackPairs(n,rng);
-      const types=shuffle([...Array(a).fill('追加'),...Array(b).fill('基本')],rng);
+      // 为方便实体打单，基本投注与追加投注严格分组，不再混排。
+      const types=[...Array(b).fill('基本'),...Array(a).fill('追加')];
       rows=fronts.map((front,i)=>({no:i+1,type:types[i],front,back:backs[i],cost:types[i]==='追加'?3:2}));
     }else{
       const n=Math.max(0,parseInt($('ssqCount').value)||0), cost=n*2; if(n<1)return toast('请至少生成 1 注');
@@ -571,11 +572,28 @@
 
   function render(){
     if(!rows.length){$('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';return;}
-    let html='<table><thead><tr><th>#</th><th>投注类型</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
-    rows.forEach(r=>{
-      html+=`<tr><td>${r.no}</td><td class="${r.type==='追加'?'type-add':'type-basic'}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
-    });
-    html+='</tbody></table>';$('tableWrap').innerHTML=html;
+
+    function renderGroup(title, groupRows, typeClass){
+      if(!groupRows.length)return '';
+      let html=`<div style="padding:12px 12px 7px;font-size:14px;font-weight:850;color:#334155;background:#f8fafc;border-bottom:1px solid var(--line)">${title} · ${groupRows.length} 注</div>`;
+      html+='<table><thead><tr><th>组内序号</th><th>投注类型</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
+      groupRows.forEach((r,idx)=>{
+        html+=`<tr><td>${idx+1}</td><td class="${typeClass}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
+      });
+      html+='</tbody></table>';
+      return html;
+    }
+
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本');
+      const addRows=rows.filter(r=>r.type==='追加');
+      let html='';
+      if(basicRows.length) html+=`<div style="border-bottom:${addRows.length?'8px':'0'} solid #f5f7fa">${renderGroup('基本投注',basicRows,'type-basic')}</div>`;
+      if(addRows.length) html+=renderGroup('追加投注',addRows,'type-add');
+      $('tableWrap').innerHTML=html;
+    }else{
+      $('tableWrap').innerHTML=renderGroup('双色球基本投注',rows,'type-basic');
+    }
 
     const cost=rows.reduce((s,r)=>s+r.cost,0), n=rows.length;
     let first,second,top2,total;
@@ -601,7 +619,7 @@
     $('statFirstSub').textContent=`${cond[0]} · ${n} 注精确值`;
     $('statSecondSub').textContent=`${cond[1]} · ${n} 注精确值`;
     $('statTop2Sub').textContent='前区/红球组合互异，因此为精确值';
-    $('probStatus').textContent=`已按当前 ${n} 注号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率。大乐透综合模式的基本/追加分配由双目标整数推演得到；追加投注不改变单个号码的中奖概率，但会改变可购买的不同组合数和命中一/二等奖后的奖金倍率。`;
+    $('probStatus').textContent=`已按当前 ${n} 注号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率。大乐透综合模式的基本/追加分配由双目标整数推演得到；页面与导出文件会把基本投注、追加投注严格分组，方便打单。`;
   }
 
   function switchGame(g){
@@ -629,9 +647,19 @@
 
   function copyAll(){
     if(!rows.length)return toast('请先生成号码');
-    const text=rows.map(r=>`${String(r.no).padStart(3,'0')}\t${r.type}\t${r.front.map(pad).join(' ')}\t${r.back.map(pad).join(' ')}\t${r.cost}元`).join('\n');
-    navigator.clipboard?.writeText(text).then(()=>toast('已复制到剪贴板')).catch(()=>{
-      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('已复制到剪贴板');
+    const formatGroup=(title,groupRows)=>{
+      if(!groupRows.length)return '';
+      return [`【${title} · ${groupRows.length}注】`,...groupRows.map((r,i)=>`${String(i+1).padStart(3,'0')}\t${r.type}\t${r.front.map(pad).join(' ')}\t${r.back.map(pad).join(' ')}\t${r.cost}元`)].join('\n');
+    };
+    let parts=[];
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本'), addRows=rows.filter(r=>r.type==='追加');
+      if(basicRows.length)parts.push(formatGroup('基本投注',basicRows));
+      if(addRows.length)parts.push(formatGroup('追加投注',addRows));
+    }else parts.push(formatGroup('双色球基本投注',rows));
+    const text=parts.join('\n\n');
+    navigator.clipboard?.writeText(text).then(()=>toast('已按基本/追加分组复制')).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('已按基本/追加分组复制');
     });
   }
 
@@ -640,10 +668,21 @@
   function exportCSV(){
     if(!rows.length)return toast('请先生成号码');
     const headers=game==='dlt'?['序号','投注类型','前区1','前区2','前区3','前区4','前区5','后区1','后区2','单注金额(元)','组合号码']:['序号','投注类型','红球1','红球2','红球3','红球4','红球5','红球6','蓝球','单注金额(元)','组合号码'];
-    const data=[headers,...rows.map(r=>[r.no,r.type,...r.front.map(pad),...r.back.map(pad),r.cost,`${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}`])];
+    const groupData=(title,groupRows)=>{
+      const out=[[title],headers];
+      groupRows.forEach((r,i)=>out.push([i+1,r.type,...r.front.map(pad),...r.back.map(pad),r.cost,`${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}`]));
+      return out;
+    };
+    let data=[];
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本'), addRows=rows.filter(r=>r.type==='追加');
+      if(basicRows.length)data.push(...groupData(`基本投注（${basicRows.length}注）`,basicRows));
+      if(basicRows.length&&addRows.length)data.push([]);
+      if(addRows.length)data.push(...groupData(`追加投注（${addRows.length}注）`,addRows));
+    }else data=groupData(`双色球基本投注（${rows.length}注）`,rows);
     const csv='\ufeff'+data.map(row=>row.map(csvEscape).join(',')).join('\r\n');
-    downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),`${game==='dlt'?'大乐透':'双色球'}_号码_${rows.length}注${$('block4Consecutive').checked?'_无4连号':''}.csv`);
-    toast('CSV 已导出');
+    downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),`${game==='dlt'?'大乐透':'双色球'}_号码_${rows.length}注_分组${$('block4Consecutive').checked?'_无4连号':''}.csv`);
+    toast('CSV 已按基本/追加分组导出');
   }
 
   // ---------- Minimal XLSX writer (ZIP STORE, no external libraries) ----------
@@ -677,19 +716,34 @@
   function exportXLSX(){
     if(!rows.length)return toast('请先生成号码');
     const headers=game==='dlt'?['序号','投注类型','前区1','前区2','前区3','前区4','前区5','后区1','后区2','单注金额(元)','组合号码']:['序号','投注类型','红球1','红球2','红球3','红球4','红球5','红球6','蓝球','单注金额(元)','组合号码'];
-    const matrix=[headers,...rows.map(r=>[r.no,r.type,...r.front.map(pad),...r.back.map(pad),r.cost,`${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}`])];
-    const sheet=sheetXml(matrix), sheetName=game==='dlt'?'大乐透号码':'双色球号码';
+    const makeMatrix=groupRows=>[headers,...groupRows.map((r,i)=>[i+1,r.type,...r.front.map(pad),...r.back.map(pad),r.cost,`${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}`])];
+
+    let sheets=[];
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本'), addRows=rows.filter(r=>r.type==='追加');
+      if(basicRows.length)sheets.push({name:'基本投注',matrix:makeMatrix(basicRows)});
+      if(addRows.length)sheets.push({name:'追加投注',matrix:makeMatrix(addRows)});
+    }else{
+      sheets.push({name:'双色球基本投注',matrix:makeMatrix(rows)});
+    }
+
+    const overrides=sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
+    const workbookSheets=sheets.map((sh,i)=>`<sheet name="${xmlEsc(sh.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('');
+    const workbookRels=sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+
     const files=[
-      {name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`},
+      {name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${overrides}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats.org/spreadsheetml.styles+xml"/></Types>`},
       {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
-      {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${sheetName}" sheetId="1" r:id="rId1"/></sheets></workbook>`},
-      {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
-      {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFB78116"/><sz val="11"/><name val="Microsoft YaHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF176B55"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
-      {name:'xl/worksheets/sheet1.xml',data:sheet}
+      {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${workbookSheets}</sheets></workbook>`},
+      {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${workbookRels}</Relationships>`},
+      {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFB78116"/><sz val="11"/><name val="Microsoft YaHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF176B55"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}
     ];
+    sheets.forEach((sh,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(sh.matrix)}));
+
     const zip=zipStore(files);
-    downloadBlob(new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${sheetName}_${rows.length}注${$('block4Consecutive').checked?'_无4连号':''}.xlsx`);
-    toast('Excel 已导出');
+    const suffix=game==='dlt'&&sheets.length>1?'_基本追加分表':'';
+    downloadBlob(new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${game==='dlt'?'大乐透':'双色球'}_号码_${rows.length}注${suffix}${$('block4Consecutive').checked?'_无4连号':''}.xlsx`);
+    toast(game==='dlt'&&sheets.length>1?'Excel 已拆分为“基本投注 / 追加投注”两个工作表':'Excel 已导出');
   }
 
   function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800);}
