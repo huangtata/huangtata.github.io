@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电商利润自动核算工具 - 智能推演版</title>
+
+    <script>
+        (function () {
+            function escapeHtml(s) {
+                return String(s).replace(/[<>&]/g, function (c) { return {'<': '&lt;', '>': '&gt;', '&': '&amp;'}[c]; });
+            }
+            function showBootError(message) {
+                var root = document.getElementById('root');
+                if (!root) return;
+                root.innerHTML = '<div style="padding:24px;font-family:-apple-system,BlinkMacSystemFont,\'Microsoft YaHei\',Arial,sans-serif;color:#991b1b;background:#fff1f2;min-height:100vh;box-sizing:border-box;white-space:pre-wrap;line-height:1.6;">' +
+                    '<h2 style="margin:0 0 12px;font-size:18px;">网页加载失败</h2>' +
+                    '<div>' + escapeHtml(message) + '</div>' +
+                    '<p style="margin-top:16px;color:#7f1d1d;font-size:13px;">建议：换网络、关闭浏览器拦截插件，或把页面上这段错误发给我。</p>' +
+                    '</div>';
+            }
+            window.__showBootError = showBootError;
+            window.addEventListener('error', function (e) {
+                var msg = (e && (e.message || e.error)) ? (e.message || e.error) : '未知脚本错误';
+                showBootError(msg + (e && e.filename ? '\n文件：' + e.filename : '') + (e && e.lineno ? '\n行号：' + e.lineno : ''));
+            });
+            window.addEventListener('unhandledrejection', function (e) {
+                showBootError('未处理的 Promise 错误：' + (e && e.reason ? e.reason : '未知'));
+            });
+        })();
+    </script>
+    <!-- 引入 Tailwind CSS 框架 -->
+    <script src="https://cdn.tailwindcss.com" onerror="window.__showBootError && window.__showBootError('Tailwind CDN 加载失败：cdn.tailwindcss.com')"></script>
+    <!-- 引入 React 核心库 -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" onerror="window.__showBootError && window.__showBootError('React CDN 加载失败：unpkg.com/react@18.2.0')"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" onerror="window.__showBootError && window.__showBootError('ReactDOM CDN 加载失败：unpkg.com/react-dom@18.2.0')"></script>
+    <!-- JSX 已预编译为普通 JavaScript，不再依赖 Babel 在线编译 -->
+<style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        /* 隐藏数字输入框的上下箭头 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+    <div id="root">
+        <div id="loading-fallback" style="padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Microsoft YaHei',Arial,sans-serif;color:#374151;background:#f9fafb;min-height:100vh;box-sizing:border-box;">
+            <h2 style="margin:0 0 8px;font-size:18px;">电商利润自动核算工具正在加载...</h2>
+            <p style="margin:0;font-size:14px;line-height:1.7;">如果一直停在这里，通常是 React CDN 加载失败或浏览器拦截。此版本已经移除 Babel 在线编译依赖，并会把脚本错误显示在页面上。</p>
+        </div>
+    </div>
+
+    <script>
+const { useState, useEffect } = React;
+const sanitizeNonNegativeInput = (value) => {
+    if (value === '' || value === null || value === undefined)
+        return '';
+    const str = String(value).trim();
+    if (str === '')
+        return '';
+    if (str === '-')
+        return '0';
+    const n = parseFloat(str);
+    if (isNaN(n))
+        return '';
+    return n < 0 ? '0' : str;
+};
+// 小组件：复用区间输入框 (支持多色彩主题)
+const RangeInput = ({ label, minVal, setMin, maxVal, setMax, suffix, step, color = 'blue', minSubtext, maxSubtext, precision = 4, normalizeOnBlur = false, disabled = false, disabledText = '', displayMultiplier = 1, displayPrecision = null, originalMin = '', originalMax = '' }) => {
+    // 定义多套专属颜色主题
+    const themes = {
+        blue: { bg: 'bg-blue-50', border: 'border-blue-300', focus: 'focus:ring-blue-500', btnBg: 'bg-blue-100', btnHover: 'hover:bg-blue-200', text: 'text-blue-700', btnBorder: 'border-blue-200' },
+        emerald: { bg: 'bg-emerald-50', border: 'border-emerald-300', focus: 'focus:ring-emerald-500', btnBg: 'bg-emerald-100', btnHover: 'hover:bg-emerald-200', text: 'text-emerald-700', btnBorder: 'border-emerald-200' },
+        purple: { bg: 'bg-purple-50', border: 'border-purple-300', focus: 'focus:ring-purple-500', btnBg: 'bg-purple-100', btnHover: 'hover:bg-purple-200', text: 'text-purple-700', btnBorder: 'border-purple-200' },
+        rose: { bg: 'bg-rose-50', border: 'border-rose-300', focus: 'focus:ring-rose-500', btnBg: 'bg-rose-100', btnHover: 'hover:bg-rose-200', text: 'text-rose-700', btnBorder: 'border-rose-200' },
+        cyan: { bg: 'bg-cyan-50', border: 'border-cyan-300', focus: 'focus:ring-cyan-500', btnBg: 'bg-cyan-100', btnHover: 'hover:bg-cyan-200', text: 'text-cyan-700', btnBorder: 'border-cyan-200' },
+        amber: { bg: 'bg-amber-50', border: 'border-amber-300', focus: 'focus:ring-amber-500', btnBg: 'bg-amber-100', btnHover: 'hover:bg-amber-200', text: 'text-amber-700', btnBorder: 'border-amber-200' },
+        indigo: { bg: 'bg-indigo-50', border: 'border-indigo-300', focus: 'focus:ring-indigo-500', btnBg: 'bg-indigo-100', btnHover: 'hover:bg-indigo-200', text: 'text-indigo-700', btnBorder: 'border-indigo-200' },
+    };
+    const theme = themes[color] || themes.blue;
+    const resolvedDisplayPrecision = displayPrecision === null ? precision : displayPrecision;
+    const toDisplayValue = (value) => {
+        if (value === '' || value === null || value === undefined)
+            return '';
+        const n = parseFloat(value);
+        if (isNaN(n))
+            return value;
+        return Number((n * displayMultiplier).toFixed(resolvedDisplayPrecision)).toString();
+    };
+    const fromDisplayValue = (value) => {
+        if (value === '' || value === null || value === undefined)
+            return '';
+        const n = parseFloat(value);
+        if (isNaN(n))
+            return value;
+        return Number((n / displayMultiplier).toFixed(precision)).toString();
+    };
+    const isOutOfOriginalRange = (value) => {
+        const n = parseFloat(value);
+        const oMin = parseFloat(originalMin);
+        const oMax = parseFloat(originalMax);
+        if (isNaN(n) || isNaN(oMin) || isNaN(oMax))
+            return false;
+        const low = Math.min(oMin, oMax);
+        const high = Math.max(oMin, oMax);
+        return n < low || n > high;
+    };
+    const minOutOfRange = isOutOfOriginalRange(minVal);
+    const maxOutOfRange = isOutOfOriginalRange(maxVal);
+    const labelIsAlert = minOutOfRange || maxOutOfRange;
+    const alertInputClass = 'bg-red-50 border-red-400 text-red-600 focus:ring-red-500';
+    const alertTextClass = 'text-red-600';
+    const adjustMin = (amount) => {
+        if (disabled)
+            return;
+        let n = parseFloat(toDisplayValue(minVal));
+        if (isNaN(n))
+            n = 0;
+        const next = Math.max(0, n + amount);
+        setMin(fromDisplayValue(Number(next.toFixed(resolvedDisplayPrecision)).toString()));
+    };
+    const adjustMax = (amount) => {
+        if (disabled)
+            return;
+        let n = parseFloat(toDisplayValue(maxVal));
+        if (isNaN(n))
+            n = 0;
+        const next = Math.max(0, n + amount);
+        setMax(fromDisplayValue(Number(next.toFixed(resolvedDisplayPrecision)).toString()));
+    };
+    return (React.createElement("div", { className: `flex flex-col ${disabled ? 'opacity-60' : ''}` },
+        React.createElement("label", { className: `text-xs font-bold mb-1 ${labelIsAlert ? alertTextClass : theme.text}` }, label),
+        React.createElement("div", { className: "grid grid-cols-[1fr_auto_1fr] items-start gap-1.5" },
+            React.createElement("div", { className: "flex flex-col gap-1.5" },
+                React.createElement("div", { className: "flex items-center gap-1" },
+                    React.createElement("input", { type: "number", min: "0", disabled: disabled, className: `w-full min-w-0 p-1.5 border rounded-lg focus:ring-1 outline-none text-sm text-center ${minOutOfRange && !disabled ? alertInputClass : `${theme.border} ${theme.focus} ${theme.bg}`} ${disabled ? 'cursor-not-allowed bg-gray-100 text-gray-400 border-gray-200' : ''}`, placeholder: "\u4E0B\u9650", value: toDisplayValue(minVal), onChange: (e) => setMin(fromDisplayValue(sanitizeNonNegativeInput(e.target.value))), onBlur: () => { if (minVal === '' || disabled)
+                            return; const n = Math.max(0, parseFloat(toDisplayValue(minVal))); if (!isNaN(n))
+                            setMin(fromDisplayValue(Number(n.toFixed(resolvedDisplayPrecision)).toString())); } }),
+                    suffix && React.createElement("span", { className: `text-xs font-bold shrink-0 ${minOutOfRange && !disabled ? alertTextClass : theme.text} opacity-80` }, suffix)),
+                minSubtext && React.createElement("div", { className: `text-[10px] text-center -mt-0.5 ${minOutOfRange && !disabled ? alertTextClass : theme.text} opacity-80` }, minSubtext),
+                step && (React.createElement("div", { className: "flex gap-1 mt-4" },
+                    React.createElement("button", { disabled: disabled, onClick: () => adjustMin(-step), className: `flex-1 text-sm py-3 rounded-lg transition-colors font-bold leading-tight shadow-sm border ${theme.btnBg} ${theme.text} ${theme.btnHover} ${theme.btnBorder} ${disabled ? 'cursor-not-allowed opacity-50 hover:bg-inherit' : ''}` }, "-"),
+                    React.createElement("button", { disabled: disabled, onClick: () => adjustMin(step), className: `flex-1 text-sm py-3 rounded-lg transition-colors font-bold leading-tight shadow-sm border ${theme.btnBg} ${theme.text} ${theme.btnHover} ${theme.btnBorder} ${disabled ? 'cursor-not-allowed opacity-50 hover:bg-inherit' : ''}` }, "+")))),
+            React.createElement("div", { className: "pt-2 flex items-center h-[34px]" },
+                React.createElement("span", { className: `font-bold shrink-0 ${labelIsAlert ? alertTextClass : theme.text} opacity-50` }, "-")),
+            React.createElement("div", { className: "flex flex-col gap-1.5" },
+                React.createElement("div", { className: "flex items-center gap-1" },
+                    React.createElement("input", { type: "number", min: "0", disabled: disabled, className: `w-full min-w-0 p-1.5 border rounded-lg focus:ring-1 outline-none text-sm text-center ${maxOutOfRange && !disabled ? alertInputClass : `${theme.border} ${theme.focus} ${theme.bg}`} ${disabled ? 'cursor-not-allowed bg-gray-100 text-gray-400 border-gray-200' : ''}`, placeholder: "\u4E0A\u9650", value: toDisplayValue(maxVal), onChange: (e) => setMax(fromDisplayValue(sanitizeNonNegativeInput(e.target.value))), onBlur: () => { if (maxVal === '' || disabled)
+                            return; const n = Math.max(0, parseFloat(toDisplayValue(maxVal))); if (!isNaN(n))
+                            setMax(fromDisplayValue(Number(n.toFixed(resolvedDisplayPrecision)).toString())); } }),
+                    suffix && React.createElement("span", { className: `text-xs font-bold shrink-0 ${maxOutOfRange && !disabled ? alertTextClass : theme.text} opacity-80` }, suffix)),
+                maxSubtext && React.createElement("div", { className: `text-[10px] text-center -mt-0.5 ${maxOutOfRange && !disabled ? alertTextClass : theme.text} opacity-80` }, maxSubtext),
+                step && (React.createElement("div", { className: "flex gap-1 mt-4" },
+                    React.createElement("button", { disabled: disabled, onClick: () => adjustMax(-step), className: `flex-1 text-sm py-3 rounded-lg transition-colors font-bold leading-tight shadow-sm border ${theme.btnBg} ${theme.text} ${theme.btnHover} ${theme.btnBorder} ${disabled ? 'cursor-not-allowed opacity-50 hover:bg-inherit' : ''}` }, "-"),
+                    React.createElement("button", { disabled: disabled, onClick: () => adjustMax(step), className: `flex-1 text-sm py-3 rounded-lg transition-colors font-bold leading-tight shadow-sm border ${theme.btnBg} ${theme.text} ${theme.btnHover} ${theme.btnBorder} ${disabled ? 'cursor-not-allowed opacity-50 hover:bg-inherit' : ''}` }, "+"))))),
+        disabled && disabledText && React.createElement("div", { className: "text-[10px] text-rose-500 mt-1" }, disabledText)));
+};
+function App() {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23;
+    const [pasteData, setPasteData] = useState('');
+    const [margin, setMargin] = useState('');
+    const [returnRate, setReturnRate] = useState('');
+    const [newCustRate, setNewCustRate] = useState('100'); // 新增：新客占比，默认 100%
+    const [monthlyFixedCost, setMonthlyFixedCost] = useState('');
+    const [extDays, setExtDays] = useState('');
+    const [extDateStr, setExtDateStr] = useState('');
+    const [extPvMin, setExtPvMin] = useState('');
+    const [extPvMax, setExtPvMax] = useState('');
+    const [extCvrMin, setExtCvrMin] = useState('');
+    const [extCvrMax, setExtCvrMax] = useState('');
+    const [extTxnMin, setExtTxnMin] = useState('');
+    const [extTxnMax, setExtTxnMax] = useState('');
+    const [extAovMin, setExtAovMin] = useState('');
+    const [extAovMax, setExtAovMax] = useState('');
+    const [extClickMin, setExtClickMin] = useState('');
+    const [extClickMax, setExtClickMax] = useState('');
+    const [extPpcMin, setExtPpcMin] = useState('');
+    const [extPpcMax, setExtPpcMax] = useState('');
+    const [extRoiMin, setExtRoiMin] = useState('');
+    const [extRoiMax, setExtRoiMax] = useState('');
+    // 新增：快捷推算状态与原始提取数据缓存
+    const [dailyRev, setDailyRev] = useState('');
+    const [dailyPaid, setDailyPaid] = useState('');
+    const [rawParsed, setRawParsed] = useState(null);
+    const [txnControlMode, setTxnControlMode] = useState('base');
+    const [txnLockedByCvr, setTxnLockedByCvr] = useState(false);
+    const [cvrConflictHint, setCvrConflictHint] = useState('');
+    const [ppcConstraintHint, setPpcConstraintHint] = useState('');
+    const [analyzedData, setAnalyzedData] = useState(null);
+    const adjustSingle = (setter, current, amount) => {
+        const n = parseFloat(current);
+        if (isNaN(n)) {
+            setter(Math.max(0, amount).toString());
+        }
+        else {
+            setter(Number(Math.max(0, n + amount).toFixed(4)).toString());
+        }
+    };
+    const formatWan = (val, digits = 4) => {
+        if (val === '' || val === null || val === undefined)
+            return '';
+        const num = parseFloat(val);
+        if (isNaN(num))
+            return '';
+        return parseFloat((num / 10000).toFixed(digits)).toString();
+    };
+    const formatPlain = (val, digits = 4) => {
+        if (val === '' || val === null || val === undefined)
+            return '';
+        const num = parseFloat(val);
+        if (isNaN(num))
+            return '';
+        return parseFloat(num.toFixed(digits)).toString();
+    };
+    const normalizeNumericRange = (min, max) => {
+        let low = parseFloat(min);
+        let high = parseFloat(max);
+        if (isNaN(low) && isNaN(high))
+            return [NaN, NaN];
+        if (isNaN(low))
+            low = high;
+        if (isNaN(high))
+            high = low;
+        if (low > high)
+            [low, high] = [high, low];
+        return [low, high];
+    };
+    const intersectNumericRanges = (rangeA, rangeB) => {
+        const [aMin, aMax] = normalizeNumericRange(rangeA === null || rangeA === void 0 ? void 0 : rangeA[0], rangeA === null || rangeA === void 0 ? void 0 : rangeA[1]);
+        const [bMin, bMax] = normalizeNumericRange(rangeB === null || rangeB === void 0 ? void 0 : rangeB[0], rangeB === null || rangeB === void 0 ? void 0 : rangeB[1]);
+        if ([aMin, aMax].some(Number.isNaN))
+            return [bMin, bMax];
+        if ([bMin, bMax].some(Number.isNaN))
+            return [aMin, aMax];
+        const low = Math.max(aMin, bMin);
+        const high = Math.min(aMax, bMax);
+        if (low <= high)
+            return [low, high];
+        return [aMin, aMax];
+    };
+    const rangesOverlap = (rangeA, rangeB) => {
+        const [aMin, aMax] = normalizeNumericRange(rangeA === null || rangeA === void 0 ? void 0 : rangeA[0], rangeA === null || rangeA === void 0 ? void 0 : rangeA[1]);
+        const [bMin, bMax] = normalizeNumericRange(rangeB === null || rangeB === void 0 ? void 0 : rangeB[0], rangeB === null || rangeB === void 0 ? void 0 : rangeB[1]);
+        if ([aMin, aMax, bMin, bMax].some(Number.isNaN))
+            return false;
+        return Math.max(aMin, bMin) <= Math.min(aMax, bMax);
+    };
+    const contractRangeUpperAnchored = (min, max, keepRatio = 0.55, formatter = (v) => formatPlain(v)) => {
+        let [low, high] = normalizeNumericRange(min, max);
+        if (Number.isNaN(low) && Number.isNaN(high))
+            return ['', ''];
+        if (low === high) {
+            const fixed = formatter(low);
+            return [fixed, fixed];
+        }
+        const clampedKeepRatio = Math.min(1, Math.max(0.1, keepRatio));
+        const span = high - low;
+        const keptSpan = span * clampedKeepRatio;
+        const tightenedMin = Math.max(low, high - keptSpan);
+        return [formatter(tightenedMin), formatter(high)];
+    };
+    const resolvePpcRange = (basePpcRange, clickRange, guideRoiRange, guideTxnRange, aovRange) => {
+        const impliedGuideRevenueRange = deriveRangeByMultiplication(guideTxnRange, aovRange);
+        const impliedSpendRange = deriveRangeByDivision(impliedGuideRevenueRange, guideRoiRange);
+        const impliedPpcRange = deriveRangeByDivision(impliedSpendRange, clickRange);
+        const baseValid = !normalizeNumericRange(basePpcRange === null || basePpcRange === void 0 ? void 0 : basePpcRange[0], basePpcRange === null || basePpcRange === void 0 ? void 0 : basePpcRange[1]).some(Number.isNaN);
+        const impliedValid = !normalizeNumericRange(impliedPpcRange === null || impliedPpcRange === void 0 ? void 0 : impliedPpcRange[0], impliedPpcRange === null || impliedPpcRange === void 0 ? void 0 : impliedPpcRange[1]).some(Number.isNaN);
+        const overlap = baseValid && impliedValid && rangesOverlap(basePpcRange, impliedPpcRange);
+        const hadZeroLowerBound = baseValid && (parseFloat(basePpcRange[0]) || 0) <= 0;
+        let resolved = basePpcRange;
+        let source = 'base';
+        if (impliedValid && overlap) {
+            resolved = intersectNumericRanges(basePpcRange, impliedPpcRange);
+            source = 'guide_intersection';
+        }
+        else if (impliedValid) {
+            resolved = impliedPpcRange;
+            source = 'guide_fallback';
+        }
+        const display = hadZeroLowerBound || source !== 'base'
+            ? contractRangeUpperAnchored(resolved[0], resolved[1], 0.55, (v) => formatPlain(v, 2))
+            : splitRangeForDefault(resolved[0], resolved[1], (v) => formatPlain(v, 2), 0.55);
+        let hint = '';
+        if (source === 'guide_intersection')
+            hint = 'PPC 已结合引导ROI/引导成交笔数约束，避免被 0 下沿压得过低。';
+        if (source === 'guide_fallback')
+            hint = '原始PPC区间与引导约束冲突，已优先采用引导ROI反推结果。';
+        if (!hint && hadZeroLowerBound)
+            hint = '原始PPC下沿接近0，已改为以上沿为锚点收缩。';
+        return { resolved, display, implied: impliedPpcRange, source, hint };
+    };
+    const contractRangeByQuantile = (min, max, keepRatio = 0.5, formatter = (v) => formatPlain(v)) => {
+        let [low, high] = normalizeNumericRange(min, max);
+        if (Number.isNaN(low) && Number.isNaN(high))
+            return ['', ''];
+        if (low === high) {
+            const fixed = formatter(low);
+            return [fixed, fixed];
+        }
+        const clampedKeepRatio = Math.min(1, Math.max(0.1, keepRatio));
+        const cut = (1 - clampedKeepRatio) / 2;
+        const span = high - low;
+        const tightenedMin = low + span * cut;
+        const tightenedMax = high - span * cut;
+        return [formatter(tightenedMin), formatter(tightenedMax)];
+    };
+    const splitRangeForDefault = (min, max, formatter = (v) => formatPlain(v), keepRatio = 0.5) => {
+        return contractRangeByQuantile(min, max, keepRatio, formatter);
+    };
+    const deriveRangeByDivision = (numeratorRange, denominatorRange) => {
+        const [nMin, nMax] = normalizeNumericRange(numeratorRange === null || numeratorRange === void 0 ? void 0 : numeratorRange[0], numeratorRange === null || numeratorRange === void 0 ? void 0 : numeratorRange[1]);
+        const [dMin, dMax] = normalizeNumericRange(denominatorRange === null || denominatorRange === void 0 ? void 0 : denominatorRange[0], denominatorRange === null || denominatorRange === void 0 ? void 0 : denominatorRange[1]);
+        if ([nMin, nMax, dMin, dMax].some(Number.isNaN) || dMin <= 0 || dMax <= 0)
+            return [NaN, NaN];
+        let low = nMin / dMax;
+        let high = nMax / dMin;
+        if (low > high)
+            [low, high] = [high, low];
+        return [low, high];
+    };
+    const deriveRangeByMultiplication = (...ranges) => {
+        const normalized = ranges.map((range) => normalizeNumericRange(range === null || range === void 0 ? void 0 : range[0], range === null || range === void 0 ? void 0 : range[1]));
+        if (normalized.some(([low, high]) => Number.isNaN(low) || Number.isNaN(high)))
+            return [NaN, NaN];
+        const low = normalized.reduce((acc, [currLow]) => acc * currLow, 1);
+        const high = normalized.reduce((acc, [, currHigh]) => acc * currHigh, 1);
+        return low <= high ? [low, high] : [high, low];
+    };
+    const getRangeNumbers = (minState, maxState, multiplier = 1) => {
+        const parseVal = (v) => {
+            if (v === '' || v === null || v === undefined)
+                return NaN;
+            return parseFloat(v) * multiplier;
+        };
+        let min = parseVal(minState);
+        let max = parseVal(maxState);
+        if (isNaN(min) && isNaN(max))
+            return [NaN, NaN];
+        if (isNaN(min))
+            min = max;
+        if (isNaN(max))
+            max = min;
+        if (min > max)
+            [min, max] = [max, min];
+        return [min, max];
+    };
+    const calcRoiRangeFromInputs = (txnMin, txnMax, aovMin, aovMax, clickMin, clickMax, ppcMin, ppcMax) => {
+        const txn = getRangeNumbers(txnMin, txnMax, 10000);
+        const aov = getRangeNumbers(aovMin, aovMax, 1);
+        const click = getRangeNumbers(clickMin, clickMax, 10000);
+        const ppc = getRangeNumbers(ppcMin, ppcMax, 1);
+        if ([...txn, ...aov, ...click, ...ppc].some((v) => isNaN(v)))
+            return ['', ''];
+        const revenueMin = txn[0] * aov[0];
+        const revenueMax = txn[1] * aov[1];
+        const paidMin = click[0] * ppc[0];
+        const paidMax = click[1] * ppc[1];
+        if (paidMin <= 0 || paidMax <= 0)
+            return ['', ''];
+        let roiMin = revenueMin / paidMax;
+        let roiMax = revenueMax / paidMin;
+        if (roiMin > roiMax)
+            [roiMin, roiMax] = [roiMax, roiMin];
+        return [formatPlain(roiMin, 2), formatPlain(roiMax, 2)];
+    };
+    const calcTxnRangeFromRoiInputs = (roiMinState, roiMaxState, aovMinState, aovMaxState, clickMinState, clickMaxState, ppcMinState, ppcMaxState) => {
+        let roiMin = parseFloat(roiMinState);
+        let roiMax = parseFloat(roiMaxState);
+        if (isNaN(roiMin) && isNaN(roiMax))
+            return ['', ''];
+        if (isNaN(roiMin))
+            roiMin = roiMax;
+        if (isNaN(roiMax))
+            roiMax = roiMin;
+        if (roiMin > roiMax)
+            [roiMin, roiMax] = [roiMax, roiMin];
+        const aov = getRangeNumbers(aovMinState, aovMaxState, 1);
+        const click = getRangeNumbers(clickMinState, clickMaxState, 10000);
+        const ppc = getRangeNumbers(ppcMinState, ppcMaxState, 1);
+        if ([...aov, ...click, ...ppc].some((v) => isNaN(v) || v <= 0))
+            return ['', ''];
+        const paidMin = click[0] * ppc[0];
+        const paidMax = click[1] * ppc[1];
+        const revenueMin = roiMin * paidMax;
+        const revenueMax = roiMax * paidMin;
+        let txnMin = revenueMin / aov[0] / 10000;
+        let txnMax = revenueMax / aov[1] / 10000;
+        if (txnMin > txnMax)
+            [txnMin, txnMax] = [txnMax, txnMin];
+        return [formatPlain(txnMin), formatPlain(txnMax)];
+    };
+    const calcTxnRangeFromPvCvrInputs = (pvMinState, pvMaxState, cvrMinState, cvrMaxState) => {
+        const pv = getRangeNumbers(pvMinState, pvMaxState, 10000);
+        const cvr = getRangeNumbers(cvrMinState, cvrMaxState, 0.01);
+        if ([...pv, ...cvr].some((v) => isNaN(v)))
+            return ['', ''];
+        let txnMin = pv[0] * cvr[0] / 10000;
+        let txnMax = pv[1] * cvr[1] / 10000;
+        if (txnMin > txnMax)
+            [txnMin, txnMax] = [txnMax, txnMin];
+        return [formatPlain(txnMin), formatPlain(txnMax)];
+    };
+    const calcCvrRangeFromPvTxnInputs = (pvMinState, pvMaxState, txnMinState, txnMaxState) => {
+        const pv = getRangeNumbers(pvMinState, pvMaxState, 10000);
+        const txn = getRangeNumbers(txnMinState, txnMaxState, 10000);
+        if ([...pv, ...txn].some((v) => isNaN(v) || v <= 0))
+            return ['', ''];
+        let cvrMin = txn[0] / pv[1] * 100;
+        let cvrMax = txn[1] / pv[0] * 100;
+        if (cvrMin > cvrMax)
+            [cvrMin, cvrMax] = [cvrMax, cvrMin];
+        return [formatPlain(cvrMin, 2), formatPlain(cvrMax, 2)];
+    };
+    const calcPvRangeFromTrafficStructure = (clickMinState, clickMaxState, parsedSource) => {
+        if (!parsedSource || !parsedSource.trafficShare)
+            return ['', ''];
+        let clickMin = parseFloat(clickMinState);
+        let clickMax = parseFloat(clickMaxState);
+        if (isNaN(clickMin) && isNaN(clickMax))
+            return ['', ''];
+        if (isNaN(clickMin))
+            clickMin = clickMax;
+        if (isNaN(clickMax))
+            clickMax = clickMin;
+        if (clickMin > clickMax)
+            [clickMin, clickMax] = [clickMax, clickMin];
+        let paidShareMin = parseFloat(parsedSource.trafficShare.paidMin);
+        let paidShareMax = parseFloat(parsedSource.trafficShare.paidMax);
+        if (isNaN(paidShareMin) || paidShareMin <= 0 || paidShareMin >= 1)
+            return ['', ''];
+        if (isNaN(paidShareMax) || paidShareMax <= 0 || paidShareMax >= 1)
+            return ['', ''];
+        if (paidShareMin > paidShareMax)
+            [paidShareMin, paidShareMax] = [paidShareMax, paidShareMin];
+        let pvMin = clickMin / paidShareMin;
+        let pvMax = clickMax / paidShareMax;
+        if (pvMin > pvMax)
+            [pvMin, pvMax] = [pvMax, pvMin];
+        return [formatPlain(pvMin, 2), formatPlain(pvMax, 2)];
+    };
+    const handleCvrMinChange = (value) => {
+        setTxnLockedByCvr(false);
+        setTxnControlMode('cvr');
+        setDailyRev('');
+        setExtCvrMin(value);
+    };
+    const handleCvrMaxChange = (value) => {
+        setTxnLockedByCvr(false);
+        setTxnControlMode('cvr');
+        setDailyRev('');
+        setExtCvrMax(value);
+    };
+    const handleResetExtracted = () => {
+        if (!rawParsed)
+            return;
+        setTxnControlMode('base');
+        setTxnLockedByCvr(false);
+        setDailyRev('');
+        setDailyPaid('');
+        setExtDays(rawParsed.days);
+        setExtDateStr(rawParsed.dateStr);
+        setExtPvMin(rawParsed.pv[0]);
+        setExtPvMax(rawParsed.pv[1]);
+        setExtCvrMin(rawParsed.cvr[0]);
+        setExtCvrMax(rawParsed.cvr[1]);
+        setExtTxnMin(rawParsed.txn[0]);
+        setExtTxnMax(rawParsed.txn[1]);
+        setExtAovMin(rawParsed.aov[0]);
+        setExtAovMax(rawParsed.aov[1]);
+        setExtClickMin(rawParsed.click[0]);
+        setExtClickMax(rawParsed.click[1]);
+        setExtPpcMin(rawParsed.ppc[0]);
+        setExtPpcMax(rawParsed.ppc[1]);
+        const [resetRoiMin, resetRoiMax] = calcRoiRangeFromInputs(rawParsed.txn[0], rawParsed.txn[1], rawParsed.aov[0], rawParsed.aov[1], rawParsed.click[0], rawParsed.click[1], rawParsed.ppc[0], rawParsed.ppc[1]);
+        setExtRoiMin(resetRoiMin);
+        setExtRoiMax(resetRoiMax);
+    };
+    // 智能提取数据逻辑
+    useEffect(() => {
+        if (!pasteData.trim())
+            return;
+        const dateRegex = /(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s*(?:至|-|~)\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2})/g;
+        let match;
+        let totalDays = 0;
+        let dateStrings = [];
+        while ((match = dateRegex.exec(pasteData)) !== null) {
+            dateStrings.push(`${match[1]} 至 ${match[2]}`);
+            const start = new Date(match[1]);
+            const end = new Date(match[2]);
+            const days = Math.round((end - start) / 86400000) + 1;
+            totalDays += days;
+        }
+        const extractRange = (keywords) => {
+            const lines = pasteData.split('\n').map(line => line.trim()).filter(Boolean);
+            let targetLine = '';
+            for (const line of lines) {
+                if (keywords.some((kw) => line.includes(kw))) {
+                    targetLine = line;
+                    break;
+                }
+            }
+            if (!targetLine)
+                return ['', ''];
+            const normalizedLine = targetLine
+                .replace(/\t/g, ' ')
+                .replace(/[～—–－]/g, '~')
+                .replace(/(\d)\s+(?=[万亿%])/g, '$1')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const rangeRegex = /(\d[\d,\.]*\s*[万亿%]?)(?:\s*[-~至]\s*(\d[\d,\.]*\s*[万亿%]?))?/g;
+            const matches = Array.from(normalizedLine.matchAll(rangeRegex)).filter((m) => /\d/.test(m[0]));
+            if (!matches.length)
+                return ['', ''];
+            const lastMatch = matches[matches.length - 1];
+            let left = (lastMatch[1] || '').trim();
+            let right = (lastMatch[2] || '').trim();
+            const isPercentContext = normalizedLine.includes('%') || keywords.some(k => k.includes('率') || k.includes('占比'));
+            const parseNum = (s) => {
+                if (!s)
+                    return '';
+                let token = s.replace(/,/g, '').replace(/\s+/g, '').trim();
+                const hasPercent = token.includes('%');
+                token = token.replace(/%/g, '');
+                let num = parseFloat(token);
+                if (isNaN(num))
+                    return '';
+                if (s.includes('亿'))
+                    num *= 100000000;
+                else if (s.includes('万'))
+                    num *= 10000;
+                if (hasPercent || (isPercentContext && !s.includes('万') && !s.includes('亿'))) {
+                    if (!(num > 100 && !hasPercent))
+                        num /= 100;
+                }
+                return num;
+            };
+            if (right) {
+                if (right.includes('亿') && !left.includes('亿') && !left.includes('万'))
+                    left += '亿';
+                if (right.includes('万') && !left.includes('万') && !left.includes('亿'))
+                    left += '万';
+                if (right.includes('%') && !left.includes('%'))
+                    left += '%';
+                let min = parseNum(left);
+                let max = parseNum(right);
+                if (min !== '' && max !== '' && min > max)
+                    [min, max] = [max, min];
+                return [min, max];
+            }
+            const val = parseNum(left);
+            return [val, val];
+        };
+        const rawPV = extractRange(['整体IPV', '整体PV', 'IPV', 'PV', '总流量', '访客']);
+        const rawCVR = extractRange(['整体成交转化率', '成交转化率', '转化率', 'CVR']);
+        const rawTxns = extractRange(['整体成交笔数', '成交笔数', '总笔数', '销量', '订单量']);
+        const rawAOV = extractRange(['整体笔单价', '整体客单价', '笔单价', '客单价', 'AOV']);
+        const clicks = extractRange(['付费点击量', '点击量', '付费点击', '推广点击']);
+        const ppc = extractRange(['单次点击成本', 'PPC', '点击成本', '平均点击花费']);
+        const rawGuideRoi = extractRange(['当天引导 ROI', '引导 ROI', '广告ROI', '引导ROI']);
+        const rawGuideTxns = extractRange(['当天引导成交笔数', '引导成交笔数', '广告引导成交笔数']);
+        const rawNewCust = extractRange(['新客成交占比', '新客占比']);
+        const isExactRange = (range) => {
+            if (!Array.isArray(range) || range.length < 2)
+                return false;
+            const [low, high] = normalizeNumericRange(range[0], range[1]);
+            return !Number.isNaN(low) && !Number.isNaN(high) && low === high;
+        };
+        const formatExactOrContract = (range, formatter, keepRatio = 0.55, upperAnchored = false) => {
+            if (isExactRange(range)) {
+                const [low] = normalizeNumericRange(range[0], range[1]);
+                const fixed = formatter(low);
+                return [fixed, fixed];
+            }
+            return upperAnchored
+                ? contractRangeUpperAnchored(range[0], range[1], keepRatio, formatter)
+                : splitRangeForDefault(range[0], range[1], formatter, keepRatio);
+        };
+        const daysDivisor = totalDays > 0 ? totalDays : 1;
+        const rawDailyPv = [rawPV[0] !== '' ? rawPV[0] / daysDivisor : '', rawPV[1] !== '' ? rawPV[1] / daysDivisor : ''];
+        const rawDailyTxns = [rawTxns[0] !== '' ? rawTxns[0] / daysDivisor : '', rawTxns[1] !== '' ? rawTxns[1] / daysDivisor : ''];
+        const rawDailyClicks = [clicks[0] !== '' ? clicks[0] / daysDivisor : '', clicks[1] !== '' ? clicks[1] / daysDivisor : ''];
+        const rawDailyGuideTxns = [rawGuideTxns[0] !== '' ? rawGuideTxns[0] / daysDivisor : '', rawGuideTxns[1] !== '' ? rawGuideTxns[1] / daysDivisor : ''];
+        const exactFlags = {
+            pv: isExactRange(rawDailyPv),
+            cvr: isExactRange(rawCVR),
+            txn: isExactRange(rawDailyTxns),
+            aov: isExactRange(rawAOV),
+            click: isExactRange(rawDailyClicks),
+            ppc: isExactRange(ppc),
+            guideRoi: isExactRange(rawGuideRoi),
+            guideTxn: isExactRange(rawDailyGuideTxns)
+        };
+        const populatedFlags = Object.values(exactFlags).filter((flag, idx) => {
+            const key = Object.keys(exactFlags)[idx];
+            const sourceMap = { pv: rawDailyPv, cvr: rawCVR, txn: rawDailyTxns, aov: rawAOV, click: rawDailyClicks, ppc, guideRoi: rawGuideRoi, guideTxn: rawDailyGuideTxns };
+            const sourceRange = sourceMap[key];
+            return !normalizeNumericRange(sourceRange === null || sourceRange === void 0 ? void 0 : sourceRange[0], sourceRange === null || sourceRange === void 0 ? void 0 : sourceRange[1]).every(Number.isNaN);
+        });
+        const dataMode = populatedFlags.length && populatedFlags.every(Boolean)
+            ? 'exact'
+            : (populatedFlags.some(Boolean) ? 'mixed' : 'fuzzy');
+        const parsedPv = formatExactOrContract(rawDailyPv, (v) => formatWan(v, 2), 0.55);
+        const parsedClick = formatExactOrContract(rawDailyClicks, (v) => formatWan(v, 2), 0.55);
+        const parsedPpc = formatExactOrContract(ppc, (v) => formatPlain(v, 2), 0.5);
+        const parsedGuideRoi = formatExactOrContract(rawGuideRoi, (v) => formatPlain(v, 2), 0.6);
+        const parsedGuideTxns = formatExactOrContract(rawDailyGuideTxns, formatWan, 0.6);
+        const paidShareMin = (() => {
+            const pv = parseFloat(parsedPv[0]);
+            const click = parseFloat(parsedClick[0]);
+            if (isNaN(pv) || pv <= 0 || isNaN(click) || click < 0)
+                return '';
+            return Number((click / pv).toFixed(6));
+        })();
+        const paidShareMax = (() => {
+            const pv = parseFloat(parsedPv[1]);
+            const click = parseFloat(parsedClick[1]);
+            if (isNaN(pv) || pv <= 0 || isNaN(click) || click < 0)
+                return '';
+            return Number((click / pv).toFixed(6));
+        })();
+        const baseTxnRange = normalizeNumericRange(rawDailyTxns[0], rawDailyTxns[1]);
+        const baseAovRange = normalizeNumericRange(rawAOV[0], rawAOV[1]);
+        const baseClickRange = normalizeNumericRange(rawDailyClicks[0], rawDailyClicks[1]);
+        const basePpcRange = normalizeNumericRange(ppc[0], ppc[1]);
+        const baseGuideRoiRange = normalizeNumericRange(rawGuideRoi[0], rawGuideRoi[1]);
+        const baseGuideTxnRange = normalizeNumericRange(rawDailyGuideTxns[0], rawDailyGuideTxns[1]);
+        const ppcResolution = exactFlags.ppc
+            ? { resolved: basePpcRange, display: [formatPlain(basePpcRange[0], 2), formatPlain(basePpcRange[1], 2)], implied: basePpcRange, source: 'exact', hint: '已识别为精准PPC，直接采用原始值，不再做区间收缩。' }
+            : resolvePpcRange(basePpcRange, baseClickRange, baseGuideRoiRange, baseGuideTxnRange, baseAovRange);
+        const constrainedPpcRange = exactFlags.ppc ? basePpcRange : ppcResolution.resolved;
+        const guideRevenueRange = deriveRangeByMultiplication(baseGuideRoiRange, deriveRangeByMultiplication(baseClickRange, constrainedPpcRange));
+        const impliedAovFromGuide = deriveRangeByDivision(guideRevenueRange, baseGuideTxnRange);
+        const constrainedAovRange = exactFlags.aov ? baseAovRange : intersectNumericRanges(baseAovRange, impliedAovFromGuide);
+        const displayedAovRange = exactFlags.aov
+            ? [formatPlain(baseAovRange[0]), formatPlain(baseAovRange[1])]
+            : formatExactOrContract(constrainedAovRange, (v) => formatPlain(v), 0.55);
+        const impliedGuideTxnFromRoi = deriveRangeByDivision(guideRevenueRange, constrainedAovRange);
+        const constrainedGuideTxnRange = exactFlags.guideTxn ? baseGuideTxnRange : intersectNumericRanges(baseGuideTxnRange, impliedGuideTxnFromRoi);
+        const impliedAdCvrRange = deriveRangeByDivision(constrainedGuideTxnRange, baseClickRange);
+        const displayedTxnRange = exactFlags.txn ? [formatWan(baseTxnRange[0]), formatWan(baseTxnRange[1])] : splitRangeForDefault(baseTxnRange[0], baseTxnRange[1], formatWan, 0.55);
+        const officialDisplayedCvrRange = exactFlags.cvr ? [formatPlain(rawCVR[0] * 100, 2), formatPlain(rawCVR[1] * 100, 2)] : splitRangeForDefault(rawCVR[0], rawCVR[1], (v) => formatPlain(v * 100), 0.55);
+        const impliedCvrFromTxnRange = deriveRangeByDivision(baseTxnRange, normalizeNumericRange(rawDailyPv[0], rawDailyPv[1]));
+        const impliedDisplayedCvrRange = [Number.isNaN(impliedCvrFromTxnRange[0]) ? '' : formatPlain(impliedCvrFromTxnRange[0] * 100, 2), Number.isNaN(impliedCvrFromTxnRange[1]) ? '' : formatPlain(impliedCvrFromTxnRange[1] * 100, 2)];
+        const officialCvrRangePct = normalizeNumericRange(rawCVR[0] !== '' ? rawCVR[0] * 100 : NaN, rawCVR[1] !== '' ? rawCVR[1] * 100 : NaN);
+        const impliedCvrRangePct = normalizeNumericRange(impliedCvrFromTxnRange[0] * 100, impliedCvrFromTxnRange[1] * 100);
+        const cvrRangesOverlap = rangesOverlap(officialCvrRangePct, impliedCvrRangePct);
+        const constrainedCvrRangePct = exactFlags.cvr ? officialCvrRangePct : (cvrRangesOverlap ? intersectNumericRanges(officialCvrRangePct, impliedCvrRangePct) : impliedCvrRangePct);
+        const displayedCvrRange = [Number.isNaN(constrainedCvrRangePct[0]) ? '' : formatPlain(constrainedCvrRangePct[0], 2), Number.isNaN(constrainedCvrRangePct[1]) ? '' : formatPlain(constrainedCvrRangePct[1], 2)];
+        const parsed = {
+            days: totalDays || '',
+            dateStr: dateStrings.join(', '),
+            pv: parsedPv,
+            cvr: displayedCvrRange,
+            txn: displayedTxnRange,
+            aov: displayedAovRange,
+            click: parsedClick,
+            ppc: ppcResolution.display,
+            ppcResolved: [Number.isNaN(constrainedPpcRange[0]) ? '' : formatPlain(constrainedPpcRange[0], 4), Number.isNaN(constrainedPpcRange[1]) ? '' : formatPlain(constrainedPpcRange[1], 4)],
+            ppcHint: ppcResolution.hint,
+            dataMode,
+            exactFlags,
+            modeHint: dataMode === 'exact' ? '已识别为精准数据，系统直接采用原始值，不启用默认收缩区间。' : (dataMode === 'mixed' ? '已识别为混合数据：精准字段直接采用原值，模糊字段才会收缩。' : '当前为模糊区间数据，系统会按约束关系自动收缩。'),
+            guideRoi: parsedGuideRoi,
+            guideTxn: [Number.isNaN(constrainedGuideTxnRange[0]) ? '' : formatWan(constrainedGuideTxnRange[0]), Number.isNaN(constrainedGuideTxnRange[1]) ? '' : formatWan(constrainedGuideTxnRange[1])],
+            adCvr: [Number.isNaN(impliedAdCvrRange[0]) ? '' : formatPlain(impliedAdCvrRange[0] * 100, 2), Number.isNaN(impliedAdCvrRange[1]) ? '' : formatPlain(impliedAdCvrRange[1] * 100, 2)],
+            impliedCvr: impliedDisplayedCvrRange,
+            officialDisplayedCvr: officialDisplayedCvrRange,
+            cvrHint: exactFlags.cvr ? '已识别为精准成交转化率，直接采用原始值。' : (cvrRangesOverlap ? '成交转化率已按成交笔数与访客区间取交集收缩。' : '官方成交转化率区间与成交笔数冲突，已优先按成交笔数反推转化率。'),
+            originalRanges: {
+                pv: [rawDailyPv[0] !== '' ? formatWan(rawDailyPv[0], 2) : '', rawDailyPv[1] !== '' ? formatWan(rawDailyPv[1], 2) : ''],
+                cvr: [rawCVR[0] !== '' ? formatPlain(rawCVR[0] * 100) : '', rawCVR[1] !== '' ? formatPlain(rawCVR[1] * 100) : ''],
+                txn: [rawDailyTxns[0] !== '' ? formatWan(rawDailyTxns[0]) : '', rawDailyTxns[1] !== '' ? formatWan(rawDailyTxns[1]) : ''],
+                aov: [rawAOV[0] !== '' ? formatPlain(rawAOV[0]) : '', rawAOV[1] !== '' ? formatPlain(rawAOV[1]) : ''],
+                click: [rawDailyClicks[0] !== '' ? formatWan(rawDailyClicks[0], 2) : '', rawDailyClicks[1] !== '' ? formatWan(rawDailyClicks[1], 2) : ''],
+                ppc: [ppc[0] !== '' ? formatPlain(ppc[0], 2) : '', ppc[1] !== '' ? formatPlain(ppc[1], 2) : ''],
+                guideRoi: [rawGuideRoi[0] !== '' ? formatPlain(rawGuideRoi[0], 2) : '', rawGuideRoi[1] !== '' ? formatPlain(rawGuideRoi[1], 2) : ''],
+                guideTxn: [rawDailyGuideTxns[0] !== '' ? formatWan(rawDailyGuideTxns[0]) : '', rawDailyGuideTxns[1] !== '' ? formatWan(rawDailyGuideTxns[1]) : '']
+            },
+            originalSourceRanges: {
+                pv: [rawPV[0] !== '' ? formatWan(rawPV[0], 2) + '万/周期' : '', rawPV[1] !== '' ? formatWan(rawPV[1], 2) + '万/周期' : ''],
+                cvr: [rawCVR[0] !== '' ? formatPlain(rawCVR[0] * 100) + '%' : '', rawCVR[1] !== '' ? formatPlain(rawCVR[1] * 100) + '%' : ''],
+                txn: [rawTxns[0] !== '' ? formatWan(rawTxns[0]) + '万笔/周期' : '', rawTxns[1] !== '' ? formatWan(rawTxns[1]) + '万笔/周期' : ''],
+                aov: [rawAOV[0] !== '' ? formatPlain(rawAOV[0]) + '元' : '', rawAOV[1] !== '' ? formatPlain(rawAOV[1]) + '元' : ''],
+                click: [clicks[0] !== '' ? formatWan(clicks[0], 2) + '万次/周期' : '', clicks[1] !== '' ? formatWan(clicks[1], 2) + '万次/周期' : ''],
+                ppc: [ppc[0] !== '' ? formatPlain(ppc[0], 2) + '元' : '', ppc[1] !== '' ? formatPlain(ppc[1], 2) + '元' : ''],
+                guideRoi: [rawGuideRoi[0] !== '' ? formatPlain(rawGuideRoi[0], 2) : '', rawGuideRoi[1] !== '' ? formatPlain(rawGuideRoi[1], 2) : ''],
+                guideTxn: [rawGuideTxns[0] !== '' ? formatWan(rawGuideTxns[0]) + '万笔/周期' : '', rawGuideTxns[1] !== '' ? formatWan(rawGuideTxns[1]) + '万笔/周期' : '']
+            },
+            newCust: rawNewCust[0] !== '' ? parseFloat(((rawNewCust[0] + rawNewCust[1]) / 2 * 100).toFixed(2)).toString() : '100',
+            trafficShare: {
+                paidMin: paidShareMin,
+                paidMax: paidShareMax,
+                otherMin: paidShareMin === '' ? '' : Number((1 - paidShareMin).toFixed(6)),
+                otherMax: paidShareMax === '' ? '' : Number((1 - paidShareMax).toFixed(6))
+            }
+        };
+        setRawParsed(parsed);
+        setCvrConflictHint(parsed.cvrHint || '');
+        setPpcConstraintHint([parsed.modeHint, parsed.ppcHint].filter(Boolean).join(' '));
+        setExtDays(parsed.days);
+        setExtDateStr(parsed.dateStr);
+        setTxnControlMode('base');
+        setTxnLockedByCvr(false);
+        setExtPvMin(parsed.pv[0]);
+        setExtPvMax(parsed.pv[1]);
+        setExtCvrMin(parsed.cvr[0]);
+        setExtCvrMax(parsed.cvr[1]);
+        setExtAovMin(parsed.aov[0]);
+        setExtAovMax(parsed.aov[1]);
+        setExtPpcMin(parsed.ppc[0]);
+        setExtPpcMax(parsed.ppc[1]);
+        // 自动填充新客占比
+        if (rawNewCust[0] !== '') {
+            setNewCustRate(parsed.newCust);
+        }
+        // 仅当快捷输入为空时，直接使用提取的笔数和点击量
+        if (!dailyRev) {
+            setExtTxnMin(parsed.txn[0]);
+            setExtTxnMax(parsed.txn[1]);
+        }
+        if (!dailyPaid) {
+            setExtClickMin(parsed.click[0]);
+            setExtClickMax(parsed.click[1]);
+        }
+    }, [pasteData]);
+    // 新增：快捷推算联动 - 日均营业额 -> 成交总笔数
+    useEffect(() => {
+        if (txnControlMode !== 'dailyRev')
+            return;
+        if (dailyRev !== '' && extDays !== '') {
+            let aMin = parseFloat(extAovMin);
+            let aMax = parseFloat(extAovMax);
+            if (isNaN(aMin))
+                aMin = aMax;
+            if (isNaN(aMax))
+                aMax = aMin;
+            if (!isNaN(aMin) && aMin > 0 && !isNaN(aMax) && aMax > 0) {
+                const rev = parseFloat(dailyRev);
+                let t1 = rev / aMin / 10000;
+                let t2 = rev / aMax / 10000;
+                setExtTxnMin(parseFloat(Math.min(t1, t2).toFixed(4)).toString());
+                setExtTxnMax(parseFloat(Math.max(t1, t2).toFixed(4)).toString());
+            }
+        }
+        else if (rawParsed && dailyRev === '') {
+            // 清空时恢复自动提取的数据
+            setExtTxnMin(rawParsed.txn[0]);
+            setExtTxnMax(rawParsed.txn[1]);
+            setTxnControlMode('base');
+        }
+    }, [dailyRev, extAovMin, extAovMax, extDays, rawParsed, txnControlMode]);
+    // 成交转化率联动 - 调整转化率时实时刷新日均成交笔数
+    useEffect(() => {
+        if (txnControlMode !== 'cvr')
+            return;
+        const [nextTxnMin, nextTxnMax] = calcTxnRangeFromPvCvrInputs(extPvMin, extPvMax, extCvrMin, extCvrMax);
+        if (nextTxnMin === '' && nextTxnMax === '')
+            return;
+        setExtTxnMin(nextTxnMin);
+        setExtTxnMax(nextTxnMax);
+    }, [txnControlMode, extPvMin, extPvMax, extCvrMin, extCvrMax]);
+    // 成交笔数优先 - 调整成交笔数或访客时，自动反推并收缩成交转化率
+    useEffect(() => {
+        var _a, _b, _c, _d;
+        if (!['base', 'manual', 'dailyRev', 'roi'].includes(txnControlMode))
+            return;
+        const [impliedCvrMin, impliedCvrMax] = calcCvrRangeFromPvTxnInputs(extPvMin, extPvMax, extTxnMin, extTxnMax);
+        if (impliedCvrMin === '' && impliedCvrMax === '')
+            return;
+        const officialMin = (_b = (_a = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.officialDisplayedCvr) === null || _a === void 0 ? void 0 : _a[0]) !== null && _b !== void 0 ? _b : '';
+        const officialMax = (_d = (_c = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.officialDisplayedCvr) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : '';
+        const officialRange = normalizeNumericRange(officialMin, officialMax);
+        const impliedRange = normalizeNumericRange(impliedCvrMin, impliedCvrMax);
+        const overlap = rangesOverlap(officialRange, impliedRange);
+        const nextRange = overlap ? intersectNumericRanges(officialRange, impliedRange) : impliedRange;
+        const nextMin = Number.isNaN(nextRange[0]) ? '' : formatPlain(nextRange[0], 2);
+        const nextMax = Number.isNaN(nextRange[1]) ? '' : formatPlain(nextRange[1], 2);
+        if (extCvrMin !== nextMin)
+            setExtCvrMin(nextMin);
+        if (extCvrMax !== nextMax)
+            setExtCvrMax(nextMax);
+        setCvrConflictHint(overlap ? '成交转化率已按成交笔数与访客区间取交集收缩。' : '官方成交转化率区间与成交笔数冲突，已优先按成交笔数反推转化率。');
+    }, [txnControlMode, extPvMin, extPvMax, extTxnMin, extTxnMax, rawParsed, extCvrMin, extCvrMax]);
+    // ROI 区间联动 - 调整 ROI 时同步刷新营业额(通过成交总笔数承接)
+    useEffect(() => {
+        if (txnControlMode !== 'roi')
+            return;
+        const [nextTxnMin, nextTxnMax] = calcTxnRangeFromRoiInputs(extRoiMin, extRoiMax, extAovMin, extAovMax, extClickMin, extClickMax, extPpcMin, extPpcMax);
+        if (nextTxnMin === '' && nextTxnMax === '')
+            return;
+        setExtTxnMin(nextTxnMin);
+        setExtTxnMax(nextTxnMax);
+    }, [txnControlMode, extRoiMin, extRoiMax, extAovMin, extAovMax, extClickMin, extClickMax, extPpcMin, extPpcMax]);
+    // 基于当前营业额 / 付费推导 ROI 区间
+    useEffect(() => {
+        if (txnControlMode === 'roi')
+            return;
+        const [nextRoiMin, nextRoiMax] = calcRoiRangeFromInputs(extTxnMin, extTxnMax, extAovMin, extAovMax, extClickMin, extClickMax, extPpcMin, extPpcMax);
+        setExtRoiMin(nextRoiMin);
+        setExtRoiMax(nextRoiMax);
+    }, [txnControlMode, extTxnMin, extTxnMax, extAovMin, extAovMax, extClickMin, extClickMax, extPpcMin, extPpcMax]);
+    // 新增：快捷推算联动 - 日推广付费 -> 付费点击总量
+    useEffect(() => {
+        if (dailyPaid !== '' && extDays !== '') {
+            let pMin = parseFloat(extPpcMin);
+            let pMax = parseFloat(extPpcMax);
+            if (isNaN(pMin))
+                pMin = pMax;
+            if (isNaN(pMax))
+                pMax = pMin;
+            if (!isNaN(pMin) && pMin > 0 && !isNaN(pMax) && pMax > 0) {
+                const paid = parseFloat(dailyPaid);
+                let c1 = paid / pMin / 10000;
+                let c2 = paid / pMax / 10000;
+                setExtClickMin(parseFloat(Math.min(c1, c2).toFixed(2)).toString());
+                setExtClickMax(parseFloat(Math.max(c1, c2).toFixed(2)).toString());
+            }
+        }
+        else if (rawParsed && dailyPaid === '') {
+            // 清空时恢复自动提取的数据
+            setExtClickMin(rawParsed.click[0]);
+            setExtClickMax(rawParsed.click[1]);
+        }
+    }, [dailyPaid, extPpcMin, extPpcMax, extDays, rawParsed]);
+    // 付费点击量变化后，按原始流量结构占比反推整体访客
+    useEffect(() => {
+        if (!rawParsed)
+            return;
+        const [nextPvMin, nextPvMax] = calcPvRangeFromTrafficStructure(extClickMin, extClickMax, rawParsed);
+        if (nextPvMin === '' && nextPvMax === '')
+            return;
+        setExtPvMin(nextPvMin);
+        setExtPvMax(nextPvMax);
+    }, [extClickMin, extClickMax, rawParsed]);
+    // 实时核算逻辑
+    useEffect(() => {
+        const days = parseFloat(extDays) || 0;
+        if (days <= 0) {
+            setAnalyzedData(null);
+            return;
+        }
+        const getVal = (minState, maxState, multiplier = 1) => {
+            const parseVal = (v) => {
+                if (v === '' || v === null || v === undefined)
+                    return NaN;
+                return parseFloat(v) * multiplier;
+            };
+            let min = parseVal(minState);
+            let max = parseVal(maxState);
+            if (isNaN(min) && isNaN(max))
+                return [0, 0];
+            if (isNaN(min))
+                min = max;
+            if (isNaN(max))
+                max = min;
+            if (min > max)
+                [min, max] = [max, min];
+            return [min, max];
+        };
+        const pv = getVal(extPvMin, extPvMax, 10000);
+        const cvr = getVal(extCvrMin, extCvrMax, 0.01);
+        const txns = getVal(extTxnMin, extTxnMax, 10000);
+        const click = getVal(extClickMin, extClickMax, 10000);
+        const aov = getVal(extAovMin, extAovMax, 1);
+        const ppc = getVal(extPpcMin, extPpcMax, 1);
+        if (aov[1] === 0) {
+            setAnalyzedData(null);
+            return;
+        }
+        let deducedTxnMin = txns[0], deducedTxnMax = txns[1], isCrossValidated = false;
+        if (pv[1] > 0 && cvr[1] > 0 && txns[1] > 0) {
+            const calcMin = pv[0] * cvr[0], calcMax = pv[1] * cvr[1];
+            const overlapMin = Math.max(txns[0], calcMin), overlapMax = Math.min(txns[1], calcMax);
+            if (overlapMin <= overlapMax && overlapMax > 0) {
+                deducedTxnMin = overlapMin;
+                deducedTxnMax = overlapMax;
+                isCrossValidated = true;
+            }
+        }
+        if (txns[1] === 0 && pv[1] > 0 && cvr[1] > 0) {
+            deducedTxnMin = pv[0] * cvr[0];
+            deducedTxnMax = pv[1] * cvr[1];
+            isCrossValidated = true;
+        }
+        const dailyFixedCost = (parseFloat(monthlyFixedCost) || 0) / 30;
+        const totalFixedCost = dailyFixedCost * days;
+        const calculateTier = (dailyTxnVal, aovVal, dailyClickVal, ppcVal, cvrVal) => {
+            const marginRatio = (parseFloat(margin) || 0) / 100;
+            const returnRatio = (parseFloat(returnRate) || 0) / 100;
+            // 新增：提取新客占比
+            const ncr = newCustRate === '' ? 100 : parseFloat(newCustRate);
+            const newCustRatio = ncr / 100;
+            const dailyRevenue = dailyTxnVal * aovVal;
+            const dailyActualRevenue = dailyRevenue - dailyRevenue * returnRatio;
+            const dailyGrossProfit = dailyActualRevenue * marginRatio;
+            const dailyPaid = dailyClickVal * ppcVal;
+            const dailyNetProfit = dailyGrossProfit - dailyPaid - dailyFixedCost;
+            const totalTxns = dailyTxnVal * days;
+            const totalRevenue = dailyRevenue * days;
+            const totalActualRevenue = dailyActualRevenue * days;
+            const totalPaid = dailyPaid * days;
+            const totalNetProfit = dailyNetProfit * days;
+            // 实际付费转化率
+            const adTxns = dailyClickVal * cvrVal;
+            const paidCvr = dailyClickVal > 0 ? (adTxns / dailyClickVal) * 100 : 0;
+            // 指标计算
+            const roi = dailyPaid > 0 ? (dailyRevenue / dailyPaid) : 0; // 1. 全店中位ROI (毛ROI)
+            const netRoi = dailyPaid > 0 ? (dailyActualRevenue / dailyPaid) : 0; // 2. 全店净有效ROI (GMV*(1-退货率)/付费)
+            // 3. 广告净ROI (成交总笔数 × 新客占比 × 客单价 × (1 − 退货率) × 毛利率) ÷ 广告总花费
+            const adNetRoi = dailyPaid > 0 ? (dailyTxnVal * newCustRatio * aovVal * (1 - returnRatio) * marginRatio) / dailyPaid : 0;
+            const maxBreakevenPpc = aovVal * marginRatio * (1 - returnRatio) * cvrVal;
+            const breakevenRoi = (marginRatio > 0 && returnRatio < 1) ? 1 / (marginRatio * (1 - returnRatio)) : 0;
+            return {
+                aov: aovVal, totalTxns, totalRevenue, totalActualRevenue, totalPaid, totalNetProfit,
+                dailyTxns: dailyTxnVal, dailyRevenue, dailyActualRevenue, dailyPaid, dailyNetProfit,
+                monthlyTxns: dailyTxnVal * 30, monthlyRevenue: dailyRevenue * 30, monthlyActualRevenue: dailyActualRevenue * 30, monthlyPaid: dailyPaid * 30, monthlyNetProfit: dailyNetProfit * 30,
+                roi, netRoi, adNetRoi, maxBreakevenPpc, breakevenRoi, paidCvr
+            };
+        };
+        const conservative = calculateTier(deducedTxnMin, aov[0], click[1] || click[0], ppc[1] || ppc[0], cvr[0]);
+        const optimistic = calculateTier(deducedTxnMax, aov[1], click[0], ppc[0], cvr[1]);
+        const steady = calculateTier((deducedTxnMin + deducedTxnMax) / 2, (aov[0] + aov[1]) / 2, (click[0] + click[1]) / 2, (ppc[0] + ppc[1]) / 2, (cvr[0] + cvr[1]) / 2);
+        // --- 实时同频诊断算法 (融合月度净利润全局视角) ---
+        const marginRatio = (parseFloat(margin) || 0) / 100;
+        const returnRatio = (parseFloat(returnRate) || 0) / 100;
+        const currentRoi = steady.roi;
+        const currentBreakevenRoi = steady.breakevenRoi;
+        let actualPpc = (parseFloat(extPpcMin) + parseFloat(extPpcMax)) / 2;
+        if (isNaN(actualPpc))
+            actualPpc = parseFloat(extPpcMin) || 0;
+        const maxPpc = steady.maxBreakevenPpc;
+        let actualCvr = (parseFloat(extCvrMin) + parseFloat(extCvrMax)) / 2;
+        if (isNaN(actualCvr))
+            actualCvr = parseFloat(extCvrMin) || 0;
+        const effectiveMargin = marginRatio * (1 - returnRatio) * 100;
+        // 提取月度推演的核心终局指标
+        const steadyMonthlyNet = steady.monthlyNetProfit;
+        const consMonthlyNet = conservative.monthlyNetProfit;
+        const steadyMonthlyRev = steady.monthlyRevenue;
+        const netProfitMargin = steadyMonthlyRev > 0 ? (steadyMonthlyNet / steadyMonthlyRev) * 100 : 0;
+        // 判断是否盈利（从单纯看变动成本的ROI，升级为看包含固定成本的最终月净利）
+        const isVariableProfitable = currentRoi >= currentBreakevenRoi && currentBreakevenRoi > 0;
+        const isNetProfitable = steadyMonthlyNet > 0;
+        const isMicroProfit = isNetProfitable && (netProfitMargin < 5 || consMonthlyNet < 0);
+        let profitStatus = !isNetProfitable ? "实质亏损" : (isMicroProfit ? "微利" : "盈利");
+        // 评判健康评级 (结合净利润规模与抗风险能力)
+        let grade = 'C';
+        if (!isNetProfitable)
+            grade = 'C';
+        else if (isMicroProfit)
+            grade = 'B';
+        else if (netProfitMargin >= 15 && consMonthlyNet >= 0)
+            grade = 'A+';
+        else
+            grade = 'A';
+        // 放大策略
+        let scaling = grade === 'C' ? '禁止放大' : (grade === 'B' ? '需优化后放大' : '可进一步放大');
+        // 1. 核心风险点提取（改成更直白的表达）
+        let allRisks = [];
+        if (!isVariableProfitable)
+            allRisks.push("广告投产还没过保本线，投得越多，亏得也可能越多");
+        if (isVariableProfitable && !isNetProfitable)
+            allRisks.push("广告端未必亏，但全店利润还不够覆盖固定成本");
+        if (actualPpc > 0 && maxPpc > 0 && actualPpc >= maxPpc * 0.9)
+            allRisks.push("点击单价已经很接近保本上限，继续加价空间很小");
+        if (returnRatio >= 0.3)
+            allRisks.push(`退货率偏高（${(returnRatio * 100).toFixed(0)}%），会明显吃掉利润`);
+        if (actualCvr < 1.0 && actualCvr > 0)
+            allRisks.push(`转化率偏低（约${actualCvr.toFixed(2)}%），买来的流量接不太住`);
+        if (isNetProfitable && consMonthlyNet < 0)
+            allRisks.push("现在虽然赚钱，但安全垫不厚，数据稍差一点就可能转亏");
+        if (allRisks.length === 0)
+            allRisks.push("目前主要指标都在安全区间，暂时没有明显硬伤");
+        const riskStr = allRisks.slice(0, 3).join("；");
+        // 2. 详细诊断（改成更简单易懂）
+        let mdaLines = [];
+        if (actualPpc > 0 && maxPpc > 0) {
+            if (actualPpc < maxPpc * 0.5)
+                mdaLines.push("流量端：点击成本比较低，当前拿流量还算轻松，后面还有一定放量空间。");
+            else if (actualPpc >= maxPpc * 0.9)
+                mdaLines.push("流量端：点击成本已经很高，继续抢流量会比较吃力，也更容易把利润压薄。");
+            else
+                mdaLines.push("流量端：拿流量成本还算正常，既能投，也需要继续盯住成本变化。");
+        }
+        if (actualCvr >= 2.0)
+            mdaLines.push("转化端：成交转化率不错，说明店铺页面、价格和产品承接能力整体在线。");
+        else if (actualCvr > 0)
+            mdaLines.push("转化端：成交转化率偏弱，说明流量进店后接不住，页面或价格力还有优化空间。");
+        if (!isNetProfitable) {
+            mdaLines.push("利润端：按现在这套模型推算，最后大概率是亏钱的，说明规模没有真正转化成利润。");
+        }
+        else if (netProfitMargin < 5) {
+            mdaLines.push(`利润端：虽然还能赚钱，但净利率只有 ${netProfitMargin.toFixed(1)}%，利润比较薄，波动一下就容易受影响。`);
+        }
+        else {
+            mdaLines.push(`利润端：净利率大约 ${netProfitMargin.toFixed(1)}%，说明这家店不只是有流水，利润也相对扎实。`);
+        }
+        // 3. 针对性优化行动方向
+        let advicesLines = [];
+        if (grade === 'C' || grade === 'B') {
+            if (!isVariableProfitable || actualPpc >= maxPpc)
+                advicesLines.push("降出价止血：立刻下调核心词PPC至极限保本线以下，暂停无转化的垃圾流量耗费。");
+            if (isVariableProfitable && !isNetProfitable)
+                advicesLines.push("拉升总流盘：前端不亏钱但月总额亏损，说明订单基数太小，必须放大免费流量或增加日均投放预算摊平固定开支。");
+            if (returnRatio >= 0.3)
+                advicesLines.push("狠抓退货率：深度分析售后原因（尺码/色差/材质），优化预期管理与发货前质检，降低非质量退货。");
+            if (actualCvr < 1.5)
+                advicesLines.push("提升转化率：诊断流失链路，重构主图卖点排序，利用客服主动催付或大额满减券进行逼单。");
+        }
+        else {
+            advicesLines.push("稳步拓流：在确保月净利空间充足的前提下，尝试以5%-10%的幅度逐步提升日限额，测试流量天花板。");
+            advicesLines.push("防御固守：针对转化极佳的核心长尾词提高卡位溢价，防范竞品恶意低价劫持核心流量。");
+            if (returnRatio > 0.15)
+                advicesLines.push("压榨纯利：若将退货率再向下压降2-3%，省下来的退货运费和货损都将1:1转化为实打实的纯利润。");
+        }
+        if (advicesLines.length < 3)
+            advicesLines.push("建议常态化监控核心PPC与转化率波动，避免主观盲目决策。");
+        const midPv = (pv[0] + pv[1]) / 2;
+        const midClick = (click[0] + click[1]) / 2;
+        const paidTrafficShare = midPv > 0 ? midClick / midPv : 0;
+        let trafficType = '混合型';
+        let trafficSummary = '自然流量和付费流量共同驱动成交，属于相对常见的综合经营模型。';
+        if (paidTrafficShare <= 0.25) {
+            trafficType = '自然型';
+            trafficSummary = '付费点击占整体访客比例较低，说明店铺更依赖自然流量、内容或老客沉淀。';
+        }
+        else if (paidTrafficShare >= 0.55) {
+            trafficType = '付费型';
+            trafficSummary = '付费点击占整体访客比例偏高，模型对投放依赖明显，放量快但波动也更大。';
+        }
+        let profitProbability = 0;
+        if (conservative.monthlyNetProfit >= 0)
+            profitProbability += 30;
+        if (steady.monthlyNetProfit >= 0)
+            profitProbability += 45;
+        if (optimistic.monthlyNetProfit >= 0)
+            profitProbability += 25;
+        if (!isVariableProfitable)
+            profitProbability = Math.max(0, profitProbability - 15);
+        if (netProfitMargin >= 10 && consMonthlyNet >= 0)
+            profitProbability = Math.min(100, profitProbability + 5);
+        let profitProbabilityLevel = '低';
+        let profitProbabilitySummary = '当前模型赚钱把握不高，更像“跑流水”而不是“稳定赚钱”。';
+        if (profitProbability >= 75) {
+            profitProbabilityLevel = '高';
+            profitProbabilitySummary = '三档推演里大部分区间都能守住利润，赚钱把握较高。';
+        }
+        else if (profitProbability >= 45) {
+            profitProbabilityLevel = '中';
+            profitProbabilitySummary = '模型具备赚钱可能，但对转化率、PPC 或退货率比较敏感。';
+        }
+        let modelType = '稳健经营型';
+        let modelSummary = '模型已经具备一定健康度，可以继续围绕转化率与成本做精细化优化。';
+        if (!isVariableProfitable) {
+            modelType = '高投放亏损型';
+            modelSummary = '广告投入已经击穿保本线，越放量越容易扩大亏损，不适合直接模仿。';
+        }
+        else if (isVariableProfitable && !isNetProfitable) {
+            modelType = '流水不养店型';
+            modelSummary = '前端投放未必直接亏，但总利润盘不足以覆盖固定成本，属于“有流水、没利润”。';
+        }
+        else if (isMicroProfit) {
+            modelType = '微利脆弱型';
+            modelSummary = '表面上能赚钱，但利润垫偏薄，指标稍微波动就可能从盈利转成亏损。';
+        }
+        else if (grade === 'A+' && trafficType === '付费型') {
+            modelType = '强投放放大型';
+            modelSummary = '模型本身盈利能力不错，但对投放能力要求高，适合有成熟投手团队的店铺。';
+        }
+        else if (grade === 'A+' && trafficType !== '付费型') {
+            modelType = '健康可复制型';
+            modelSummary = '利润、安全垫和流量结构都比较健康，具备较强的参考和模仿价值。';
+        }
+        let mimicLevel = '不建议模仿';
+        let mimicSummary = '当前模型不适合作为学习样板，更适合先拆解其问题，再决定是否借鉴局部打法。';
+        if (grade === 'A+' && profitProbability >= 75) {
+            mimicLevel = '可以模仿';
+            mimicSummary = '这个模型兼顾利润和安全边际，适合作为重点参考对象。';
+        }
+        else if ((grade === 'A' || grade === 'A+') && profitProbability >= 60) {
+            mimicLevel = '可选择性模仿';
+            mimicSummary = '可以借鉴其流量打法和投放结构，但仍需结合你自己的毛利和退货率校正。';
+        }
+        else if (grade === 'B') {
+            mimicLevel = '谨慎模仿';
+            mimicSummary = '只能参考局部动作，不建议原样照搬，否则容易复制到“微利甚至亏损”结果。';
+        }
+        const overviewText = !isNetProfitable
+            ? '这家店更像是在用投放和流水硬撑规模，报表看着有体量，但底层利润不够硬。'
+            : (isMicroProfit
+                ? '这家店属于能跑起来但利润垫不厚的模型，经营上需要强执行、强控费。'
+                : '这家店的模型整体较完整，具备从流量获取到利润兑现的闭环能力。');
+        const diag = {
+            profitStatus,
+            grade,
+            scaling,
+            riskStr,
+            mdaLines,
+            breakevenRoi: currentBreakevenRoi,
+            roi: currentRoi,
+            monthlyNet: steadyMonthlyNet,
+            netProfitMargin,
+            adviceLines: advicesLines.slice(0, 4),
+            trafficType,
+            trafficShare: paidTrafficShare,
+            trafficSummary,
+            profitProbability,
+            profitProbabilityLevel,
+            profitProbabilitySummary,
+            modelType,
+            modelSummary,
+            mimicLevel,
+            mimicSummary,
+            overviewText,
+            ranges: {
+                monthlyProfit: [conservative.monthlyNetProfit, optimistic.monthlyNetProfit],
+                dailyProfit: [conservative.dailyNetProfit, optimistic.dailyNetProfit],
+                aov: [conservative.aov, optimistic.aov],
+                dailyRevenue: [conservative.dailyRevenue, optimistic.dailyRevenue],
+                monthlyRevenue: [conservative.monthlyRevenue, optimistic.monthlyRevenue],
+                dailyPaid: [conservative.dailyPaid, optimistic.dailyPaid],
+                roi: [conservative.roi, optimistic.roi],
+                netRoi: [conservative.netRoi, optimistic.netRoi]
+            }
+        };
+        setAnalyzedData({ days, dateStr: extDateStr || '自定义周期', dailyFixedCost, totalFixedCost, isCrossValidated, conservative, steady, optimistic, diag });
+    }, [extDays, extDateStr, extPvMin, extPvMax, extCvrMin, extCvrMax, extTxnMin, extTxnMax, extAovMin, extAovMax, extClickMin, extClickMax, extPpcMin, extPpcMax, margin, returnRate, newCustRate, monthlyFixedCost]);
+    const handleClearAll = () => {
+        setPasteData('');
+        setMargin('');
+        setReturnRate('');
+        setMonthlyFixedCost('');
+        setNewCustRate('100');
+        setExtDays('');
+        setExtDateStr('');
+        setExtPvMin('');
+        setExtPvMax('');
+        setExtCvrMin('');
+        setExtCvrMax('');
+        setExtTxnMin('');
+        setExtTxnMax('');
+        setExtAovMin('');
+        setExtAovMax('');
+        setExtClickMin('');
+        setExtClickMax('');
+        setExtPpcMin('');
+        setExtPpcMax('');
+        setExtRoiMin('');
+        setExtRoiMax('');
+        setAnalyzedData(null);
+        setDailyRev('');
+        setDailyPaid('');
+        setRawParsed(null);
+        setTxnControlMode('base');
+        setTxnLockedByCvr(false);
+        setCvrConflictHint('');
+        setPpcConstraintHint('');
+    };
+    const formatCurrency = (val) => {
+        if (Math.abs(val) >= 10000)
+            return (val < 0 ? '-' : '') + '¥' + (Math.abs(val) / 10000).toFixed(1) + '万';
+        return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val);
+    };
+    const formatCount = (val) => {
+        if (Math.abs(val) >= 10000)
+            return parseFloat((Math.abs(val) / 10000).toFixed(2)).toString() + '万';
+        return Math.round(val).toLocaleString();
+    };
+    const formatRangeCurrency = (min, max) => {
+        const low = Math.min(min, max);
+        const high = Math.max(min, max);
+        if (low === high)
+            return formatCurrency(low);
+        return `${formatCurrency(low)} ~ ${formatCurrency(high)}`;
+    };
+    const formatCompactCurrency = (val) => {
+        const sign = val < 0 ? '-' : '';
+        const absVal = Math.abs(val);
+        if (absVal >= 10000)
+            return `${sign}¥${(absVal / 10000).toFixed(1)}万`;
+        return `${sign}¥${Math.round(absVal).toLocaleString()}`;
+    };
+    const formatRangeCurrencyCompact = (min, max) => {
+        const low = Math.min(min, max);
+        const high = Math.max(min, max);
+        if (low === high)
+            return formatCompactCurrency(low);
+        return `${formatCompactCurrency(low)}~${formatCompactCurrency(high)}`;
+    };
+    const formatRangePercent = (min, max) => {
+        const low = Math.min(min, max);
+        const high = Math.max(min, max);
+        if (low === high)
+            return `${low.toFixed(1)}%`;
+        return `${low.toFixed(1)}% ~ ${high.toFixed(1)}%`;
+    };
+    const parsedDaysForDisplay = parseFloat(extDays) || 0;
+    const calcDailyTxnStr = (val) => {
+        const num = parseFloat(val);
+        if (isNaN(num))
+            return null;
+        return `约 ${Math.round(num * 10000).toLocaleString()} 笔/天`;
+    };
+    // 动态生成广告净ROI的提示文本
+    const getAdNetRoiTooltip = () => {
+        if (!analyzedData)
+            return "";
+        const currentReturnRate = parseFloat(returnRate) || 0;
+        const currentCostRate = 100 - (parseFloat(margin) || 0);
+        return `＝（成交总笔数 × 新客占比 × 客单价 × (1 − 退货率) × 毛利率）÷（付费点击量 × PPC）\n\n用途：实际广告每投入 1 元，带来约 ${analyzedData.steady.adNetRoi.toFixed(2)} 元的真实毛利润（已扣除 ${currentReturnRate}% 退货 + ${currentCostRate}% 商品成本）；\n\n特点：\n  - 同时剔除退货损失与商品成本，反映广告投入的真实效益；\n  - ROI > 1 表示广告端盈利，< 1 则亏损，是比平台“当天引导 ROI”更可靠的决策指标。\n\n策略指导：\n  - 若 ROI < 1 → 广告亏损，需降低 PPC、提升转化率或优化产品退货率；\n  - 若 ROI ≥ 2 → 广告健康，具备放量空间；\n  - 若 1 ≤ ROI < 2 → 微利状态，需结合固定成本评估全店整体盈亏，谨慎扩量。`;
+    };
+    return (React.createElement("div", { className: "min-h-screen p-4 md:p-6 bg-gray-100" },
+        React.createElement("div", { className: "max-w-[1400px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6" },
+            React.createElement("div", { className: "xl:col-span-5 flex flex-col gap-4" },
+                React.createElement("div", { className: "bg-white p-5 rounded-xl shadow-sm border border-gray-200" },
+                    React.createElement("h2", { className: "text-base font-bold mb-3 text-gray-800 flex items-center justify-between" },
+                        React.createElement("span", null,
+                            "\u6B65\u9AA4 1\uFF1A\u7C98\u8D34\u57FA\u7840\u6570\u636E ",
+                            React.createElement("span", { className: "text-xs text-blue-500 font-normal bg-blue-50 px-2 py-0.5 rounded" }, "\u81EA\u52A8\u63D0\u53D6")),
+                        React.createElement("button", { onClick: handleClearAll, className: "text-sm text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1" },
+                            React.createElement("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" })),
+                            "\u6E05\u7A7A")),
+                    React.createElement("textarea", { className: "w-full h-28 p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none", value: pasteData, onChange: (e) => setPasteData(e.target.value), placeholder: "\u8BF7\u5728\u6B64\u7C98\u8D34\u751F\u610F\u53C2\u8C0B\u7B49\u8868\u683C\u6570\u636E..." })),
+                analyzedData && (React.createElement("div", { className: "bg-white p-5 rounded-xl shadow-sm border border-purple-200 relative overflow-hidden animate-fade-in" },
+                    React.createElement("div", { className: "absolute top-0 left-0 w-1.5 h-full bg-purple-500" }),
+                    React.createElement("h2", { className: "text-base font-bold mb-4 text-gray-800 flex items-center gap-2" },
+                        React.createElement("span", { className: "text-purple-600" },
+                            React.createElement("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" }))),
+                        "\u6307\u6807\u5207\u7247\u5BF9\u6BD4\u9762\u677F"),
+                    React.createElement("div", { className: "grid grid-cols-1 gap-5" },
+                        React.createElement("section", null,
+                            React.createElement("h3", { className: "font-bold text-sm text-gray-700 mb-2" }, "\uD83D\uDCC5 \u65E5\u5747\u6307\u6807\u5207\u7247"),
+                            React.createElement("div", { className: "overflow-x-auto shadow-sm rounded-lg border border-gray-200" },
+                                React.createElement("table", { className: "w-full text-xs text-left min-w-[300px]" },
+                                    React.createElement("thead", { className: "bg-gray-100 text-gray-700" },
+                                        React.createElement("tr", null,
+                                            React.createElement("th", { className: "px-3 py-2 border-b" }, "\u6307\u6807"),
+                                            React.createElement("th", { className: "px-3 py-2 border-b font-semibold" }, "\u60B2\u89C2"),
+                                            React.createElement("th", { className: "px-3 py-2 border-b font-semibold" }, "\u7A33\u5065"),
+                                            React.createElement("th", { className: "px-3 py-2 border-b font-semibold" }, "\u4E50\u89C2"))),
+                                    React.createElement("tbody", { className: "divide-y divide-gray-100 bg-white" },
+                                        React.createElement("tr", null,
+                                            React.createElement("td", { className: "px-3 py-2 text-gray-500" }, "\u65E5\u8425\u4E1A\u989D"),
+                                            React.createElement("td", { className: "px-3 py-2" }, formatCurrency(analyzedData.conservative.dailyRevenue)),
+                                            React.createElement("td", { className: "px-3 py-2" }, formatCurrency(analyzedData.steady.dailyRevenue)),
+                                            React.createElement("td", { className: "px-3 py-2" }, formatCurrency(analyzedData.optimistic.dailyRevenue))),
+                                        React.createElement("tr", { className: "bg-gray-50/30" },
+                                            React.createElement("td", { className: "px-3 py-2 text-gray-500" }, "\u65E5\u63A8\u5E7F\u8D39"),
+                                            React.createElement("td", { className: "px-3 py-2 text-red-500" }, formatCurrency(analyzedData.conservative.dailyPaid)),
+                                            React.createElement("td", { className: "px-3 py-2 text-red-500" }, formatCurrency(analyzedData.steady.dailyPaid)),
+                                            React.createElement("td", { className: "px-3 py-2 text-red-500" }, formatCurrency(analyzedData.optimistic.dailyPaid))),
+                                        React.createElement("tr", null,
+                                            React.createElement("td", { className: "px-3 py-2 text-gray-800 font-bold" }, "\u65E5\u5747\u51C0\u5229\u6DA6"),
+                                            React.createElement("td", { className: `px-3 py-2 font-bold ${analyzedData.conservative.dailyNetProfit >= 0 ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(analyzedData.conservative.dailyNetProfit)),
+                                            React.createElement("td", { className: `px-3 py-2 font-bold ${analyzedData.steady.dailyNetProfit >= 0 ? 'text-green-600' : 'text-red-500'}` }, formatCurrency(analyzedData.steady.dailyNetProfit)),
+                                            React.createElement("td", { className: `px-3 py-2 font-bold ${analyzedData.optimistic.dailyNetProfit >= 0 ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(analyzedData.optimistic.dailyNetProfit))))))),
+                        React.createElement("section", null,
+                            React.createElement("h3", { className: "font-bold text-sm text-gray-700 mb-2" }, "\uD83D\uDCE6 \u7406\u8BBA\u6708\u5EA6\u5207\u7247 (\u630930\u5929)"),
+                            React.createElement("div", { className: "overflow-x-auto shadow-sm rounded-lg border border-gray-200" },
+                                React.createElement("table", { className: "w-full text-xs text-left min-w-[300px]" },
+                                    React.createElement("thead", { className: "bg-gray-100 text-gray-700" },
+                                        React.createElement("tr", null,
+                                            React.createElement("th", { className: "px-3 py-2 border-b" }, "\u6307\u6807"),
+                                            React.createElement("th", { className: "px-3 py-2 border-b font-semibold" }, "\u60B2\u89C2"),
+                                            React.createElement("th", { className: "px-3 py-2 border-b font-semibold" }, "\u7A33\u5065"),
+                                            React.createElement("th", { className: "px-3 py-2 border-b font-semibold" }, "\u4E50\u89C2"))),
+                                    React.createElement("tbody", { className: "divide-y divide-gray-100 bg-white" },
+                                        React.createElement("tr", null,
+                                            React.createElement("td", { className: "px-3 py-2 text-gray-500" }, "\u6708\u8425\u4E1A\u989D"),
+                                            React.createElement("td", { className: "px-3 py-2" }, formatCurrency(analyzedData.conservative.monthlyRevenue)),
+                                            React.createElement("td", { className: "px-3 py-2" }, formatCurrency(analyzedData.steady.monthlyRevenue)),
+                                            React.createElement("td", { className: "px-3 py-2" }, formatCurrency(analyzedData.optimistic.monthlyRevenue))),
+                                        React.createElement("tr", { className: "bg-gray-50/30" },
+                                            React.createElement("td", { className: "px-3 py-2 text-gray-500" }, "\u6708\u63A8\u5E7F\u8D39"),
+                                            React.createElement("td", { className: "px-3 py-2 text-red-500" }, formatCurrency(analyzedData.conservative.monthlyPaid)),
+                                            React.createElement("td", { className: "px-3 py-2 text-red-500" }, formatCurrency(analyzedData.steady.monthlyPaid)),
+                                            React.createElement("td", { className: "px-3 py-2 text-red-500" }, formatCurrency(analyzedData.optimistic.monthlyPaid))),
+                                        React.createElement("tr", null,
+                                            React.createElement("td", { className: "px-3 py-2 text-gray-800 font-bold" }, "\u6708\u51C0\u5229\u6DA6"),
+                                            React.createElement("td", { className: `px-3 py-2 font-bold ${analyzedData.conservative.monthlyNetProfit >= 0 ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(analyzedData.conservative.monthlyNetProfit)),
+                                            React.createElement("td", { className: `px-3 py-2 font-bold ${analyzedData.steady.monthlyNetProfit >= 0 ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(analyzedData.steady.monthlyNetProfit)),
+                                            React.createElement("td", { className: `px-3 py-2 font-bold ${analyzedData.optimistic.monthlyNetProfit >= 0 ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(analyzedData.optimistic.monthlyNetProfit)))))))))),
+                React.createElement("div", { className: "bg-white p-5 rounded-xl shadow-sm border border-emerald-200 relative overflow-hidden" },
+                    React.createElement("div", { className: "absolute top-0 left-0 w-1.5 h-full bg-emerald-500" }),
+                    React.createElement("h2", { className: "text-base font-bold mb-3 text-gray-800 flex items-center justify-between" },
+                        React.createElement("div", { className: "flex items-center gap-2" },
+                            "\u5FEB\u6377\u63A8\u7B97 ",
+                            React.createElement("span", { className: "text-xs font-normal text-gray-500" }, "(\u5DF2\u77E5\u65E5\u5747\u91D1\u989D\u65F6\u4F7F\u7528)")),
+                        (dailyRev !== '' || dailyPaid !== '') && (React.createElement("button", { onClick: () => { setDailyRev(''); setDailyPaid(''); if (txnControlMode === 'dailyRev')
+                                setTxnControlMode('base'); }, className: "text-sm text-emerald-500 hover:text-emerald-600 transition-colors flex items-center gap-1 font-normal" },
+                            React.createElement("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" })),
+                            "\u6E05\u9664"))),
+                    React.createElement("div", { className: "grid grid-cols-2 gap-4" },
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-xs font-medium text-gray-600 mb-1" }, "\u65E5\u5747\u8425\u4E1A\u989D"),
+                            React.createElement("div", { className: "flex items-center gap-1" },
+                                React.createElement("input", { type: "number", className: "w-full p-2 border border-emerald-300 rounded focus:ring-1 focus:ring-emerald-500 outline-none text-sm bg-emerald-50", placeholder: "\u53EF\u7559\u7A7A\uFF0C\u5143", min: "0", value: dailyRev, onChange: e => { const next = sanitizeNonNegativeInput(e.target.value); setTxnLockedByCvr(false); setTxnControlMode(next === '' ? 'base' : 'dailyRev'); setDailyRev(next); } })),
+                            dailyRev !== '' && !isNaN(parseFloat(dailyRev)) && (React.createElement("div", { className: "text-[10px] text-emerald-600/80 mt-1 pl-1 font-medium" },
+                                "\u63A8\u7B97\u6708\u5747: ",
+                                formatCurrency(parseFloat(dailyRev) * 30)))),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-xs font-medium text-gray-600 mb-1" }, "\u65E5\u63A8\u5E7F\u4ED8\u8D39"),
+                            React.createElement("div", { className: "flex items-center gap-1" },
+                                React.createElement("input", { type: "number", className: "w-full p-2 border border-emerald-300 rounded focus:ring-1 focus:ring-emerald-500 outline-none text-sm bg-emerald-50", placeholder: "\u53EF\u7559\u7A7A\uFF0C\u5143", min: "0", value: dailyPaid, onChange: e => setDailyPaid(sanitizeNonNegativeInput(e.target.value)) })),
+                            dailyPaid !== '' && !isNaN(parseFloat(dailyPaid)) && (React.createElement("div", { className: "text-[10px] text-emerald-600/80 mt-1 pl-1 font-medium" },
+                                "\u63A8\u7B97\u6708\u5747: ",
+                                formatCurrency(parseFloat(dailyPaid) * 30))))),
+                    React.createElement("p", { className: "text-[11px] text-gray-400 mt-3 leading-relaxed" },
+                        "\u8F93\u5165\u4E0A\u8FF0\u91D1\u989D\u540E\uFF0C\u7ED3\u5408\u4E0B\u65B9\u201C\u5355\u6B21\u70B9\u51FB\u6210\u672C\u201D\u548C\u201C\u5BA2\u5355\u4EF7\u201D\uFF0C\u5C06\u81EA\u52A8",
+                        React.createElement("strong", { className: "text-emerald-600 font-bold" }, "\u540C\u6B65\u5237\u65B0"),
+                        "\u201C\u65E5\u5747\u6210\u4EA4\u7B14\u6570\u201D\u4E0E\u201C\u65E5\u5747\u4ED8\u8D39\u70B9\u51FB\u91CF\u201D\uFF1B\u5F53\u4ED8\u8D39\u70B9\u51FB\u91CF\u53D1\u751F\u53D8\u5316\u65F6\uFF0C\u7CFB\u7EDF\u8FD8\u4F1A\u6309\u539F\u59CB\u6D41\u91CF\u7ED3\u6784\u5360\u6BD4\u81EA\u52A8\u56DE\u63A8\u201C\u65E5\u5747\u6574\u4F53\u8BBF\u5BA2(PV/UV)\u201D\u3002\u6E05\u7A7A\u5219\u6062\u590D\u63D0\u53D6\u539F\u503C\u3002")),
+                React.createElement("div", { className: "bg-white p-5 rounded-xl shadow-sm border border-orange-200 relative overflow-hidden" },
+                    React.createElement("div", { className: "absolute top-0 left-0 w-1.5 h-full bg-orange-500" }),
+                    React.createElement("h2", { className: "text-base font-bold mb-4 text-gray-800" }, "\u6B65\u9AA4 2\uFF1A\u6838\u5FC3\u6D4B\u7B97\u6210\u672C\u53C2\u6570"),
+                    React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3" },
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-xs font-medium text-gray-700 mb-1" }, "\u6BDB\u5229\u7387 (%)"),
+                            React.createElement("input", { type: "number", className: "w-full p-2 border border-orange-300 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm bg-orange-50", min: "0", value: margin, onChange: (e) => setMargin(sanitizeNonNegativeInput(e.target.value)), placeholder: "\u5982: 50" }),
+                            React.createElement("div", { className: "flex gap-1 mt-1.5" }, [35, 55, 60, 65].map(val => (React.createElement("button", { key: val, onClick: () => setMargin(val), className: "flex-1 text-[10px] py-1 bg-orange-50 text-orange-700 rounded hover:bg-orange-100 transition-colors border border-orange-100" },
+                                val,
+                                "%")))),
+                            React.createElement("div", { className: "flex gap-1 mt-4" },
+                                React.createElement("button", { onClick: () => adjustSingle(setMargin, margin, -1), className: "flex-1 text-sm py-3 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border border-orange-200 font-bold shadow-sm leading-tight" }, "-"),
+                                React.createElement("button", { onClick: () => adjustSingle(setMargin, margin, 1), className: "flex-1 text-sm py-3 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border border-orange-200 font-bold shadow-sm leading-tight" }, "+"))),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-xs font-medium text-gray-700 mb-1" }, "\u9000\u8D27\u7387 (%)"),
+                            React.createElement("input", { type: "number", className: "w-full p-2 border border-orange-300 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm bg-orange-50", min: "0", value: returnRate, onChange: (e) => setReturnRate(sanitizeNonNegativeInput(e.target.value)), placeholder: "\u5982: 10" }),
+                            React.createElement("div", { className: "flex gap-1 mt-1.5" }, [15, 20, 33, 35].map(val => (React.createElement("button", { key: val, onClick: () => setReturnRate(val), className: "flex-1 text-[10px] py-1 bg-orange-50 text-orange-700 rounded hover:bg-orange-100 transition-colors border border-orange-100" },
+                                val,
+                                "%")))),
+                            React.createElement("div", { className: "flex gap-1 mt-4" },
+                                React.createElement("button", { onClick: () => adjustSingle(setReturnRate, returnRate, -1), className: "flex-1 text-sm py-3 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border border-orange-200 font-bold shadow-sm leading-tight" }, "-"),
+                                React.createElement("button", { onClick: () => adjustSingle(setReturnRate, returnRate, 1), className: "flex-1 text-sm py-3 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border border-orange-200 font-bold shadow-sm leading-tight" }, "+"))),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-xs font-medium text-gray-700 mb-1" }, "\u65B0\u5BA2\u5360\u6BD4 (%)"),
+                            React.createElement("input", { type: "number", className: "w-full p-2 border border-orange-300 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm bg-orange-50", min: "0", value: newCustRate, onChange: (e) => setNewCustRate(sanitizeNonNegativeInput(e.target.value)), placeholder: "\u9ED8\u8BA4: 100" }),
+                            React.createElement("div", { className: "flex gap-1 mt-1.5" }, [50, 70, 80, 100].map(val => (React.createElement("button", { key: val, onClick: () => setNewCustRate(val), className: "flex-1 text-[10px] py-1 bg-orange-50 text-orange-700 rounded hover:bg-orange-100 transition-colors border border-orange-100" },
+                                val,
+                                "%")))),
+                            React.createElement("div", { className: "flex gap-1 mt-4" },
+                                React.createElement("button", { onClick: () => adjustSingle(setNewCustRate, newCustRate, -1), className: "flex-1 text-sm py-3 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border border-orange-200 font-bold shadow-sm leading-tight" }, "-"),
+                                React.createElement("button", { onClick: () => adjustSingle(setNewCustRate, newCustRate, 1), className: "flex-1 text-sm py-3 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors border border-orange-200 font-bold shadow-sm leading-tight" }, "+"))),
+                        React.createElement("div", null,
+                            React.createElement("label", { className: "block text-xs font-medium text-gray-700 mb-1" }, "\u6708\u56FA\u5B9A\u6210\u672C"),
+                            React.createElement("input", { type: "number", className: "w-full p-2 border border-orange-300 rounded-lg focus:ring-1 focus:ring-orange-500 outline-none text-sm bg-orange-50", min: "0", value: monthlyFixedCost, onChange: (e) => setMonthlyFixedCost(sanitizeNonNegativeInput(e.target.value)), placeholder: "\u5143" })))),
+                React.createElement("div", { className: "bg-white p-5 rounded-xl shadow-sm border border-blue-200 relative overflow-hidden" },
+                    React.createElement("div", { className: "absolute top-0 left-0 w-1.5 h-full bg-blue-500" }),
+                    React.createElement("div", { className: "flex items-start justify-between gap-3 mb-4" },
+                        React.createElement("div", null,
+                            React.createElement("h2", { className: "text-base font-bold mb-1 text-gray-800" }, "\u6B65\u9AA4 3\uFF1A\u6570\u636E\u63D0\u53D6\u786E\u8BA4\u4E0E\u4FEE\u6539"),
+                            React.createElement("p", { className: "text-xs text-gray-500" }, "\u7CFB\u7EDF\u81EA\u52A8\u8BC6\u522B\u7ED3\u679C\uFF0C\u53EF\u624B\u52A8\u5FAE\u8C03\u3002\u9664\u5BA2\u5355\u4EF7 / \u8F6C\u5316\u7387 / PPC / ROI \u5916\uFF0C\u4E0B\u65B9\u5DF2\u81EA\u52A8\u6362\u7B97\u4E3A\u65E5\u5747\u53E3\u5F84\uFF1B\u9ED8\u8BA4\u6536\u7F29\u5DF2\u6539\u4E3A\u5BF9\u79F0\u5206\u4F4D\u6536\u7F29\uFF0C\u5E76\u4F1A\u4F18\u5148\u53C2\u8003\u201C\u5F15\u5BFCROI\u00D7\u5E7F\u544A\u82B1\u8D39\u2248\u5F15\u5BFC\u6210\u4EA4\u989D\u201D\u7684\u7EA6\u675F\u6765\u6821\u6B63\u5BA2\u5355\u4EF7\u4E0E\u5E7F\u544A\u6210\u4EA4\u7B14\u6570\u3002")),
+                        React.createElement("button", { onClick: handleResetExtracted, disabled: !rawParsed, className: `shrink-0 px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${rawParsed ? 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}` }, "\u590D\u4F4D\u63D0\u53D6\u6570\u636E")),
+                    React.createElement("div", { className: "grid grid-cols-2 gap-4" },
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement("label", { className: "text-xs font-bold text-blue-700 mb-1 block" }, "\u7EDF\u8BA1\u603B\u5929\u6570 (\u5173\u952E)"),
+                            React.createElement("div", { className: "flex flex-col gap-1.5" },
+                                React.createElement("div", { className: "flex items-center gap-1" },
+                                    React.createElement("input", { type: "number", className: "w-full min-w-0 p-1.5 border border-blue-300 rounded-lg focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-blue-50 text-center", min: "0", value: extDays, onChange: (e) => setExtDays(sanitizeNonNegativeInput(e.target.value)), placeholder: "\u5982: 30" }),
+                                    React.createElement("span", { className: "text-blue-700 opacity-80 text-xs font-bold shrink-0" }, "\u5929")),
+                                React.createElement("div", { className: "flex gap-1 mt-4" },
+                                    React.createElement("button", { onClick: () => adjustSingle(setExtDays, extDays, -1), className: "flex-1 text-sm py-3 rounded-lg transition-colors font-bold leading-tight shadow-sm border bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200" }, "-"),
+                                    React.createElement("button", { onClick: () => adjustSingle(setExtDays, extDays, 1), className: "flex-1 text-sm py-3 rounded-lg transition-colors font-bold leading-tight shadow-sm border bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200" }, "+")))),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u5BA2\u5355\u4EF7 / \u7B14\u5355\u4EF7", suffix: "\u5143", minVal: extAovMin, setMin: setExtAovMin, maxVal: extAovMax, setMax: setExtAovMax, step: 5, color: "emerald", minSubtext: ((_b = (_a = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _a === void 0 ? void 0 : _a.aov) === null || _b === void 0 ? void 0 : _b[0]) ? `原始：${rawParsed.originalSourceRanges.aov[0]}` : "", maxSubtext: ((_d = (_c = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _c === void 0 ? void 0 : _c.aov) === null || _d === void 0 ? void 0 : _d[1]) ? `原始：${rawParsed.originalSourceRanges.aov[1]}` : "", originalMin: (_g = (_f = (_e = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _e === void 0 ? void 0 : _e.aov) === null || _f === void 0 ? void 0 : _f[0]) !== null && _g !== void 0 ? _g : "", originalMax: (_k = (_j = (_h = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _h === void 0 ? void 0 : _h.aov) === null || _j === void 0 ? void 0 : _j[1]) !== null && _k !== void 0 ? _k : "" })),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u6210\u4EA4\u8F6C\u5316\u7387", suffix: "%", minVal: extCvrMin, setMin: handleCvrMinChange, maxVal: extCvrMax, setMax: handleCvrMaxChange, step: 0.05, color: "purple", minSubtext: ((_m = (_l = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _l === void 0 ? void 0 : _l.cvr) === null || _m === void 0 ? void 0 : _m[0]) ? `原始：${rawParsed.originalSourceRanges.cvr[0]}` : "", maxSubtext: ((_p = (_o = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _o === void 0 ? void 0 : _o.cvr) === null || _p === void 0 ? void 0 : _p[1]) ? `原始：${rawParsed.originalSourceRanges.cvr[1]}` : "", originalMin: (_s = (_r = (_q = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _q === void 0 ? void 0 : _q.cvr) === null || _r === void 0 ? void 0 : _r[0]) !== null && _s !== void 0 ? _s : "", originalMax: (_v = (_u = (_t = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _t === void 0 ? void 0 : _t.cvr) === null || _u === void 0 ? void 0 : _u[1]) !== null && _v !== void 0 ? _v : "" }),
+                            cvrConflictHint && React.createElement("div", { className: "text-[10px] text-purple-600 mt-1 leading-4" }, cvrConflictHint)),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u65E5\u5747\u6210\u4EA4\u7B14\u6570", suffix: "\u7B14/\u5929", minVal: extTxnMin, setMin: (value) => { setTxnLockedByCvr(false); setTxnControlMode('manual'); setExtTxnMin(value); }, maxVal: extTxnMax, setMax: (value) => { setTxnLockedByCvr(false); setTxnControlMode('manual'); setExtTxnMax(value); }, step: 1, color: "amber", precision: 4, displayMultiplier: 10000, displayPrecision: 0, normalizeOnBlur: true, minSubtext: ((_x = (_w = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _w === void 0 ? void 0 : _w.txn) === null || _x === void 0 ? void 0 : _x[0]) ? `原始：${rawParsed.originalSourceRanges.txn[0]}` : "", maxSubtext: ((_z = (_y = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _y === void 0 ? void 0 : _y.txn) === null || _z === void 0 ? void 0 : _z[1]) ? `原始：${rawParsed.originalSourceRanges.txn[1]}` : "", originalMin: (_2 = (_1 = (_0 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _0 === void 0 ? void 0 : _0.txn) === null || _1 === void 0 ? void 0 : _1[0]) !== null && _2 !== void 0 ? _2 : "", originalMax: (_5 = (_4 = (_3 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _3 === void 0 ? void 0 : _3.txn) === null || _4 === void 0 ? void 0 : _4[1]) !== null && _5 !== void 0 ? _5 : "" })),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u65E5\u5747\u6574\u4F53\u8BBF\u5BA2(PV/UV)", suffix: "\u4E07/\u5929", minVal: extPvMin, setMin: setExtPvMin, maxVal: extPvMax, setMax: setExtPvMax, color: "cyan", precision: 2, normalizeOnBlur: true, minSubtext: ((_7 = (_6 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _6 === void 0 ? void 0 : _6.pv) === null || _7 === void 0 ? void 0 : _7[0]) ? `原始：${rawParsed.originalSourceRanges.pv[0]}` : "", maxSubtext: ((_9 = (_8 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _8 === void 0 ? void 0 : _8.pv) === null || _9 === void 0 ? void 0 : _9[1]) ? `原始：${rawParsed.originalSourceRanges.pv[1]}` : "" })),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u65E5\u5747\u4ED8\u8D39\u70B9\u51FB\u91CF", suffix: "\u4E07\u6B21/\u5929", minVal: extClickMin, setMin: setExtClickMin, maxVal: extClickMax, setMax: setExtClickMax, color: "amber", precision: 2, normalizeOnBlur: true, minSubtext: ((_11 = (_10 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _10 === void 0 ? void 0 : _10.click) === null || _11 === void 0 ? void 0 : _11[0]) ? `原始：${rawParsed.originalSourceRanges.click[0]}` : "", maxSubtext: ((_13 = (_12 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _12 === void 0 ? void 0 : _12.click) === null || _13 === void 0 ? void 0 : _13[1]) ? `原始：${rawParsed.originalSourceRanges.click[1]}` : "" })),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u5355\u6B21\u70B9\u51FB\u6210\u672C(PPC)", suffix: "\u5143", minVal: extPpcMin, setMin: setExtPpcMin, maxVal: extPpcMax, setMax: setExtPpcMax, step: 0.1, color: "indigo", precision: 2, normalizeOnBlur: true, minSubtext: ((_15 = (_14 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _14 === void 0 ? void 0 : _14.ppc) === null || _15 === void 0 ? void 0 : _15[0]) ? `原始：${rawParsed.originalSourceRanges.ppc[0]}` : "", maxSubtext: ((_17 = (_16 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalSourceRanges) === null || _16 === void 0 ? void 0 : _16.ppc) === null || _17 === void 0 ? void 0 : _17[1]) ? `原始：${rawParsed.originalSourceRanges.ppc[1]}` : "", originalMin: (_20 = (_19 = (_18 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _18 === void 0 ? void 0 : _18.ppc) === null || _19 === void 0 ? void 0 : _19[0]) !== null && _20 !== void 0 ? _20 : "", originalMax: (_23 = (_22 = (_21 = rawParsed === null || rawParsed === void 0 ? void 0 : rawParsed.originalRanges) === null || _21 === void 0 ? void 0 : _21.ppc) === null || _22 === void 0 ? void 0 : _22[1]) !== null && _23 !== void 0 ? _23 : "" }),
+                            ppcConstraintHint && React.createElement("div", { className: "text-[10px] text-indigo-600 mt-1 leading-4" }, ppcConstraintHint)),
+                        React.createElement("div", { className: "col-span-2 sm:col-span-1" },
+                            React.createElement(RangeInput, { label: "\u5168\u5E97ROI\u533A\u95F4(\u65E5\u8425\u4E1A\u989D / \u65E5\u4ED8\u8D39)", minVal: extRoiMin, setMin: (value) => { setTxnLockedByCvr(false); setTxnControlMode('roi'); setExtRoiMin(value); }, maxVal: extRoiMax, setMax: (value) => { setTxnLockedByCvr(false); setTxnControlMode('roi'); setExtRoiMax(value); }, step: 0.1, color: "blue", precision: 2, normalizeOnBlur: true }))))),
+            React.createElement("div", { className: "xl:col-span-7" },
+                React.createElement("div", { className: "bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-200 h-full" },
+                    React.createElement("h2", { className: "text-xl font-bold mb-6 text-gray-900 border-b pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2" },
+                        React.createElement("span", null, "\u6838\u7B97\u4E0E\u63A8\u6F14\u7ED3\u679C\u9762\u677F"),
+                        analyzedData && analyzedData.isCrossValidated && (React.createElement("span", { className: "text-xs font-normal px-2.5 py-1 bg-green-100 text-green-700 rounded-full border border-green-200 flex items-center gap-1" },
+                            React.createElement("svg", { className: "w-3 h-3", fill: "currentColor", viewBox: "0 0 20 20" },
+                                React.createElement("path", { fillRule: "evenodd", d: "M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", clipRule: "evenodd" })),
+                            "\u4EA4\u53C9\u9A8C\u8BC1\u6324\u6C34\u542F\u52A8"))),
+                    !analyzedData ? (React.createElement("div", { className: "flex flex-col items-center justify-center h-[500px] text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-300" },
+                        React.createElement("svg", { className: "w-16 h-16 mb-4 text-gray-300", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                            React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "1.5", d: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" })),
+                        React.createElement("p", null, "\u8BF7\u5728\u5DE6\u4FA7\u5F55\u5165\u6570\u636E\uFF0C\u7CFB\u7EDF\u5C06\u81EA\u52A8\u5F00\u59CB\u63A8\u6F14..."))) : (React.createElement("div", { className: "space-y-6 animate-fade-in" },
+                        React.createElement("section", { className: "grid grid-cols-2 xl:grid-cols-4 gap-3 bg-gray-50 p-3.5 rounded-lg border border-gray-200" },
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-xs text-gray-500" }, "\u7EDF\u8BA1\u5206\u6790\u5929\u6570"),
+                                React.createElement("p", { className: "font-bold text-sm text-blue-800" },
+                                    analyzedData.days,
+                                    " \u5929")),
+                            React.createElement("div", { className: "col-span-2 xl:col-span-1" },
+                                React.createElement("p", { className: "text-xs text-gray-500" }, "\u5468\u671F\u8BB0\u5F55"),
+                                React.createElement("p", { className: "font-bold text-sm leading-5 break-all whitespace-normal text-gray-900", title: analyzedData.dateStr }, analyzedData.dateStr)),
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-xs text-gray-500" }, "\u65E5\u5747\u56FA\u5B9A\u6210\u672C"),
+                                React.createElement("p", { className: "font-bold text-sm text-orange-600" }, formatCurrency(analyzedData.dailyFixedCost))),
+                            React.createElement("div", null,
+                                React.createElement("p", { className: "text-xs text-gray-500" }, "\u671F\u95F4\u603B\u56FA\u5B9A\u6210\u672C"),
+                                React.createElement("p", { className: "font-bold text-sm text-orange-600" }, formatCurrency(analyzedData.totalFixedCost)))),
+                        React.createElement("section", { className: "bg-white p-4 md:p-5 rounded-xl border border-indigo-100 shadow-sm relative overflow-hidden" },
+                            React.createElement("div", { className: "absolute top-0 left-0 w-1.5 h-full bg-indigo-500" }),
+                            React.createElement("h3", { className: "font-bold text-base text-gray-800 mb-4 flex items-center gap-2" },
+                                React.createElement("span", { className: "text-indigo-600" },
+                                    React.createElement("svg", { className: "w-5 h-5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                                        React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" }))),
+                                "\u7B56\u7565\u5065\u5EB7\u5EA6\u8BCA\u65AD\u4E0E\u7ADE\u4EF7\u6781\u9650\u5206\u6790"),
+                            React.createElement("div", { className: "grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4" },
+                                React.createElement("div", { className: "bg-indigo-50/70 p-3 rounded-lg border border-indigo-100/50 flex flex-col justify-center" },
+                                    React.createElement("p", { className: "text-xs text-gray-500 mb-1 cursor-help border-b border-dashed border-gray-400 inline-block w-max", title: "\uFF1D \u5168\u5E97\u603B\u8425\u4E1A\u989D \u00F7 \u5E7F\u544A\u603B\u82B1\u8D39\n\u7528\u9014\uFF1A\u8861\u91CF\u5E7F\u544A\u6295\u5165\u5BF9\u5168\u5E97\u9500\u552E\u7684\u62C9\u52A8\u6548\u7387\uFF08\u542B\u81EA\u7136\u6D41\u91CF\u7EA2\u5229\uFF09\n\u7279\u70B9\uFF1A\u6570\u503C\u9AD8\uFF0C\u4F46\u4E0D\u53CD\u6620\u771F\u5B9E\u5229\u6DA6" }, "\u5168\u5E97\u4E2D\u4F4DROI \u2139\uFE0F"),
+                                    React.createElement("p", { className: "font-bold text-lg text-indigo-700" }, analyzedData.steady.roi.toFixed(2))),
+                                React.createElement("div", { className: "bg-indigo-50/70 p-3 rounded-lg border border-indigo-100/50 flex flex-col justify-center" },
+                                    React.createElement("p", { className: "text-xs text-gray-500 mb-1 cursor-help border-b border-dashed border-gray-400 inline-block w-max", title: "\uFF1D\uFF08\u5168\u5E97 GMV \u00D7 (1 \u2212 \u9000\u8D27\u7387)\uFF09\u00F7 \u5E7F\u544A\u82B1\u8D39\n\u7528\u9014\uFF1A\u8BC4\u4F30\u6BCF1\u5143\u5E7F\u544A\u5E26\u6765\u7684\u771F\u5B9E\u6709\u6548\u6210\u4EA4\u989D\uFF0C\u5224\u65AD\u6295\u653E\u662F\u5426\u5065\u5EB7\u3002\n\u7279\u70B9\uFF1A\n  - \u5254\u9664\u9000\u8D27\uFF0C\u542B\u81EA\u7136\u6D41\u91CF\uFF0C\u53CD\u6620\u771F\u5B9E\u9500\u552E\u6548\u7387\uFF1B\n  - \u9AD8\u9000\u8D27\u7C7B\u76EE\u5FC5\u5907\u6307\u6807\uFF1B\n  - \u9700 \u2265 \u4FDD\u672C ROI\uFF08= 1 \u00F7 \u6BDB\u5229\u7387 \u00F7 \u7B7E\u6536\u7387\uFF09\u624D\u4E0D\u4E8F\u53D8\u52A8\u6210\u672C\u3002" }, "\u5168\u5E97\u51C0\u6709\u6548ROI \u2139\uFE0F"),
+                                    analyzedData.conservative.netRoi === analyzedData.optimistic.netRoi ? (React.createElement("p", { className: `font-bold text-lg ${analyzedData.steady.netRoi >= analyzedData.steady.breakevenRoi ? 'text-green-600' : 'text-red-500'}` }, analyzedData.steady.netRoi.toFixed(2))) : (React.createElement("div", { className: "text-xs space-y-0.5 mt-0.5 w-full" },
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u6700\u5DEE:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, analyzedData.conservative.netRoi.toFixed(2))),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u4E2D\u4F4D:"),
+                                            React.createElement("span", { className: `font-bold text-sm ${analyzedData.steady.netRoi >= analyzedData.steady.breakevenRoi ? 'text-green-600' : 'text-red-500'}` }, analyzedData.steady.netRoi.toFixed(2))),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u6700\u4F73:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, analyzedData.optimistic.netRoi.toFixed(2)))))),
+                                React.createElement("div", { className: "bg-indigo-50/70 p-3 rounded-lg border border-indigo-100/50 flex flex-col justify-center" },
+                                    React.createElement("p", { className: "text-xs text-gray-500 mb-1 cursor-help border-b border-dashed border-gray-400 inline-block w-max", title: getAdNetRoiTooltip() }, "\u5E7F\u544A\u51C0ROI \u2139\uFE0F"),
+                                    analyzedData.conservative.adNetRoi === analyzedData.optimistic.adNetRoi ? (React.createElement("p", { className: `font-bold text-lg ${analyzedData.steady.adNetRoi >= 1 ? 'text-green-600' : 'text-red-500'}` }, analyzedData.steady.adNetRoi.toFixed(2))) : (React.createElement("div", { className: "text-xs space-y-0.5 mt-0.5 w-full" },
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u6700\u5DEE:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, analyzedData.conservative.adNetRoi.toFixed(2))),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u4E2D\u4F4D:"),
+                                            React.createElement("span", { className: `font-bold text-sm ${analyzedData.steady.adNetRoi >= 1 ? 'text-green-600' : 'text-red-500'}` }, analyzedData.steady.adNetRoi.toFixed(2))),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u6700\u4F73:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, analyzedData.optimistic.adNetRoi.toFixed(2)))))),
+                                React.createElement("div", { className: "bg-indigo-50/70 p-3 rounded-lg border border-indigo-100/50 flex flex-col justify-center" },
+                                    React.createElement("p", { className: "text-xs text-gray-500 mb-1 cursor-help border-b border-dashed border-gray-400 inline-block w-max", title: "\uFF1D \uFF08\u5E7F\u544A\u5F15\u5BFC\u6210\u4EA4\u7B14\u6570 \u00F7 \u4ED8\u8D39\u70B9\u51FB\u91CF\uFF09 \u00D7 100%" }, "\u5B9E\u9645\u4ED8\u8D39\u8F6C\u5316\u7387 \u2139\uFE0F"),
+                                    analyzedData.conservative.paidCvr === analyzedData.optimistic.paidCvr ? (React.createElement("p", { className: "font-bold text-lg text-indigo-700" },
+                                        analyzedData.steady.paidCvr.toFixed(2),
+                                        "%")) : (React.createElement("div", { className: "text-xs space-y-0.5 mt-0.5 w-full" },
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u6700\u5DEE:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" },
+                                                analyzedData.conservative.paidCvr.toFixed(2),
+                                                "%")),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u4E2D\u4F4D:"),
+                                            React.createElement("span", { className: "font-bold text-sm text-indigo-700" },
+                                                analyzedData.steady.paidCvr.toFixed(2),
+                                                "%")),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-gray-600" }, "\u6700\u4F73:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" },
+                                                analyzedData.optimistic.paidCvr.toFixed(2),
+                                                "%"))))),
+                                React.createElement("div", { className: "bg-indigo-50/70 p-3 rounded-lg border border-indigo-100/50 flex flex-col justify-center" },
+                                    React.createElement("div", { className: "mb-1" },
+                                        React.createElement("p", { className: "text-xs text-gray-500 cursor-help border-b border-dashed border-gray-400 inline-block", title: "\uFF1D 1 \u00F7 [ \u6BDB\u5229\u7387 \u00D7 (1 \u2212 \u9000\u8D27\u7387) ]\n\u7528\u9014\uFF1A\u5224\u65AD\u5E7F\u544A\u6216\u5168\u5E97\u662F\u5426\u771F\u6B63\u4FDD\u672C\u2014\u2014\u5373\u6BCF\u82B11\u5143\u5E7F\u544A\u8D39\uFF0C\u81F3\u5C11\u9700\u8981\u5E26\u6765\u591A\u5C11\u5143GMV\u624D\u80FD\u4E0D\u4E8F\u94B1\n\u7279\u70B9\uFF1A\u53EA\u7531\u6BDB\u5229\u7387\u548C\u9000\u8D27\u7387\u51B3\u5B9A\uFF0C\u4E0E\u5B9E\u9645\u82B1\u8D39\u65E0\u5173\uFF1B\u662F\u76C8\u4E8F\u7684\u201C\u53CA\u683C\u7EBF\u201D\uFF0C\u4E0D\u662F\u5B9E\u9645\u8868\u73B0" }, "\u5168\u5E97\u4FDD\u672CROI\u7EBF \u2139\uFE0F"),
+                                        React.createElement("p", { className: "text-[10px] text-gray-400 mt-0.5" }, "(\u6BDB\u5229\u7387\u9000\u8D27\u7387\u6240\u51B3\u5B9A)")),
+                                    React.createElement("p", { className: "font-bold text-lg text-gray-700" }, analyzedData.steady.breakevenRoi.toFixed(2))),
+                                React.createElement("div", { className: "bg-orange-50/80 p-3 rounded-lg border border-orange-200 flex flex-col justify-center" },
+                                    React.createElement("div", { className: "flex items-center gap-1 mb-1" },
+                                        React.createElement("svg", { className: "w-3.5 h-3.5 text-orange-700", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                                            React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M13 10V3L4 14h7v7l9-11h-7z" })),
+                                        React.createElement("p", { className: "text-xs text-orange-700 font-semibold cursor-help border-b border-dashed border-orange-400", title: "\uFF1D \u5BA2\u5355\u4EF7 \u00D7 \u6BDB\u5229\u7387 \u00D7 (1 \u2212 \u9000\u8D27\u7387) \u00D7 \u6210\u4EA4\u8F6C\u5316\u7387\n\u7528\u9014\uFF1A\u6D4B\u7B97\u5728\u5F53\u524D\u5229\u6DA6\u6A21\u578B\u4E0B\uFF0C\u5355\u6B21\u5E7F\u544A\u70B9\u51FB\u6700\u591A\u80FD\u82B1\u591A\u5C11\u94B1\u624D\u4E0D\u4E8F\u94B1\uFF1B\u7528\u4E8E\u6307\u5BFC\u51FA\u4EF7\u4E0A\u9650\u548C\u6295\u653E\u7B56\u7565\n\u7279\u70B9\uFF1A\n  - \u5206 \u4FDD\u5B88 / \u4E2D\u6027 / \u4E50\u89C2 \u4E09\u6863\uFF0C\u5BF9\u5E94\u8F6C\u5316\u7387\u533A\u95F4\u7684\u53D6\u503C\uFF0C\u8986\u76D6\u7ECF\u8425\u4E0D\u786E\u5B9A\u6027\n  - \u6570\u503C\u901A\u5E38\u8FDC\u4F4E\u4E8E\u5B9E\u9645PPC\uFF08\u5C24\u5176\u9AD8\u9000\u8D27\u3001\u4F4E\u8F6C\u5316\u7C7B\u76EE\uFF09\uFF0C\u63ED\u793A\u201C\u5E7F\u544A\u81EA\u8EAB\u662F\u5426\u76C8\u5229\u201D\n  - \u4EC5\u53CD\u6620\u53D8\u52A8\u6210\u672C\u76C8\u4E8F\uFF0C\u672A\u542B\u5E73\u53F0\u4F63\u91D1\u3001\u4EBA\u5DE5\u7B49\u56FA\u5B9A\u6210\u672C" }, "\u6781\u9650\u4FDD\u672CPPC \u2139\uFE0F")),
+                                    analyzedData.conservative.maxBreakevenPpc === analyzedData.optimistic.maxBreakevenPpc ? (React.createElement("p", { className: "font-bold text-lg text-orange-700" }, analyzedData.steady.maxBreakevenPpc.toFixed(1))) : (React.createElement("div", { className: "text-xs space-y-0.5 mt-0.5 w-full" },
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-orange-600/80" }, "\u4FDD\u5B88:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, analyzedData.conservative.maxBreakevenPpc.toFixed(1))),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-orange-600/80" }, "\u4E2D\u6027:"),
+                                            React.createElement("span", { className: "font-bold text-sm text-orange-700" }, analyzedData.steady.maxBreakevenPpc.toFixed(1))),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-1" },
+                                            React.createElement("span", { className: "text-orange-600/80" }, "\u4E50\u89C2:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, analyzedData.optimistic.maxBreakevenPpc.toFixed(1))))))),
+                            React.createElement("div", { className: "bg-indigo-50/60 rounded-xl border border-indigo-100 p-3 md:p-4 mb-4" },
+                                React.createElement("div", { className: "font-bold text-gray-900 mb-3 flex items-center gap-2" },
+                                    React.createElement("span", { className: "text-indigo-600" },
+                                        React.createElement("svg", { className: "w-4.5 h-4.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24" },
+                                            React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" }))),
+                                    "\u7ED3\u679C\u603B\u89C8"),
+                                React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-sm" },
+                                    React.createElement("div", { className: "rounded-lg border border-indigo-100 bg-white px-3 py-2.5 min-w-0" },
+                                        React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u5229\u6DA6\u533A\u95F4\uFF08\u6708\u51C0\u5229\uFF09"),
+                                        React.createElement("div", { className: `font-bold text-[13px] xl:text-sm leading-tight whitespace-nowrap ${analyzedData.diag.ranges.monthlyProfit[1] >= 0 ? 'text-gray-900' : 'text-red-700'}` }, formatRangeCurrencyCompact(analyzedData.diag.ranges.monthlyProfit[0], analyzedData.diag.ranges.monthlyProfit[1]))),
+                                    React.createElement("div", { className: "rounded-lg border border-indigo-100 bg-white px-3 py-2.5 min-w-0" },
+                                        React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u5BA2\u5355\u533A\u95F4"),
+                                        React.createElement("div", { className: "font-bold text-[13px] xl:text-sm leading-tight whitespace-nowrap text-gray-900" }, formatRangeCurrencyCompact(analyzedData.diag.ranges.aov[0], analyzedData.diag.ranges.aov[1]))),
+                                    React.createElement("div", { className: "rounded-lg border border-indigo-100 bg-white px-3 py-2.5 min-w-0" },
+                                        React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u8425\u4E1A\u989D\u533A\u95F4\uFF08\u65E5\uFF09"),
+                                        React.createElement("div", { className: "font-bold text-[13px] xl:text-sm leading-tight whitespace-nowrap text-gray-900" }, formatRangeCurrencyCompact(analyzedData.diag.ranges.dailyRevenue[0], analyzedData.diag.ranges.dailyRevenue[1]))),
+                                    React.createElement("div", { className: "rounded-lg border border-indigo-100 bg-white px-3 py-2.5 min-w-0" },
+                                        React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u65E5\u4ED8\u8D39\u533A\u95F4"),
+                                        React.createElement("div", { className: "font-bold text-[13px] xl:text-sm leading-tight whitespace-nowrap text-red-600" }, formatRangeCurrencyCompact(analyzedData.diag.ranges.dailyPaid[0], analyzedData.diag.ranges.dailyPaid[1]))))),
+                            analyzedData.diag && (React.createElement("div", { className: `p-4 md:p-5 rounded-xl border ${analyzedData.diag.grade === 'C' ? 'bg-red-50 border-red-200 shadow-sm shadow-red-100' : (analyzedData.diag.grade === 'B' ? 'bg-orange-50 border-orange-200 shadow-sm shadow-orange-100' : 'bg-green-50 border-green-200 shadow-sm shadow-green-100')}` },
+                                React.createElement("h4", { className: `font-bold text-sm md:text-base mb-3 flex items-center gap-1.5 ${analyzedData.diag.grade === 'C' ? 'text-red-800' : (analyzedData.diag.grade === 'B' ? 'text-orange-800' : 'text-green-800')}` },
+                                    analyzedData.diag.grade === 'C' ? (React.createElement("svg", { className: "w-5 h-5 shrink-0", fill: "currentColor", viewBox: "0 0 20 20" },
+                                        React.createElement("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }))) : (React.createElement("svg", { className: "w-5 h-5 shrink-0", fill: "currentColor", viewBox: "0 0 20 20" },
+                                        React.createElement("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }))),
+                                    "\u591A\u7EF4\u7EFC\u5408\u667A\u80FD\u8BCA\u65AD\u62A5\u544A"),
+                                React.createElement("div", { className: "space-y-4 text-[13px] leading-relaxed" },
+                                    React.createElement("div", { className: "bg-white/70 p-3 rounded-lg border border-white/70" },
+                                        React.createElement("p", { className: "text-sm text-gray-900 leading-7" },
+                                            React.createElement("span", { className: "font-bold" }, "\u4E00\u53E5\u8BDD\u7ED3\u8BBA\uFF1A"),
+                                            analyzedData.diag.overviewText)),
+                                    React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3" },
+                                        React.createElement("div", { className: "bg-white/75 rounded-lg border border-white p-3" },
+                                            React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u6D41\u91CF\u7ED3\u6784"),
+                                            React.createElement("div", { className: "font-bold text-base text-gray-900" }, analyzedData.diag.trafficType),
+                                            React.createElement("div", { className: "text-[11px] text-gray-500 mt-1" },
+                                                "\u4ED8\u8D39\u6D41\u91CF\u5360\u6BD4\u7EA6 ",
+                                                formatRangePercent(analyzedData.diag.trafficShare * 100, analyzedData.diag.trafficShare * 100)),
+                                            React.createElement("div", { className: "text-xs text-gray-600 mt-2 leading-5" }, analyzedData.diag.trafficSummary)),
+                                        React.createElement("div", { className: "bg-white/75 rounded-lg border border-white p-3" },
+                                            React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u8D5A\u94B1\u6982\u7387"),
+                                            React.createElement("div", { className: `font-bold text-base ${analyzedData.diag.profitProbability >= 75 ? 'text-green-700' : (analyzedData.diag.profitProbability >= 45 ? 'text-orange-700' : 'text-red-700')}` },
+                                                analyzedData.diag.profitProbability.toFixed(0),
+                                                "% \u00B7 ",
+                                                analyzedData.diag.profitProbabilityLevel),
+                                            React.createElement("div", { className: "text-xs text-gray-600 mt-2 leading-5" }, analyzedData.diag.profitProbabilitySummary)),
+                                        React.createElement("div", { className: "bg-white/75 rounded-lg border border-white p-3" },
+                                            React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u5E97\u94FA\u6A21\u578B\u8BCA\u65AD"),
+                                            React.createElement("div", { className: "font-bold text-base text-gray-900" }, analyzedData.diag.modelType),
+                                            React.createElement("div", { className: "text-xs text-gray-600 mt-2 leading-5" }, analyzedData.diag.modelSummary)),
+                                        React.createElement("div", { className: "bg-white/75 rounded-lg border border-white p-3" },
+                                            React.createElement("div", { className: "text-xs text-gray-500 mb-1" }, "\u662F\u5426\u503C\u5F97\u6A21\u4EFF"),
+                                            React.createElement("div", { className: `font-bold text-base ${analyzedData.diag.mimicLevel === '可以模仿' ? 'text-green-700' : (analyzedData.diag.mimicLevel === '可选择性模仿' || analyzedData.diag.mimicLevel === '谨慎模仿' ? 'text-orange-700' : 'text-red-700')}` }, analyzedData.diag.mimicLevel),
+                                            React.createElement("div", { className: "text-xs text-gray-600 mt-2 leading-5" }, analyzedData.diag.mimicSummary))),
+                                    React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3" },
+                                        React.createElement("div", { className: `p-3 rounded-lg border ${analyzedData.diag.grade === 'C' ? 'bg-red-100/50 border-red-200/60' : (analyzedData.diag.grade === 'B' ? 'bg-orange-100/50 border-orange-200/60' : 'bg-green-100/50 border-green-200/60')}` },
+                                            React.createElement("div", { className: `font-bold mb-1 ${analyzedData.diag.grade === 'C' ? 'text-red-900' : (analyzedData.diag.grade === 'B' ? 'text-orange-900' : 'text-green-900')}` }, "\u6838\u5FC3\u98CE\u9669"),
+                                            React.createElement("div", { className: "text-sm text-gray-800 leading-6" }, analyzedData.diag.riskStr)),
+                                        React.createElement("div", { className: "p-3 rounded-lg border bg-white/75 border-white" },
+                                            React.createElement("div", { className: "font-bold mb-1 text-gray-900" }, "\u5173\u952E\u5224\u65AD"),
+                                            React.createElement("div", { className: "text-sm text-gray-700 leading-6" },
+                                                "\u4FDD\u672CROI\u7EBF ",
+                                                React.createElement("span", { className: "font-bold text-gray-900" }, analyzedData.diag.breakevenRoi.toFixed(2)),
+                                                "\uFF0C \u5B9E\u9645ROI ",
+                                                React.createElement("span", { className: `font-bold ${analyzedData.diag.roi >= analyzedData.diag.breakevenRoi ? 'text-green-600' : 'text-red-600'}` }, analyzedData.diag.roi.toFixed(2)),
+                                                "\uFF0C \u7A33\u5065\u6708\u51C0\u5229 ",
+                                                React.createElement("span", { className: `font-bold ${analyzedData.diag.monthlyNet >= 0 ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(analyzedData.diag.monthlyNet)),
+                                                "\uFF0C \u51C0\u5229\u7387 ",
+                                                React.createElement("span", { className: `font-bold ${analyzedData.diag.netProfitMargin >= 5 ? 'text-green-700' : 'text-orange-700'}` },
+                                                    analyzedData.diag.netProfitMargin.toFixed(1),
+                                                    "%"),
+                                                "\u3002"))),
+                                    React.createElement("div", null,
+                                        React.createElement("div", { className: "font-bold text-gray-900 mb-1.5" }, "\u8BE6\u7EC6\u8BCA\u65AD"),
+                                        React.createElement("ul", { className: "list-disc pl-5 text-gray-700 space-y-1.5" }, analyzedData.diag.mdaLines.map((line, i) => (React.createElement("li", { key: i }, line))))),
+                                    React.createElement("div", null,
+                                        React.createElement("div", { className: "font-bold text-gray-900 block mb-1.5" }, "\u5EFA\u8BAE\u600E\u4E48\u5B66 / \u600E\u4E48\u6539"),
+                                        React.createElement("ul", { className: "list-decimal pl-5 text-blue-800 space-y-1.5 font-medium bg-white/50 p-3 rounded border border-white/70" }, analyzedData.diag.adviceLines.map((line, i) => (React.createElement("li", { key: i, className: "pl-1" }, line))))))))),
+                        React.createElement("section", null,
+                            React.createElement("h3", { className: "font-bold text-base text-gray-700 mb-3 flex items-center gap-2" },
+                                React.createElement("span", { className: "w-1 h-4 bg-gray-800 rounded" }),
+                                " \u6781\u9650\u8FD8\u539F\u63A8\u6F14\u6A21\u578B"),
+                            React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4" }, ['conservative', 'steady', 'optimistic'].map((tier, idx) => {
+                                const titles = ['悲观 (承受底线)', '稳健 (常规预期)', '乐观 (理想状态)'];
+                                const bgColors = ['bg-red-50/50', 'bg-blue-50/50', 'bg-green-50/50'];
+                                const borderColors = ['border-red-200', 'border-blue-200', 'border-green-200'];
+                                const textColors = ['text-red-800', 'text-blue-800', 'text-green-800'];
+                                const data = analyzedData[tier];
+                                const isProfit = data.monthlyNetProfit >= 0;
+                                return (React.createElement("div", { key: tier, className: `border rounded-xl p-4 shadow-sm ${bgColors[idx]} ${borderColors[idx]}` },
+                                    React.createElement("div", { className: `font-bold text-center mb-3 pb-2 border-b border-gray-200/50 ${textColors[idx]}` }, titles[idx]),
+                                    React.createElement("div", { className: "mb-3 p-2 bg-white/60 rounded text-xs space-y-1.5 text-gray-600 border border-white" },
+                                        React.createElement("div", { className: "flex justify-between" },
+                                            React.createElement("span", null, "\u63A8\u7B97\u5BA2\u5355:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" }, formatCurrency(data.aov))),
+                                        React.createElement("div", { className: "flex justify-between" },
+                                            React.createElement("span", null, "\u6708\u63A8\u7B97\u7B14\u6570:"),
+                                            React.createElement("span", { className: "font-bold text-gray-800" },
+                                                formatCount(data.monthlyTxns),
+                                                "\u7B14")),
+                                        React.createElement("div", { className: "flex justify-between" },
+                                            React.createElement("span", null, "\u65E5\u63A8\u7B97\u7B14\u6570:"),
+                                            React.createElement("span", { className: "font-bold text-blue-700" },
+                                                formatCount(data.dailyTxns),
+                                                "\u7B14/\u5929"))),
+                                    React.createElement("div", { className: "space-y-2 text-sm" },
+                                        React.createElement("div", { className: "flex justify-between" },
+                                            React.createElement("span", null, "\u6708\u8425\u4E1A\u989D:"),
+                                            React.createElement("span", { className: "font-semibold text-gray-800" }, formatCurrency(data.monthlyRevenue))),
+                                        React.createElement("div", { className: "flex justify-between" },
+                                            React.createElement("span", null, "\u6708\u5B9E\u9645\u6210\u4EA4:"),
+                                            React.createElement("span", { className: "font-semibold text-gray-800" }, formatCurrency(data.monthlyActualRevenue))),
+                                        React.createElement("div", { className: "flex justify-between" },
+                                            React.createElement("span", null, "\u6708\u63A8\u5E7F\u82B1\u8D39:"),
+                                            React.createElement("span", { className: "font-semibold text-red-500" }, formatCurrency(data.monthlyPaid))),
+                                        React.createElement("div", { className: "pt-2 mt-2 border-t border-dashed border-gray-200/70 space-y-1 text-xs" },
+                                            React.createElement("div", { className: "flex justify-between" },
+                                                React.createElement("span", null, "\u65E5\u8425\u4E1A\u989D:"),
+                                                React.createElement("span", null, formatCurrency(data.dailyRevenue))),
+                                            React.createElement("div", { className: "flex justify-between" },
+                                                React.createElement("span", null, "\u65E5\u5B9E\u9645\u6210\u4EA4:"),
+                                                React.createElement("span", null, formatCurrency(data.dailyActualRevenue))),
+                                            React.createElement("div", { className: "flex justify-between text-red-500" },
+                                                React.createElement("span", null, "\u65E5\u63A8\u5E7F\u8D39:"),
+                                                React.createElement("span", null, formatCurrency(data.dailyPaid))),
+                                            React.createElement("div", { className: "flex justify-between" },
+                                                React.createElement("span", null, "\u65E5\u51C0\u5229\u6DA6:"),
+                                                React.createElement("span", { className: data.dailyNetProfit >= 0 ? 'text-green-600' : 'text-red-500' }, formatCurrency(data.dailyNetProfit)))),
+                                        React.createElement("div", { className: "flex justify-between items-center pt-3 border-t border-gray-200/50 mt-2" },
+                                            React.createElement("span", { className: "text-gray-900 font-bold" }, "\u6708\u51C0\u5229\u6DA6:"),
+                                            React.createElement("span", { className: `font-black text-lg ${isProfit ? 'text-green-600' : 'text-red-600'}` }, formatCurrency(data.monthlyNetProfit))))));
+                            }))))))))));
+}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App, null));
+
+</script>
+
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                var root = document.getElementById('root');
+                if (!window.React || !window.ReactDOM) {
+                    window.__showBootError && window.__showBootError('核心库没有加载成功：React / ReactDOM。通常是网络无法访问 unpkg.com，或浏览器/安全软件拦截了 CDN。');
+                    return;
+                }
+                if (root && root.querySelector('#loading-fallback')) {
+                    window.__showBootError && window.__showBootError('React 页面没有完成渲染。请把当前页面显示的错误，或浏览器控制台红色报错发给我。');
+                }
+            }, 4000);
+        });
+    </script>
+</body>
+</html>
