@@ -77,7 +77,7 @@
   <div class="hero">
     <div>
       <h1>彩票号码组合生成器</h1>
-      <div class="sub">支持大乐透与双色球。按 2026-08-16 核验的现行中奖规则计算一等奖至末等奖覆盖概率；在预算内避免重复购买相同关键组合，并让号码使用次数尽量均匀。它不预测开奖号码，也不会改变单注的随机中奖概率。</div>
+      <div class="sub">支持大乐透与双色球。按 2026-08-16 核验的现行中奖规则，重点计算一等奖、二等奖及“一或二等奖”的精确覆盖概率；预算硬上限 1000 元，并避免重复购买相同关键组合。它不预测开奖号码，也不会改变单注的随机中奖概率。</div>
     </div>
     <div class="badge">现行规则核对版 · 离线可用 · 可导出 XLSX</div>
   </div>
@@ -91,19 +91,18 @@
       <div class="grid">
         <section class="settings">
           <h2 id="settingTitle">大乐透设置</h2>
-          <button class="preset" id="presetBtn">一键载入：228 元综合方案</button>
+          <button class="preset" id="presetBtn">一键载入：228 元一/二等奖覆盖最大方案</button>
 
           <div class="field">
-            <label>预算（元）</label>
-            <input id="budget" type="number" min="2" step="1" value="228" />
+            <label>预算（元，最高 1000）</label>
+            <input id="budget" type="number" min="2" max="1000" step="1" value="228" />
           </div>
 
           <div class="field" id="strategyField">
             <label>策略</label>
             <select id="strategy">
-              <option value="balanced">综合：部分追加 + 尽量多覆盖</option>
-              <option value="prob">概率优先：全部基本投注</option>
-              <option value="prize">奖金优先：全部追加投注</option>
+              <option value="prob">一/二等奖覆盖最大化：全部基本投注</option>
+              <option value="prize">一/二等奖奖金优先：全部追加投注</option>
               <option value="custom">自定义基本 / 追加注数</option>
             </select>
           </div>
@@ -111,17 +110,17 @@
           <div class="row2" id="dltCounts">
             <div class="field">
               <label>基本投注（注）</label>
-              <input id="basicCount" type="number" min="0" value="60" />
+              <input id="basicCount" type="number" min="0" max="500" value="114" />
             </div>
             <div class="field">
               <label>追加投注（注）</label>
-              <input id="addCount" type="number" min="0" value="36" />
+              <input id="addCount" type="number" min="0" max="333" value="0" />
             </div>
           </div>
 
           <div class="field" id="ssqCountField" style="display:none">
             <label>生成注数</label>
-            <input id="ssqCount" type="number" min="1" value="114" />
+            <input id="ssqCount" type="number" min="1" max="500" value="114" />
           </div>
 
           <div class="field">
@@ -149,7 +148,7 @@
           <div class="algo">
             <b>生成逻辑：</b><br>
             ① 关键号码组合不重复；② <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；③ 候选组合优先选择当前使用次数较少的号码；④ 尽量降低与已有组合的高度重合；⑤ 后区/蓝球做均衡轮换。<br><br>
-            <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。<br><br><b>概率口径：</b>一等奖、二等奖及一或二等奖可直接按互不重复的前区/红球组合精确计算；三等奖及以下会出现不同投注对应同一开奖号码的重叠，因此程序使用完整开奖空间精确枚举并对重复开奖情形去重，不使用错误的“单注概率 × 注数”。<br><br><b>现行奖级：</b>大乐透按 7 个奖级（第26014期起规则）计算；双色球按 6 个常规奖级（第2026014期起规则）计算，双色球不存在常规七等奖。
+            <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。<br><br><b>概率口径：</b>本版只把一等奖、二等奖及“一或二等奖”作为核心优化目标。前区/红球组合互不重复时，这三项概率都能直接得到精确值，不需要低奖级的全空间枚举。<br><br><b>策略说明：</b>“覆盖最大化”会在预算内购买尽可能多的不同基本注；“奖金优先”只适用于大乐透，会使用追加投注提高中得一、二等奖时的单注奖金，但会减少可购买的不同号码数量。
           </div>
         </section>
 
@@ -161,19 +160,19 @@
             <div class="stat prob"><div class="k">一等奖覆盖概率</div><div class="v" id="statFirst">—</div><div class="s" id="statFirstSub">—</div></div>
             <div class="stat prob"><div class="k">二等奖覆盖概率</div><div class="v" id="statSecond">—</div><div class="s" id="statSecondSub">—</div></div>
             <div class="stat prob"><div class="k">一或二等奖覆盖概率</div><div class="v" id="statTop2">—</div><div class="s" id="statTop2Sub">—</div></div>
-            <div class="stat prob"><div class="k">三等奖覆盖概率</div><div class="v" id="statThird">—</div><div class="s" id="statThirdSub">—</div></div>
-            <div class="stat prob"><div class="k">四等奖覆盖概率</div><div class="v" id="statFourth">—</div><div class="s" id="statFourthSub">—</div></div>
-            <div class="stat prob"><div class="k">五等奖覆盖概率</div><div class="v" id="statFifth">—</div><div class="s" id="statFifthSub">—</div></div>
-            <div class="stat prob"><div class="k">六等奖覆盖概率</div><div class="v" id="statSixth">—</div><div class="s" id="statSixthSub">—</div></div>
-            <div class="stat prob"><div class="k">七等奖覆盖概率</div><div class="v" id="statSeventh">—</div><div class="s" id="statSeventhSub">—</div></div>
+            <div class="stat prob" style="display:none"><div class="k">三等奖覆盖概率</div><div class="v" id="statThird">—</div><div class="s" id="statThirdSub">—</div></div>
+            <div class="stat prob" style="display:none"><div class="k">四等奖覆盖概率</div><div class="v" id="statFourth">—</div><div class="s" id="statFourthSub">—</div></div>
+            <div class="stat prob" style="display:none"><div class="k">五等奖覆盖概率</div><div class="v" id="statFifth">—</div><div class="s" id="statFifthSub">—</div></div>
+            <div class="stat prob" style="display:none"><div class="k">六等奖覆盖概率</div><div class="v" id="statSixth">—</div><div class="s" id="statSixthSub">—</div></div>
+            <div class="stat prob" style="display:none"><div class="k">七等奖覆盖概率</div><div class="v" id="statSeventh">—</div><div class="s" id="statSeventhSub">—</div></div>
           </div>
-          <div class="prob-status" id="probStatus">概率说明：生成号码后，将按现行中奖条件计算当前整组号码在一次开奖中“至少有 1 注命中该奖级”的覆盖概率。追加投注只改变大乐透一等奖、二等奖的奖金，不改变中奖概率。各奖级覆盖事件可能同时发生，因此不同奖级概率不可直接相加。</div>
+          <div class="prob-status" id="probStatus">概率说明：本版重点优化一等奖、二等奖及“一或二等奖”。由于前区/红球关键组合互不重复，这三项覆盖概率可精确计算；大乐透追加投注会提高一、二等奖中奖时的奖金，但不会提高中奖概率。</div>
           <div class="audit-status" id="auditStatus">算法自检中…</div>
 
           <div class="table-wrap" id="tableWrap">
             <div class="empty">点击“生成号码”开始</div>
           </div>
-          <div class="footer">导出的 Excel 为标准 .xlsx 文件，不依赖外部网站或第三方脚本。建议把彩票作为固定娱乐预算，不因未中奖追加投入。</div>
+          <div class="footer">导出的 Excel 为标准 .xlsx 文件，不依赖外部网站或第三方脚本。预算硬上限为 1000 元。建议把彩票作为固定娱乐预算，不因未中奖追加投入。</div>
         </section>
       </div>
     </div>
@@ -213,6 +212,14 @@
   function comb(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r;}
   function overlap(a,b){let s=new Set(a),c=0;for(const x of b)if(s.has(x))c++;return c;}
   function variance(arr){const m=arr.reduce((a,b)=>a+b,0)/arr.length;return arr.reduce((s,x)=>s+(x-m)*(x-m),0)/arr.length;}
+
+  function getBudget(){
+    let v=Math.floor(Number($('budget').value)||0);
+    if(v<2)v=2;
+    if(v>1000)v=1000;
+    if(String(v)!==$('budget').value)$('budget').value=v;
+    return v;
+  }
 
   function longestConsecutiveRun(nums){
     if(!nums.length)return 0;
@@ -288,28 +295,14 @@
 
   function syncByStrategy(){
     if(game!=='dlt')return;
-    const budget=Math.max(0,Number($('budget').value)||0), strategy=$('strategy').value;
+    const budget=getBudget(), strategy=$('strategy').value;
     if(strategy==='prob') { $('basicCount').value=Math.floor(budget/2); $('addCount').value=0; }
     if(strategy==='prize') { $('basicCount').value=0; $('addCount').value=Math.floor(budget/3); }
-    if(strategy==='balanced') {
-      if(budget===228){$('basicCount').value=60;$('addCount').value=36;}
-      else {
-        // Roughly keep 37.5% of lines as additional while spending no more than budget.
-        let best={b:Math.floor(budget/2),a:0,score:Infinity};
-        for(let a=0;a<=Math.floor(budget/3);a++){
-          const b=Math.floor((budget-3*a)/2); const lines=a+b; if(lines<=0)continue;
-          const ratio=a/lines, unused=budget-(3*a+2*b);
-          const score=Math.abs(ratio-.375)*20+unused;
-          if(score<best.score)best={a,b,score};
-        }
-        $('basicCount').value=best.b;$('addCount').value=best.a;
-      }
-    }
     updateBudgetNote();
   }
 
   function updateBudgetNote(){
-    const budget=Math.max(0,Number($('budget').value)||0);
+    const budget=getBudget();
     if(game==='dlt'){
       const b=Math.max(0,parseInt($('basicCount').value)||0),a=Math.max(0,parseInt($('addCount').value)||0),cost=b*2+a*3;
       $('budgetNote').innerHTML=`当前设置：<b>${b}</b> 注基本 + <b>${a}</b> 注追加，共 <b>${b+a}</b> 组号码；费用 <b>¥${cost}</b>${cost>budget?'，<span style="color:#b42318">已超预算 ¥'+(cost-budget)+'</span>':cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。`;
@@ -322,14 +315,19 @@
   function generate(){
     const rng=makeRng(); rows=[];
     try{
+    const budget=getBudget();
     if(game==='dlt'){
-      const b=Math.max(0,parseInt($('basicCount').value)||0), a=Math.max(0,parseInt($('addCount').value)||0), n=b+a;
+      const b=Math.max(0,parseInt($('basicCount').value)||0), a=Math.max(0,parseInt($('addCount').value)||0), n=b+a, cost=b*2+a*3;
       if(n<1)return toast('请至少生成 1 注');
+      if(cost>1000)return toast('投注金额不能超过 1000 元');
+      if(cost>budget)return toast('当前注数超过你设置的预算');
       const fronts=generateBalancedSets(35,5,n,rng,350,passesPatternFilters), backs=generateBackPairs(n,rng);
       const types=shuffle([...Array(a).fill('追加'),...Array(b).fill('基本')],rng);
       rows=fronts.map((front,i)=>({no:i+1,type:types[i],front,back:backs[i],cost:types[i]==='追加'?3:2}));
     }else{
-      const n=Math.max(0,parseInt($('ssqCount').value)||0); if(n<1)return toast('请至少生成 1 注');
+      const n=Math.max(0,parseInt($('ssqCount').value)||0), cost=n*2; if(n<1)return toast('请至少生成 1 注');
+      if(cost>1000)return toast('投注金额不能超过 1000 元');
+      if(cost>budget)return toast('当前注数超过你设置的预算');
       const reds=generateBalancedSets(33,6,n,rng,350,passesPatternFilters), blues=generateBlue(n,rng);
       rows=reds.map((front,i)=>({no:i+1,type:'基本',front,back:[blues[i]],cost:2}));
     }
@@ -405,10 +403,10 @@
     const el=$('auditStatus');
     if(ok){
       el.classList.remove('bad');
-      el.innerHTML='算法自检：<b>通过</b>。大乐透总开奖空间 21,425,712；单注各奖级开奖情形数 1 / 20 / 195 / 3,000 / 11,100 / 127,600 / 1,287,281。双色球总开奖空间 17,721,088；单注一至六等奖开奖情形数 1 / 15 / 162 / 7,695 / 137,475 / 1,043,640。';
+      el.innerHTML='内部组合数学自检：<b>通过</b>。大乐透总开奖空间 21,425,712；单注各奖级开奖情形数 1 / 20 / 195 / 3,000 / 11,100 / 127,600 / 1,287,281。双色球总开奖空间 17,721,088；单注一至六等奖开奖情形数 1 / 15 / 162 / 7,695 / 137,475 / 1,043,640。';
     }else{
       el.classList.add('bad');
-      el.textContent='算法自检未通过：奖级映射或组合数常量异常，请勿使用当前概率结果。';
+      el.textContent='内部组合数学自检未通过：奖级映射或组合数常量异常，请勿使用当前概率结果。';
     }
     return ok;
   }
@@ -540,28 +538,28 @@
     $('statFirstSub').textContent=`${cond[0]} · ${n} 注精确值`;
     $('statSecondSub').textContent=`${cond[1]} · ${n} 注精确值`;
     $('statTop2Sub').textContent='前区/红球组合互异，因此为精确值';
-    startExactCoverage();
+    $('probStatus').textContent=`已按当前 ${n} 注号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率。前区/红球组合互不重复，因此这些值是精确值；追加投注只改变大乐透一、二等奖奖金，不改变这些概率。`;
   }
 
   function switchGame(g){
     game=g; rows=[]; coverageToken++; if(coverageWorker){coverageWorker.terminate();coverageWorker=null;} tabs.forEach(t=>t.classList.toggle('active',t.dataset.game===g));
     if(g==='dlt'){
-      $('settingTitle').textContent='大乐透设置';$('presetBtn').textContent='一键载入：228 元综合方案';
+      $('settingTitle').textContent='大乐透设置';$('presetBtn').textContent='一键载入：228 元一/二等奖覆盖最大方案';
       $('strategyField').style.display='block';$('dltCounts').style.display='grid';$('ssqCountField').style.display='none';
     }else{
       $('settingTitle').textContent='双色球设置';$('presetBtn').textContent='一键载入：228 元概率覆盖方案';
       $('strategyField').style.display='none';$('dltCounts').style.display='none';$('ssqCountField').style.display='block';
-      $('ssqCount').value=Math.floor((Number($('budget').value)||228)/2);
+      $('ssqCount').value=Math.floor(getBudget()/2);
     }
     $('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';
     ['statCost','statLines','statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent=id==='statCost'?'¥0':id==='statLines'?'0':'—');
-    $('probStatus').textContent='概率说明：生成号码后，将按现行中奖条件计算当前整组号码在一次开奖中“至少有 1 注命中该奖级”的覆盖概率。追加投注只改变大乐透一等奖、二等奖的奖金，不改变中奖概率。各奖级覆盖事件可能同时发生，因此不同奖级概率不可直接相加。';
+    $('probStatus').textContent='概率说明：本版重点优化一等奖、二等奖及“一或二等奖”。由于前区/红球关键组合互不重复，这三项覆盖概率可精确计算；大乐透追加投注会提高一、二等奖中奖时的奖金，但不会提高中奖概率。';
     updateBudgetNote();
   }
 
   function preset(){
     $('budget').value=228;
-    if(game==='dlt'){$('strategy').value='balanced';$('basicCount').value=60;$('addCount').value=36;}
+    if(game==='dlt'){$('strategy').value='prob';$('basicCount').value=114;$('addCount').value=0;}
     else {$('ssqCount').value=114;}
     updateBudgetNote();generate();
   }
@@ -635,11 +633,11 @@
 
   tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game)));
   $('strategy').addEventListener('change',()=>{if($('strategy').value==='custom'){}else syncByStrategy();});
-  $('budget').addEventListener('input',()=>{if(game==='dlt'&&$('strategy').value!=='custom')syncByStrategy();else if(game==='ssq'){$('ssqCount').value=Math.floor((Number($('budget').value)||0)/2);updateBudgetNote();}else updateBudgetNote();});
+  $('budget').addEventListener('input',()=>{getBudget();if(game==='dlt'&&$('strategy').value!=='custom')syncByStrategy();else if(game==='ssq'){$('ssqCount').value=Math.floor(getBudget()/2);updateBudgetNote();}else updateBudgetNote();});
   $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
   $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
   $('ssqCount').addEventListener('input',updateBudgetNote);
-  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算概率。';});
+  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算一、二等奖覆盖概率。';});
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
 
   runAlgorithmSelfCheck();
