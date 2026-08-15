@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>大乐透 / 双色球 号码组合生成器 · 现行奖级概率核对版</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --text:#172033; --muted:#6b7280;
+    --line:#e5e7eb; --primary:#176b55; --primary2:#0f513f;
+    --red:#df3146; --blue:#3276d2; --gold:#b78116; --soft:#edf7f3;
+  }
+  *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 50px}
+  .hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
+  h1{font-size:28px;margin:0 0 8px;letter-spacing:-.5px}
+  .sub{color:var(--muted);font-size:14px;line-height:1.65;max-width:800px}
+  .badge{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#e9f5f0;color:var(--primary);font-size:12px;font-weight:700;white-space:nowrap}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 28px rgba(20,30,50,.05);overflow:hidden}
+  .tabs{display:flex;border-bottom:1px solid var(--line);background:#fbfcfd}
+  .tab{flex:1;padding:15px 18px;border:0;background:transparent;font-size:15px;font-weight:700;color:#64748b;cursor:pointer}
+  .tab.active{color:var(--primary);background:white;box-shadow:inset 0 -3px var(--primary)}
+  .content{padding:20px}
+  .grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px}
+  .grid>*{min-width:0}
+  .results{min-width:0;max-width:100%;overflow:hidden}
+  .settings{border:1px solid var(--line);border-radius:15px;padding:16px;background:#fcfdfd;height:max-content}
+  .settings h2,.results h2{font-size:17px;margin:0 0 14px}
+  .field{margin-bottom:14px}
+  label{display:block;font-size:13px;color:#475569;font-weight:700;margin-bottom:7px}
+  input,select{width:100%;height:42px;border:1px solid #d7dce3;border-radius:10px;padding:0 11px;font-size:14px;background:white;color:var(--text);outline:none}
+  input:focus,select:focus{border-color:#7ab5a5;box-shadow:0 0 0 3px rgba(23,107,85,.08)}
+  .preset{width:100%;border:1px solid #b9d9cf;color:var(--primary2);background:var(--soft);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer;margin:3px 0 14px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:6px}
+  .filterbox{border:1px solid #dfe8e4;background:#f8fcfa;border-radius:11px;padding:10px 11px}
+  .checkrow{display:flex;align-items:flex-start;gap:9px;margin:0;font-weight:650;color:#334155;line-height:1.45;cursor:pointer}
+  .checkrow input{width:17px;height:17px;margin:2px 0 0;accent-color:var(--primary);flex:0 0 auto}
+  .filter-status{margin-top:7px;font-size:11px;color:#64748b;line-height:1.5}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}
+  button.action{height:43px;border-radius:10px;border:1px solid var(--line);background:white;font-weight:800;cursor:pointer;color:#334155}
+  button.primary{grid-column:1/-1;background:var(--primary);border-color:var(--primary);color:white}
+  button.action:hover{filter:brightness(.98)}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr));gap:10px;margin-bottom:14px;min-width:0;max-width:100%}
+  .stat{border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff;min-width:0;overflow:hidden}
+  .stat .k{font-size:12px;color:var(--muted);margin-bottom:5px}
+  .stat .v{font-size:20px;font-weight:850;letter-spacing:-.4px;overflow-wrap:anywhere;word-break:break-word}
+  .stat .s{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.45}
+  .stat.prob .v{font-size:18px}
+  .prob-status{margin:-3px 0 10px;padding:9px 11px;border:1px dashed #d7dce3;border-radius:10px;background:#fbfcfd;color:#64748b;font-size:11px;line-height:1.55}
+  .audit-status{margin:0 0 14px;padding:9px 11px;border-radius:10px;background:#f8fcfa;border:1px solid #dfe8e4;color:#46635a;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+  .audit-status.bad{background:#fff5f5;border-color:#f1c6c6;color:#9b2c2c}
+  .table-wrap{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:640px;background:white;width:100%;max-width:100%;min-width:0;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  table{border-collapse:collapse;width:100%;min-width:730px}
+  th{position:sticky;top:0;background:#f8fafc;z-index:2;font-size:12px;color:#64748b;text-align:left;padding:11px;border-bottom:1px solid var(--line)}
+  td{padding:10px 11px;border-bottom:1px solid #eef1f4;font-size:13px;vertical-align:middle}
+  tr:hover td{background:#fbfdfc}
+  .balls{display:flex;gap:5px;flex-wrap:wrap}
+  .ball{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:800;box-shadow:inset 0 -2px 0 rgba(0,0,0,.08)}
+  .front{background:var(--red)} .back{background:var(--blue)}
+  .type-basic{font-weight:800;color:#475569}.type-add{font-weight:850;color:var(--gold)}
+  .type-m1{font-weight:850;color:#475569}.type-m2{font-weight:850;color:var(--primary)}.type-m3{font-weight:850;color:var(--gold)}
+  .alloc-summary{font-size:13px;line-height:1.75;color:#334155}.alloc-summary b{color:var(--primary2)}
+  .empty{padding:54px 20px;text-align:center;color:#94a3b8}
+  .note{margin-top:14px;padding:13px 14px;border-radius:12px;background:#fff8e8;border:1px solid #f2dfae;color:#6e551d;font-size:12px;line-height:1.65}
+  .algo{margin-top:12px;padding:13px 14px;border-radius:12px;background:#f7f9fb;border:1px solid var(--line);font-size:12px;color:#64748b;line-height:1.7}
+  .footer{margin-top:14px;color:#94a3b8;font-size:11px;line-height:1.65}
+  .toast{position:fixed;right:18px;bottom:18px;background:#172033;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.2s}
+  .toast.show{opacity:1;transform:translateY(0)}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.hero{align-items:flex-start;flex-direction:column}.badge{align-self:flex-start}}
+  @media(max-width:520px){.wrap{padding:16px 10px 34px;max-width:100%;overflow-x:hidden}.panel{max-width:100%;overflow:hidden}.content{padding:12px;min-width:0}.grid{width:100%;min-width:0}.settings,.results{width:100%;min-width:0;max-width:100%}.stats{grid-template-columns:1fr 1fr;width:100%;min-width:0}.stat{padding:10px}.stat .v{font-size:15px;line-height:1.25}.stat .k{font-size:11px}.stat .s{font-size:10px;overflow-wrap:anywhere}.prob-status{overflow-wrap:anywhere}.row2{grid-template-columns:1fr}.table-wrap{width:100%;max-width:100%}table{width:max-content;min-width:730px}}
+  @media(max-width:380px){.stats{grid-template-columns:1fr}.stat .v{font-size:16px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div>
+      <h1>彩票号码组合生成器 · 超级双目标优化版</h1>
+      <div class="sub">支持大乐透与双色球。按 2026-08-16 核验的现行中奖规则，显示一等奖至七等奖（双色球无七等奖）的覆盖概率；大乐透在基本/追加之间做整数优化，双色球在 1–3 倍之间智能分配且每个方案最多使用两种倍数。两种彩票都提供“均衡 / 奖金最大化 / 一二奖覆盖最大化”自动策略；预算硬上限 1000 元。它不预测开奖号码，也不会改变单个合法号码组合的开奖概率。</div>
+    </div>
+    <div class="badge">现行规则核对版 · 离线可用 · 可导出 XLSX</div>
+  </div>
+
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab active" data-game="dlt">大乐透</button>
+      <button class="tab" data-game="ssq">双色球</button>
+    </div>
+    <div class="content">
+      <div class="grid">
+        <section class="settings">
+          <h2 id="settingTitle">大乐透设置</h2>
+          <button class="preset" id="presetBtn">一键载入：228 元超级均衡方案</button>
+
+          <div class="field">
+            <label>预算（元，最高 1000）</label>
+            <input id="budget" type="number" min="2" max="1000" step="1" value="228" />
+          </div>
+
+          <div class="field" id="strategyField">
+            <label>策略</label>
+            <select id="strategy">
+              <option value="balanced">1. 均衡模式：覆盖概率 × 命中奖金强度</option>
+              <option value="prize">2. 奖金最大化：优先提高命中后的奖金倍率</option>
+              <option value="prob">3. 一/二等奖覆盖最大化：优先更多唯一号码</option>
+              <option value="custom">4. 自定义基本 / 追加注数（仅大乐透）</option>
+            </select>
+          </div>
+
+          <div class="row2" id="dltCounts">
+            <div class="field">
+              <label>基本投注（注）</label>
+              <input id="basicCount" type="number" min="0" max="500" value="57" />
+            </div>
+            <div class="field">
+              <label>追加投注（注）</label>
+              <input id="addCount" type="number" min="0" max="333" value="38" />
+            </div>
+          </div>
+
+          <div class="field" id="ssqCountField" style="display:none">
+            <label>双色球唯一号码组合数（自动）</label>
+            <input id="ssqCount" type="number" min="1" max="500" value="66" readonly />
+            <div class="hint">倍数不重复生成相同号码；1–3 倍会按策略自动分组，每个方案最多出现两种倍数。</div>
+          </div>
+
+          <div class="field" id="ssqAllocationField" style="display:none">
+            <label>双色球智能倍数分配</label>
+            <div class="filterbox">
+              <div class="alloc-summary" id="ssqAllocationSummary">—</div>
+              <div class="filter-status">为了打单清楚，页面、复制、CSV、Excel 都按倍数分组；不会同时出现 1 倍、2 倍、3 倍三种。</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>随机种子（可选）</label>
+            <input id="seed" type="text" placeholder="留空则每次不同；填同样内容可复现" />
+            <div class="hint">适合保存某次方案。相同游戏、设置、过滤规则和种子会生成相同结果。</div>
+          </div>
+
+          <div class="field">
+            <label>形态过滤规则</label>
+            <div class="filterbox">
+              <label class="checkrow"><input id="block4Consecutive" type="checkbox" checked /> <span><b>屏蔽 4 连号及以上</b><br><span style="font-weight:400;color:#64748b">例如 08-09-10-11、21-22-23-24-25；候选组合一旦出现即淘汰重抽。</span></span></label>
+              <div class="filter-status" id="filterStatus">当前：已启用 4 连号过滤</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="action primary" id="generateBtn">生成号码</button>
+            <button class="action" id="copyBtn">复制全部</button>
+            <button class="action" id="xlsxBtn">导出 Excel (.xlsx)</button>
+            <button class="action" id="csvBtn">导出 CSV</button>
+          </div>
+
+          <div class="note" id="budgetNote"></div>
+          <div class="algo">
+            <b>生成逻辑：</b><br>
+            ① 关键号码组合不重复；② <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；③ 候选组合优先选择当前使用次数较少的号码；④ 尽量降低与已有组合的高度重合；⑤ 后区/蓝球做均衡轮换。<br><br>
+            <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。<br><br>
+            <b>概率口径：</b>一等奖、二等奖及“一或二等奖”由唯一前区/红球组合数直接得到精确值；三至七等奖通过 Web Worker 精确枚举完整开奖空间，计算“当前整组号码至少有 1 注命中该奖级”的覆盖概率。倍投只放大同一号码命中后的奖金，不会提高该号码本身的中奖概率。<br><br>
+            <b>大乐透均衡算法：</b>穷举预算内所有“基本 + 追加”整数分配。目标 A 是一/二等奖覆盖；目标 B 是一/二等奖奖金权重（基本=1，追加=1.8），在 Pareto 端点之间标准化后用 Nash 乘积选折中点。<br><br>
+            <b>双色球超级均衡算法：</b>穷举 1 倍、2 倍、3 倍的整数分配，并加入硬约束“一个方案最多只出现两种倍数”。目标 A = 唯一号码组合数（与一、二等奖及一/二等奖任一奖覆盖严格同向）；目标 B = 命中后的平均奖金倍率。先找覆盖端点（偏 1 倍）与奖金端点（偏 3 倍），再做 Pareto + Nash 标准化折中；若数学得分相同，优先选择倍数跨度更小、预算利用更高的方案，方便实体打单。<br><br>
+            <b>奖金最大化口径：</b>这里指“同一唯一号码一旦命中时，尽量提高该号码的投注倍数/奖金强度”，不是提高彩票期望收益率；倍投不会改变开奖概率。双色球新规允许 2–99 倍多倍投注，本工具按你的要求只使用 1–3 倍。当前（2026-08-16）双色球没有七等奖；规则中的“福运奖”不是七等奖，且自第 2026076 期起暂停。
+          </div>
+        </section>
+
+        <section class="results">
+          <h2>生成结果</h2>
+          <div class="stats">
+            <div class="stat"><div class="k">实际金额</div><div class="v" id="statCost">¥0</div><div class="s" id="statCostSub">—</div></div>
+            <div class="stat"><div class="k">有效组合数</div><div class="v" id="statLines">0</div><div class="s" id="statLinesSub">—</div></div>
+            <div class="stat prob"><div class="k">一等奖覆盖概率</div><div class="v" id="statFirst">—</div><div class="s" id="statFirstSub">—</div></div>
+            <div class="stat prob"><div class="k">二等奖覆盖概率</div><div class="v" id="statSecond">—</div><div class="s" id="statSecondSub">—</div></div>
+            <div class="stat prob"><div class="k">一或二等奖覆盖概率</div><div class="v" id="statTop2">—</div><div class="s" id="statTop2Sub">—</div></div>
+            <div class="stat prob"><div class="k">命中后平均奖金倍率</div><div class="v" id="statPrizeMult">—</div><div class="s" id="statPrizeMultSub">大乐透相对基本投注</div></div>
+            <div class="stat prob"><div class="k">一/二等奖奖金权重</div><div class="v" id="statPrizeWeight">—</div><div class="s" id="statPrizeWeightSub">基本等效注</div></div>
+            <div class="stat prob"><div class="k">三等奖覆盖概率</div><div class="v" id="statThird">—</div><div class="s" id="statThirdSub">—</div></div>
+            <div class="stat prob"><div class="k">四等奖覆盖概率</div><div class="v" id="statFourth">—</div><div class="s" id="statFourthSub">—</div></div>
+            <div class="stat prob"><div class="k">五等奖覆盖概率</div><div class="v" id="statFifth">—</div><div class="s" id="statFifthSub">—</div></div>
+            <div class="stat prob"><div class="k">六等奖覆盖概率</div><div class="v" id="statSixth">—</div><div class="s" id="statSixthSub">—</div></div>
+            <div class="stat prob"><div class="k" id="statSeventhLabel">七等奖覆盖概率</div><div class="v" id="statSeventh">—</div><div class="s" id="statSeventhSub">—</div></div>
+          </div>
+          <div class="prob-status" id="probStatus">概率说明：一、二等奖及“一或二等奖”会立即给出精确值；三至七等奖会在后台线程中精确枚举完整开奖空间。双色球无七等奖；当前福运奖暂停。倍投不改变中奖概率，只改变同一号码中奖后的奖金倍数。</div>
+          <div class="audit-status" id="auditStatus">算法自检中…</div>
+
+          <div class="table-wrap" id="tableWrap">
+            <div class="empty">点击“生成号码”开始</div>
+          </div>
+          <div class="footer">导出的 Excel 为标准 .xlsx 文件，不依赖外部网站或第三方脚本。预算硬上限为 1000 元。建议把彩票作为固定娱乐预算，不因未中奖追加投入。</div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  let game = 'dlt';
+  let rows = [];
+  let coverageWorker = null;
+  let coverageToken = 0;
+
+  const $ = id => document.getElementById(id);
+  const tabs = [...document.querySelectorAll('.tab')];
+
+  function xmur3(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+    return function() { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return (h ^= h >>> 16) >>> 0; };
+  }
+  function mulberry32(a) { return function() { let t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function makeRng() {
+    const s = $('seed').value.trim();
+    if (!s) return Math.random;
+    return mulberry32(xmur3(`${game}|${s}|strategy=${$('strategy').value}|${$('budget').value}|${$('basicCount').value}|${$('addCount').value}|${$('ssqCount').value}|block4=${$('block4Consecutive').checked}`)());
+  }
+  function shuffle(arr, rng) {
+    const a = arr.slice();
+    for (let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    return a;
+  }
+  function pad(n){return String(n).padStart(2,'0');}
+  function comb(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r;}
+  function overlap(a,b){let s=new Set(a),c=0;for(const x of b)if(s.has(x))c++;return c;}
+  function variance(arr){const m=arr.reduce((a,b)=>a+b,0)/arr.length;return arr.reduce((s,x)=>s+(x-m)*(x-m),0)/arr.length;}
+
+  function getBudget(){
+    let v=Math.floor(Number($('budget').value)||0);
+    if(v<2)v=2;
+    if(v>1000)v=1000;
+    if(String(v)!==$('budget').value)$('budget').value=v;
+    return v;
+  }
+
+  function longestConsecutiveRun(nums){
+    if(!nums.length)return 0;
+    const a=nums.slice().sort((x,y)=>x-y);
+    let best=1,cur=1;
+    for(let i=1;i<a.length;i++){
+      if(a[i]===a[i-1]+1){cur++;best=Math.max(best,cur);}else cur=1;
+    }
+    return best;
+  }
+  function passesPatternFilters(nums){
+    if($('block4Consecutive').checked && longestConsecutiveRun(nums)>=4)return false;
+    return true;
+  }
+  function updateFilterStatus(){
+    $('filterStatus').innerHTML=$('block4Consecutive').checked
+      ? '当前：<b>已启用</b> 4 连号及以上过滤；生成时会直接淘汰并重抽。'
+      : '当前：<b>未启用</b> 连号过滤。';
+  }
+
+  // Greedy randomized balanced generator. It intentionally does NOT use historical draws.
+  function generateBalancedSets(poolMax, pick, count, rng, candidateBatch=650, validator=()=>true) {
+    const used = new Set();
+    const freq = Array(poolMax+1).fill(0);
+    const out = [];
+    for (let idx=0; idx<count; idx++) {
+      let best=null, bestScore=Infinity;
+      for (let c=0;c<candidateBatch;c++) {
+        const candidate = shuffle(Array.from({length:poolMax},(_,i)=>i+1), rng).slice(0,pick).sort((a,b)=>a-b);
+        const key=candidate.join('-');
+        if(used.has(key) || !validator(candidate)) continue;
+        const newFreq=freq.slice(); candidate.forEach(n=>newFreq[n]++);
+        const v=variance(newFreq.slice(1));
+        let maxOv=0, sumHigh=0;
+        for (let j=Math.max(0,out.length-50); j<out.length; j++) {
+          const ov=overlap(candidate,out[j]); maxOv=Math.max(maxOv,ov); if(ov>=pick-1)sumHigh++;
+        }
+        // The random term only breaks ties and adds diversity.
+        const score=v*13 + maxOv*1.35 + sumHigh*4.5 + rng()*0.04;
+        if(score<bestScore){bestScore=score;best=candidate;}
+      }
+      if(!best){
+        let attempts=0;
+        do {
+          best=shuffle(Array.from({length:poolMax},(_,i)=>i+1),rng).slice(0,pick).sort((a,b)=>a-b);
+          attempts++;
+          if(attempts>50000) throw new Error('过滤条件过严，无法生成足够号码');
+        } while(used.has(best.join('-')) || !validator(best));
+      }
+      used.add(best.join('-')); best.forEach(n=>freq[n]++); out.push(best);
+    }
+    return out;
+  }
+
+  function generateBackPairs(count, rng){
+    const pairs=[]; for(let a=1;a<=12;a++)for(let b=a+1;b<=12;b++)pairs.push([a,b]);
+    // Cycle through all 66 pairs in randomized order; repeat only after full coverage.
+    const out=[]; let cycle=[];
+    for(let i=0;i<count;i++){
+      if(i%pairs.length===0) cycle=shuffle(pairs,rng);
+      out.push(cycle[i%pairs.length]);
+    }
+    return out;
+  }
+  function generateBlue(count,rng){
+    const nums=Array.from({length:16},(_,i)=>i+1),out=[]; let cycle=[];
+    for(let i=0;i<count;i++){
+      if(i%16===0) cycle=shuffle(nums,rng);
+      out.push(cycle[i%16]);
+    }
+    return out;
+  }
+
+  // 双目标整数优化：
+  // 目标 A = 不同前区组合数 lines（与一/二等奖覆盖概率严格成正比）
+  // 目标 B = prizeWeight = basic + 1.8 * add（一/二等奖奖金权重）
+  // 对每个追加注数 a，仅保留预算内最大的基本注数 b，因为更少的 b 同时劣化两个目标。
+  function optimizeDLTAllocation(budget, mode='balanced'){
+    const candidates=[];
+    for(let a=0;a<=Math.floor(budget/3);a++){
+      const b=Math.floor((budget-3*a)/2);
+      const cost=3*a+2*b, lines=a+b;
+      if(lines<=0)continue;
+      const prizeWeight=b+1.8*a;
+      candidates.push({a,b,cost,lines,prizeWeight,unused:budget-cost});
+    }
+    const betterCoverage=(x,y)=>
+      x.lines!==y.lines?x.lines>y.lines:
+      x.prizeWeight!==y.prizeWeight?x.prizeWeight>y.prizeWeight:
+      x.cost>y.cost;
+    const betterPrize=(x,y)=>
+      Math.abs(x.prizeWeight-y.prizeWeight)>1e-12?x.prizeWeight>y.prizeWeight:
+      x.lines!==y.lines?x.lines>y.lines:
+      x.cost>y.cost;
+    let cover=candidates[0], prize=candidates[0];
+    for(const c of candidates){if(betterCoverage(c,cover))cover=c;if(betterPrize(c,prize))prize=c;}
+    if(mode==='prob')return {...cover,mode,cover,prize,nash:1,covNorm:1,prizeNorm:0};
+    if(mode==='prize')return {...prize,mode,cover,prize,nash:1,covNorm:0,prizeNorm:1};
+    const dC=cover.lines-prize.lines, dW=prize.prizeWeight-cover.prizeWeight;
+    if(dC<=0||dW<=1e-12)return {...cover,mode,cover,prize,nash:1,covNorm:1,prizeNorm:1};
+    let best=null;
+    for(const c of candidates){
+      // 只在两个 Pareto 端点形成的有效区间中寻找折中点。
+      if(c.lines<prize.lines||c.prizeWeight<cover.prizeWeight)continue;
+      const covNorm=(c.lines-prize.lines)/dC;
+      const prizeNorm=(c.prizeWeight-cover.prizeWeight)/dW;
+      if(covNorm<0||covNorm>1||prizeNorm<0||prizeNorm>1)continue;
+      const nash=covNorm*prizeNorm;
+      const balanceGap=Math.abs(covNorm-prizeNorm);
+      const item={...c,mode,cover,prize,nash,covNorm,prizeNorm,balanceGap};
+      if(!best || nash>best.nash+1e-12 ||
+        (Math.abs(nash-best.nash)<=1e-12 && balanceGap<best.balanceGap-1e-12) ||
+        (Math.abs(nash-best.nash)<=1e-12 && Math.abs(balanceGap-best.balanceGap)<=1e-12 && c.cost>best.cost)) best=item;
+    }
+    return best||{...cover,mode,cover,prize,nash:1,covNorm:1,prizeNorm:0};
+  }
+
+  // 双色球 1-3 倍整数优化：
+  // 每一条 rows 代表一个“唯一号码组合”，multiplier 只改变该组合命中后的奖金倍数，不改变覆盖概率。
+  // 硬约束：每个方案最多使用两种倍数，绝不让 1/2/3 倍同时出现。
+  function optimizeSSQAllocation(budget, mode='balanced'){
+    const candidates=[], seen=new Set();
+    const push=(c1,c2,c3)=>{
+      const counts=[c1,c2,c3], active=counts.filter(x=>x>0).length;
+      if(active===0||active>2)return;
+      const cost=2*c1+4*c2+6*c3;
+      if(cost>budget)return;
+      const lines=c1+c2+c3, prizeWeight=c1+2*c2+3*c3, avgMultiplier=prizeWeight/lines;
+      const key=counts.join('-'); if(seen.has(key))return; seen.add(key);
+      const used=counts.map((x,i)=>x>0?i+1:0).filter(Boolean);
+      const spread=used.length>1?used[used.length-1]-used[0]:0;
+      candidates.push({counts,c1,c2,c3,cost,lines,prizeWeight,avgMultiplier,unused:budget-cost,active,spread});
+    };
+    // 只枚举单一倍数或任意两种倍数组合，天然满足“最多两种倍数”。
+    const pairs=[[1,1],[2,2],[3,3],[1,2],[1,3],[2,3]];
+    for(const [m1,m2] of pairs){
+      if(m1===m2){
+        for(let x=1;x<=Math.floor(budget/(2*m1));x++){
+          const c=[0,0,0];c[m1-1]=x;push(...c);
+        }
+      }else{
+        for(let x=0;x<=Math.floor(budget/(2*m1));x++){
+          const remain=budget-2*m1*x;
+          for(let y=0;y<=Math.floor(remain/(2*m2));y++){
+            if(x===0&&y===0)continue;
+            const c=[0,0,0];c[m1-1]=x;c[m2-1]=y;push(...c);
+          }
+        }
+      }
+    }
+    const betterCoverage=(x,y)=>x.lines!==y.lines?x.lines>y.lines:x.prizeWeight!==y.prizeWeight?x.prizeWeight>y.prizeWeight:x.cost>y.cost;
+    // “奖金最大化”按命中后的单组合平均奖金倍率优先；同倍率时尽量用足预算、再保留更多唯一号码。
+    const betterPrize=(x,y)=>Math.abs(x.avgMultiplier-y.avgMultiplier)>1e-12?x.avgMultiplier>y.avgMultiplier:x.prizeWeight!==y.prizeWeight?x.prizeWeight>y.prizeWeight:x.lines!==y.lines?x.lines>y.lines:x.cost>y.cost;
+    let cover=candidates[0],prize=candidates[0];
+    for(const c of candidates){if(betterCoverage(c,cover))cover=c;if(betterPrize(c,prize))prize=c;}
+    if(mode==='prob')return {...cover,mode,cover,prize,nash:1,covNorm:1,prizeNorm:0};
+    if(mode==='prize')return {...prize,mode,cover,prize,nash:1,covNorm:0,prizeNorm:1};
+    const dC=cover.lines-prize.lines, dM=prize.avgMultiplier-cover.avgMultiplier;
+    if(dC<=0||dM<=1e-12)return {...cover,mode,cover,prize,nash:1,covNorm:1,prizeNorm:1};
+    let best=null;
+    for(const c of candidates){
+      if(c.lines<prize.lines||c.avgMultiplier<cover.avgMultiplier)continue;
+      const covNorm=(c.lines-prize.lines)/dC, prizeNorm=(c.avgMultiplier-cover.avgMultiplier)/dM;
+      if(covNorm<0||covNorm>1||prizeNorm<0||prizeNorm>1)continue;
+      const nash=covNorm*prizeNorm, balanceGap=Math.abs(covNorm-prizeNorm);
+      const item={...c,mode,cover,prize,nash,covNorm,prizeNorm,balanceGap};
+      if(!best || nash>best.nash+1e-12 ||
+        (Math.abs(nash-best.nash)<=1e-12 && balanceGap<best.balanceGap-1e-12) ||
+        (Math.abs(nash-best.nash)<=1e-12 && Math.abs(balanceGap-best.balanceGap)<=1e-12 && c.spread<best.spread) ||
+        (Math.abs(nash-best.nash)<=1e-12 && Math.abs(balanceGap-best.balanceGap)<=1e-12 && c.spread===best.spread && c.cost>best.cost) ||
+        (Math.abs(nash-best.nash)<=1e-12 && Math.abs(balanceGap-best.balanceGap)<=1e-12 && c.spread===best.spread && c.cost===best.cost && c.lines>best.lines)) best=item;
+    }
+    if(best && best.nash<=1e-12){
+      let fallback=null;
+      for(const c of candidates){
+        if(c.lines<prize.lines||c.avgMultiplier<cover.avgMultiplier)continue;
+        const covNorm=(c.lines-prize.lines)/dC, prizeNorm=(c.avgMultiplier-cover.avgMultiplier)/dM;
+        if(covNorm<0||covNorm>1||prizeNorm<0||prizeNorm>1)continue;
+        const sum=covNorm+prizeNorm, gap=Math.abs(covNorm-prizeNorm);
+        const item={...c,mode,cover,prize,nash:0,covNorm,prizeNorm,balanceGap:gap,sum};
+        if(!fallback || sum>fallback.sum+1e-12 ||
+          (Math.abs(sum-fallback.sum)<=1e-12 && gap<fallback.balanceGap-1e-12) ||
+          (Math.abs(sum-fallback.sum)<=1e-12 && Math.abs(gap-fallback.balanceGap)<=1e-12 && c.lines>fallback.lines) ||
+          (Math.abs(sum-fallback.sum)<=1e-12 && Math.abs(gap-fallback.balanceGap)<=1e-12 && c.lines===fallback.lines && c.cost>fallback.cost)) fallback=item;
+      }
+      if(fallback)best=fallback;
+    }
+    return best||{...cover,mode,cover,prize,nash:1,covNorm:1,prizeNorm:0};
+  }
+
+  function ssqAllocationText(opt){
+    const parts=[]; for(let m=1;m<=3;m++)if(opt.counts[m-1])parts.push(`<b>${m}倍 × ${opt.counts[m-1]}注</b>`);
+    return `${parts.join('　+　')}<br>唯一号码 <b>${opt.lines}</b> 组 · 平均奖金倍率 <b>${opt.avgMultiplier.toFixed(3)}×</b> · 费用 <b>¥${opt.cost}</b>`;
+  }
+
+  function syncByStrategy(){
+    const budget=getBudget(), strategy=$('strategy').value;
+    if(game==='dlt'){
+      if(strategy!=='custom'){
+        const best=optimizeDLTAllocation(budget,strategy);
+        $('basicCount').value=best.b; $('addCount').value=best.a;
+      }
+    }else{
+      const mode=strategy==='custom'?'balanced':strategy;
+      const best=optimizeSSQAllocation(budget,mode);
+      $('ssqCount').value=best.lines;
+      $('ssqAllocationSummary').innerHTML=ssqAllocationText(best);
+    }
+    updateBudgetNote();
+  }
+
+  function updateBudgetNote(){
+    const budget=getBudget();
+    if(game==='dlt'){
+      const b=Math.max(0,parseInt($('basicCount').value)||0),a=Math.max(0,parseInt($('addCount').value)||0),cost=b*2+a*3;
+      const n=b+a, weight=b+1.8*a, mult=n?weight/n:0, top2=n*21/(comb(35,5)*comb(12,2));
+      let extra='';
+      if($('strategy').value!=='custom'){
+        const opt=optimizeDLTAllocation(budget,$('strategy').value);
+        if($('strategy').value==='balanced') extra=`<br>超级均衡推演：覆盖端点 <b>${opt.cover.lines}</b> 注；奖金端点权重 <b>${opt.prize.prizeWeight.toFixed(1)}</b>；当前 Nash 双目标点：覆盖标准化 <b>${(opt.covNorm*100).toFixed(1)}%</b> / 奖金标准化 <b>${(opt.prizeNorm*100).toFixed(1)}%</b>。`;
+      }
+      $('budgetNote').innerHTML=`当前设置：<b>${b}</b> 注基本 + <b>${a}</b> 注追加，共 <b>${n}</b> 组号码；费用 <b>¥${cost}</b>${cost>budget?'，<span style="color:#b42318">已超预算 ¥'+(cost-budget)+'</span>':cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。<br>一或二等奖精确覆盖约 <b>${(top2*100).toFixed(6)}%</b>；若命中一/二等奖，按当前追加占比计算的平均奖金倍率约 <b>${mult.toFixed(3)}×</b>；奖金权重 <b>${weight.toFixed(1)}</b> 基本等效注。${extra}`;
+    } else {
+      const strategy=$('strategy').value==='custom'?'balanced':$('strategy').value;
+      const opt=optimizeSSQAllocation(budget,strategy), n=opt.lines, cost=opt.cost;
+      $('ssqCount').value=n;$('ssqAllocationSummary').innerHTML=ssqAllocationText(opt);
+      const top2=n*16/(comb(33,6)*16);
+      let extra='';
+      if(strategy==='balanced') extra=`<br>超级均衡推演：覆盖端点 <b>${opt.cover.lines}</b> 组；奖金端点平均 <b>${opt.prize.avgMultiplier.toFixed(3)}×</b>；当前 Nash 点：覆盖标准化 <b>${(opt.covNorm*100).toFixed(1)}%</b> / 奖金标准化 <b>${(opt.prizeNorm*100).toFixed(1)}%</b>。`;
+      const parts=[];for(let m=1;m<=3;m++)if(opt.counts[m-1])parts.push(`<b>${m}倍 ${opt.counts[m-1]}注</b>`);
+      $('budgetNote').innerHTML=`当前智能分配：${parts.join(' + ')}，共 <b>${n}</b> 组唯一号码；费用 <b>¥${cost}</b>${cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。<br>一或二等奖精确覆盖约 <b>${(top2*100).toFixed(6)}%</b>；若某个唯一号码命中奖级，按当前分配的平均奖金倍率约 <b>${opt.avgMultiplier.toFixed(3)}×</b>；奖金权重 <b>${opt.prizeWeight}</b> 基本等效注。${extra}`;
+    }
+  }
+
+  function generate(){
+    const rng=makeRng(); rows=[];
+    try{
+    const budget=getBudget();
+    if(game==='dlt'){
+      const b=Math.max(0,parseInt($('basicCount').value)||0), a=Math.max(0,parseInt($('addCount').value)||0), n=b+a, cost=b*2+a*3;
+      if(n<1)return toast('请至少生成 1 注');
+      if(cost>1000)return toast('投注金额不能超过 1000 元');
+      if(cost>budget)return toast('当前注数超过你设置的预算');
+      const fronts=generateBalancedSets(35,5,n,rng,350,passesPatternFilters), backs=generateBackPairs(n,rng);
+      // 为方便实体打单，基本投注与追加投注严格分组，不再混排。
+      const types=[...Array(b).fill('基本'),...Array(a).fill('追加')];
+      rows=fronts.map((front,i)=>({no:i+1,type:types[i],front,back:backs[i],cost:types[i]==='追加'?3:2}));
+    }else{
+      const strategy=$('strategy').value==='custom'?'balanced':$('strategy').value;
+      const opt=optimizeSSQAllocation(budget,strategy), n=opt.lines, cost=opt.cost; if(n<1)return toast('请至少生成 1 注');
+      if(cost>1000)return toast('投注金额不能超过 1000 元');
+      if(cost>budget)return toast('当前分配超过你设置的预算');
+      const reds=generateBalancedSets(33,6,n,rng,350,passesPatternFilters), blues=generateBlue(n,rng);
+      const multipliers=[];for(let m=1;m<=3;m++)for(let k=0;k<opt.counts[m-1];k++)multipliers.push(m);
+      rows=reds.map((front,i)=>{const multiplier=multipliers[i];return {no:i+1,type:`${multiplier}倍`,multiplier,front,back:[blues[i]],cost:2*multiplier};});
+    }
+    render();
+    toast(`已生成 ${rows.length} 注${$('block4Consecutive').checked?'（无4连号+）':''}`);
+    }catch(err){
+      console.error(err);
+      rows=[]; render(); toast(err.message||'生成失败，请调整过滤规则');
+    }
+  }
+
+  function probText(p){
+    if(!p||p<=0)return '—';
+    const denom=Math.round(1/p);
+    if(denom>=1000)return `约 1/${denom.toLocaleString('zh-CN')}`;
+    if(p>=.999995)return `${(p*100).toFixed(3)}%`;
+    if(p>=.01)return `${(p*100).toFixed(3)}%`;
+    return `${(p*100).toFixed(5)}%`;
+  }
+
+  function probabilityConditions(g){
+    if(g==='dlt') return [
+      '5+2', '5+1', '5+0 / 4+2', '4+1', '4+0 / 3+2', '3+1 / 2+2', '3+0 / 2+1 / 1+2 / 0+2'
+    ];
+    return [
+      '6+1', '6+0', '5+1', '5+0 / 4+1', '4+0 / 3+1', '2+1 / 1+1 / 0+1', '无七等奖；福运奖当前暂停（启用时为3+0）'
+    ];
+  }
+
+  // 奖级映射：索引为“前区/红球命中数”，第二维为“后区/蓝球命中数”；-1 表示未中奖。
+  // 大乐透后区命中数为 0/1/2；双色球蓝球命中数为 0/1。奖级编号 0=一等奖，以此类推。
+  const DLT_PRIZE_MAP=[
+    [-1,-1,6], // 前区0：仅0+2为七等奖
+    [-1,-1,6], // 前区1：仅1+2为七等奖
+    [-1, 6, 5], // 2+1七等奖，2+2六等奖
+    [ 6, 5, 4], // 3+0七，3+1六，3+2五
+    [ 4, 3, 2], // 4+0五，4+1四，4+2三
+    [ 2, 1, 0]  // 5+0三，5+1二，5+2一
+  ];
+  const SSQ_PRIZE_MAP=[
+    [-1,5], // 0+1 六等奖
+    [-1,5], // 1+1 六等奖
+    [-1,5], // 2+1 六等奖
+    [-1,4], // 3+1 五等奖；3+0不中奖
+    [ 4,3], // 4+0五，4+1四
+    [ 3,2], // 5+0四，5+1三
+    [ 1,0]  // 6+0二，6+1一
+  ];
+
+  function singleTicketWaysFromRules(g){
+    if(g==='dlt'){
+      const out=Array(7).fill(0);
+      for(let f=0;f<=5;f++)for(let b=0;b<=2;b++){
+        const prize=DLT_PRIZE_MAP[f][b];
+        if(prize>=0) out[prize]+=comb(5,f)*comb(30,5-f)*comb(2,b)*comb(10,2-b);
+      }
+      return out;
+    }
+    const out=Array(6).fill(0);
+    for(let r=0;r<=6;r++)for(let b=0;b<=1;b++){
+      const prize=SSQ_PRIZE_MAP[r][b];
+      if(prize>=0) out[prize]+=comb(6,r)*comb(27,6-r)*(b===1?1:15);
+    }
+    return out;
+  }
+
+  function runAlgorithmSelfCheck(){
+    const dltExpected=[1,20,195,3000,11100,127600,1287281];
+    const ssqExpected=[1,15,162,7695,137475,1043640];
+    const dltGot=singleTicketWaysFromRules('dlt'),ssqGot=singleTicketWaysFromRules('ssq');
+    const dltTotal=comb(35,5)*comb(12,2),ssqTotal=comb(33,6)*16;
+    const ok=dltTotal===21425712 && ssqTotal===17721088 && dltGot.every((v,i)=>v===dltExpected[i]) && ssqGot.every((v,i)=>v===ssqExpected[i]);
+    const el=$('auditStatus');
+    if(ok){
+      el.classList.remove('bad');
+      el.innerHTML='内部组合数学自检：<b>通过</b>。大乐透总开奖空间 21,425,712；单注一至七等奖开奖情形数 1 / 20 / 195 / 3,000 / 11,100 / 127,600 / 1,287,281。双色球总开奖空间 17,721,088；按当前非特别规定，单注一至六等奖开奖情形数 1 / 15 / 162 / 7,695 / 137,475 / 1,043,640；双色球无七等奖，福运奖当前暂停。';
+    }else{
+      el.classList.add('bad');
+      el.textContent='内部组合数学自检未通过：奖级映射或组合数常量异常，请勿使用当前概率结果。';
+    }
+    return ok;
+  }
+
+  // 在 Web Worker 中精确枚举完整开奖空间，避免低奖级事件重叠时错误使用“单注概率 × 注数”。
+  function coverageWorkerMain(){
+    'use strict';
+    function pc32(x){x=x>>>0;x=x-((x>>>1)&0x55555555);x=(x&0x33333333)+((x>>>2)&0x33333333);return (((x+(x>>>4))&0x0F0F0F0F)*0x01010101)>>>24;}
+    function bits(max){
+      const lo=new Uint32Array(max+1),hi=new Uint32Array(max+1);
+      for(let n=1;n<=max;n++){if(n<=32)lo[n]=(1<<(n-1))>>>0;else hi[n]=(1<<(n-33))>>>0;}
+      return {lo,hi};
+    }
+    function rowMasks(rows,max){
+      const B=bits(max);
+      return {B,rows:rows.map(r=>{let lo=0,hi=0;for(const n of r.front){lo|=B.lo[n];hi|=B.hi[n];}return {lo:lo>>>0,hi:hi>>>0,back:r.back.slice()};})};
+    }
+    function dltBackMasks(rms){
+      const outcomes=[];for(let a=1;a<=12;a++)for(let b=a+1;b<=12;b++)outcomes.push([a,b]);
+      return rms.map(r=>{
+        const m=[new Uint32Array(3),new Uint32Array(3),new Uint32Array(3)];
+        for(let i=0;i<outcomes.length;i++){
+          const o=outcomes[i];let h=0;
+          if(r.back[0]===o[0]||r.back[0]===o[1])h++;
+          if(r.back[1]===o[0]||r.back[1]===o[1])h++;
+          const seg=i>>>5,bit=i&31;m[h][seg]|=(1<<bit)>>>0;
+        }
+        return m;
+      });
+    }
+    function calcDLT(rows,map){
+      const packed=rowMasks(rows,35),B=packed.B,rms=packed.rows,bm=dltBackMasks(rms),counts=new Float64Array(7),pm=new Uint32Array(21);
+      function add(prize,m){const off=prize*3;pm[off]|=m[0];pm[off+1]|=m[1];pm[off+2]|=m[2];}
+      for(let a=1;a<=31;a++)for(let b=a+1;b<=32;b++)for(let c=b+1;c<=33;c++)for(let d=c+1;d<=34;d++)for(let e=d+1;e<=35;e++){
+        const lo=(B.lo[a]|B.lo[b]|B.lo[c]|B.lo[d]|B.lo[e])>>>0,hi=(B.hi[a]|B.hi[b]|B.hi[c]|B.hi[d]|B.hi[e])>>>0;
+        pm.fill(0);
+        for(let i=0;i<rms.length;i++){
+          const f=pc32(lo&rms[i].lo)+pc32(hi&rms[i].hi),m=bm[i],rule=map[f];
+          for(let backHit=0;backHit<=2;backHit++){const prize=rule[backHit];if(prize>=0)add(prize,m[backHit]);}
+        }
+        for(let t=0;t<7;t++){const o=t*3;counts[t]+=pc32(pm[o])+pc32(pm[o+1])+pc32(pm[o+2]);}
+      }
+      return {counts:Array.from(counts),total:21425712};
+    }
+    function calcSSQ(rows,map){
+      const packed=rowMasks(rows,33),B=packed.B,rms=packed.rows,counts=new Float64Array(6),pm=new Uint32Array(6),ALL=0xFFFF;
+      const blue=rms.map(r=>(1<<(r.back[0]-1))>>>0);
+      for(let a=1;a<=28;a++)for(let b=a+1;b<=29;b++)for(let c=b+1;c<=30;c++)for(let d=c+1;d<=31;d++)for(let e=d+1;e<=32;e++)for(let f=e+1;f<=33;f++){
+        const lo=(B.lo[a]|B.lo[b]|B.lo[c]|B.lo[d]|B.lo[e]|B.lo[f])>>>0,hi=(B.hi[a]|B.hi[b]|B.hi[c]|B.hi[d]|B.hi[e]|B.hi[f])>>>0;
+        pm.fill(0);
+        for(let i=0;i<rms.length;i++){
+          const redHit=pc32(lo&rms[i].lo)+pc32(hi&rms[i].hi),yes=blue[i],no=(ALL^yes)>>>0,rule=map[redHit];
+          const p0=rule[0],p1=rule[1];
+          if(p0>=0)pm[p0]|=no;
+          if(p1>=0)pm[p1]|=yes;
+        }
+        for(let t=0;t<6;t++)counts[t]+=pc32(pm[t]&ALL);
+      }
+      return {counts:Array.from(counts),total:17721088};
+    }
+    self.onmessage=e=>{
+      try{
+        const {game,rows,ruleMap}=e.data;
+        const result=game==='dlt'?calcDLT(rows,ruleMap):calcSSQ(rows,ruleMap);
+        self.postMessage({ok:true,...result});
+      }catch(err){self.postMessage({ok:false,error:String(err&&err.message||err)});}
+    };
+  }
+
+  function setProbabilityLoading(){
+    ['statThird','statFourth','statFifth','statSixth'].forEach(id=>$(id).textContent='计算中…');
+    $('statSeventh').textContent=game==='dlt'?'计算中…':'—';
+    $('statSeventhLabel').textContent=game==='dlt'?'七等奖覆盖概率':'七等奖 / 福运奖';
+    const cond=probabilityConditions(game);
+    $('statThirdSub').textContent=cond[2];$('statFourthSub').textContent=cond[3];$('statFifthSub').textContent=cond[4];$('statSixthSub').textContent=cond[5];$('statSeventhSub').textContent=cond[6];
+    $('probStatus').textContent=`正在精确枚举${game==='dlt'?'21,425,712':'17,721,088'}种可能的开奖号码，计算当前 ${rows.length} 注组合至少命中一次各奖级的概率…`;
+  }
+
+  function startExactCoverage(){
+    if(!rows.length)return;
+    const token=++coverageToken, g=game, snapshot=rows.map(r=>({front:r.front.slice(),back:r.back.slice()}));
+    if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}
+    setProbabilityLoading();
+    try{
+      const blob=new Blob([`(${coverageWorkerMain.toString()})()`],{type:'text/javascript'});
+      const url=URL.createObjectURL(blob);
+      const w=new Worker(url); coverageWorker=w; URL.revokeObjectURL(url);
+      w.onmessage=ev=>{
+        if(token!==coverageToken||g!==game)return w.terminate();
+        const data=ev.data;if(!data.ok){$('probStatus').textContent='精确概率计算失败：'+data.error;return w.terminate();}
+        const p=data.counts.map(c=>c/data.total),ids=['statFirst','statSecond','statThird','statFourth','statFifth','statSixth','statSeventh'];
+        p.forEach((v,i)=>{if(ids[i])$(ids[i]).textContent=probText(v);});
+        const top2=(data.counts[0]+data.counts[1])/data.total;$('statTop2').textContent=probText(top2);
+        const cond=probabilityConditions(g);
+        const subs=['statFirstSub','statSecondSub','statThirdSub','statFourthSub','statFifthSub','statSixthSub','statSeventhSub'];
+        for(let i=0;i<subs.length;i++){
+          if(i<p.length)$(subs[i]).textContent=`${cond[i]} · 精确覆盖 ${(p[i]*100).toFixed(p[i]<.001?6:4)}%`;
+          else $(subs[i]).textContent=cond[i];
+        }
+        $('statTop2Sub').textContent=`一或二等奖 · 精确覆盖 ${(top2*100).toFixed(top2<.001?6:4)}%`;
+        $('probStatus').textContent=`已完成精确枚举：以上概率均指当前 ${rows.length} 组唯一号码在一次开奖中“至少有 1 组命中对应奖级”的概率；不同奖级可由不同投注同时命中，所以各奖级概率不能相加。追加投注/双色球倍投不改变号码中奖概率，只改变命中后的奖金。`;
+        w.terminate();if(coverageWorker===w)coverageWorker=null;
+      };
+      w.onerror=()=>{if(token===coverageToken)$('probStatus').textContent='浏览器无法启动精确概率计算线程；一等奖、二等奖和一或二等奖仍为精确值。';w.terminate();if(coverageWorker===w)coverageWorker=null;};
+      w.postMessage({game:g,rows:snapshot,ruleMap:g==='dlt'?DLT_PRIZE_MAP:SSQ_PRIZE_MAP});
+    }catch(err){$('probStatus').textContent='浏览器不支持离线精确概率线程；一等奖、二等奖和一或二等奖仍为精确值。';}
+  }
+
+  function render(){
+    if(!rows.length){$('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';return;}
+
+    function renderGroup(title, groupRows, typeClass){
+      if(!groupRows.length)return '';
+      let html=`<div style="padding:12px 12px 7px;font-size:14px;font-weight:850;color:#334155;background:#f8fafc;border-bottom:1px solid var(--line)">${title} · ${groupRows.length} 注</div>`;
+      html+='<table><thead><tr><th>组内序号</th><th>'+ (game==='dlt'?'投注类型':'投注倍数') +'</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
+      groupRows.forEach((r,idx)=>{
+        html+=`<tr><td>${idx+1}</td><td class="${typeClass}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
+      });
+      html+='</tbody></table>';
+      return html;
+    }
+
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本');
+      const addRows=rows.filter(r=>r.type==='追加');
+      let html='';
+      if(basicRows.length) html+=`<div style="border-bottom:${addRows.length?'8px':'0'} solid #f5f7fa">${renderGroup('基本投注',basicRows,'type-basic')}</div>`;
+      if(addRows.length) html+=renderGroup('追加投注',addRows,'type-add');
+      $('tableWrap').innerHTML=html;
+    }else{
+      let html='';
+      for(let m=1;m<=3;m++){
+        const groupRows=rows.filter(r=>r.multiplier===m);
+        if(groupRows.length)html+=`<div style="border-bottom:8px solid #f5f7fa">${renderGroup(`双色球 ${m} 倍投注`,groupRows,`type-m${m}`)}</div>`;
+      }
+      $('tableWrap').innerHTML=html;
+    }
+
+    const cost=rows.reduce((s,r)=>s+r.cost,0), n=rows.length;
+    let first,second,top2,total;
+    const cond=probabilityConditions(game);
+    if(game==='dlt'){
+      total=comb(35,5)*comb(12,2); first=n/total; second=n*20/total; top2=n*21/total;
+      const basicN=rows.filter(r=>r.type==='基本').length, addN=rows.filter(r=>r.type==='追加').length;
+      const prizeWeight=basicN+1.8*addN, prizeMult=n?prizeWeight/n:0;
+      $('statLinesSub').textContent=`基本 ${basicN} / 追加 ${addN}${$('block4Consecutive').checked?' · 无4连号+':''}`;
+      $('statPrizeMult').textContent=`${prizeMult.toFixed(3)}×`;
+      $('statPrizeMultSub').textContent=`若命中一/二等奖，相对同期开奖基本投注的平均倍率`;
+      $('statPrizeWeight').textContent=prizeWeight.toFixed(1);
+      $('statPrizeWeightSub').textContent=`基本等效注 · 追加占比 ${(addN/n*100).toFixed(1)}%`;
+    }else{
+      total=comb(33,6)*16; first=n/total; second=n*15/total; top2=n*16/total;
+      const counts=[1,2,3].map(m=>rows.filter(r=>r.multiplier===m).length), prizeWeight=rows.reduce((s,r)=>s+(r.multiplier||1),0), prizeMult=n?prizeWeight/n:0;
+      const parts=[];for(let m=1;m<=3;m++)if(counts[m-1])parts.push(`${m}倍 ${counts[m-1]}`);
+      $('statLinesSub').textContent=`唯一红球组合 ${n} 组 · ${parts.join(' / ')}${$('block4Consecutive').checked?' · 无4连号+':''}`;
+      $('statPrizeMult').textContent=`${prizeMult.toFixed(3)}×`;$('statPrizeMultSub').textContent='若命中，按当前分组计算的平均投注倍数';
+      $('statPrizeWeight').textContent=prizeWeight.toFixed(0);$('statPrizeWeightSub').textContent=`基本等效注 · 最多两种倍数`; 
+    }
+    $('statCost').textContent=`¥${cost}`;$('statCostSub').textContent=`预算 ¥${Number($('budget').value)||0}`;
+    $('statLines').textContent=n;
+    $('statFirst').textContent=probText(first);$('statSecond').textContent=probText(second);$('statTop2').textContent=probText(top2);
+    $('statFirstSub').textContent=`${cond[0]} · ${n} 注精确值`;
+    $('statSecondSub').textContent=`${cond[1]} · ${n} 注精确值`;
+    $('statTop2Sub').textContent='前区/红球组合互异，因此为精确值';
+    $('probStatus').textContent=`已按当前 ${n} 组唯一号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率；三至七等奖正在后台做完整开奖空间精确枚举。页面与导出文件会按投注类型/双色球倍数严格分组，方便打单。`;
+    startExactCoverage();
+  }
+
+  function updateStrategyLabels(){
+    const opts=$('strategy').options;
+    if(game==='dlt'){
+      opts[0].textContent='1. 均衡模式：覆盖概率 × 一/二等奖奖金权重';
+      opts[1].textContent='2. 奖金最大化：最高一/二等奖奖金权重';
+      opts[2].textContent='3. 一/二等奖覆盖最大化：最多唯一前区';
+      opts[3].hidden=false;
+    }else{
+      opts[0].textContent='1. 均衡模式：唯一号码覆盖 × 命中奖金倍率';
+      opts[1].textContent='2. 奖金最大化：优先 3 倍奖金强度';
+      opts[2].textContent='3. 一/二等奖覆盖最大化：优先 1 倍唯一号码';
+      opts[3].hidden=true;
+      if($('strategy').value==='custom')$('strategy').value='balanced';
+    }
+  }
+
+  function switchGame(g){
+    game=g; rows=[]; coverageToken++; if(coverageWorker){coverageWorker.terminate();coverageWorker=null;} tabs.forEach(t=>t.classList.toggle('active',t.dataset.game===g));
+    if(g==='dlt'){
+      $('settingTitle').textContent='大乐透设置';$('presetBtn').textContent='一键载入：228 元超级均衡方案';
+      $('strategyField').style.display='block';$('dltCounts').style.display='grid';$('ssqCountField').style.display='none';$('ssqAllocationField').style.display='none';
+      $('statSeventhLabel').textContent='七等奖覆盖概率';
+    }else{
+      $('settingTitle').textContent='双色球设置';$('presetBtn').textContent='一键载入：228 元超级均衡倍数方案';
+      $('strategyField').style.display='block';$('dltCounts').style.display='none';$('ssqCountField').style.display='block';$('ssqAllocationField').style.display='block';
+      $('statSeventhLabel').textContent='七等奖 / 福运奖';
+    }
+    updateStrategyLabels();
+    $('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';
+    ['statCost','statLines','statFirst','statSecond','statTop2','statPrizeMult','statPrizeWeight','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent=id==='statCost'?'¥0':id==='statLines'?'0':'—');
+    $('statSeventhSub').textContent=g==='dlt'?'0+2 / 1+2 / 2+1 / 3+0':'无七等奖；福运奖当前暂停（启用时3+0）';
+    $('probStatus').textContent=g==='dlt'?'概率说明：一、二等奖及“一或二等奖”立即精确计算；三至七等奖生成后在后台精确枚举。':'概率说明：一、二等奖及“一或二等奖”立即精确计算；三至六等奖生成后在后台精确枚举。双色球无七等奖；福运奖当前暂停。';
+    syncByStrategy();
+  }
+
+  function preset(){
+    $('budget').value=228;
+    $('strategy').value='balanced';syncByStrategy();
+    updateBudgetNote();generate();
+  }
+
+  function copyAll(){
+    if(!rows.length)return toast('请先生成号码');
+    const formatGroup=(title,groupRows)=>{
+      if(!groupRows.length)return '';
+      return [`【${title} · ${groupRows.length}注】`,...groupRows.map((r,i)=>`${String(i+1).padStart(3,'0')}\t${r.type}\t${r.front.map(pad).join(' ')}\t${r.back.map(pad).join(' ')}\t${r.cost}元`)].join('\n');
+    };
+    let parts=[];
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本'), addRows=rows.filter(r=>r.type==='追加');
+      if(basicRows.length)parts.push(formatGroup('基本投注',basicRows));
+      if(addRows.length)parts.push(formatGroup('追加投注',addRows));
+    }else{
+      for(let m=1;m<=3;m++){
+        const groupRows=rows.filter(r=>r.multiplier===m);
+        if(groupRows.length)parts.push(formatGroup(`双色球 ${m} 倍投注`,groupRows));
+      }
+    }
+    const text=parts.join('\n\n');
+    navigator.clipboard?.writeText(text).then(()=>toast(game==='dlt'?'已按基本/追加分组复制':'已按双色球倍数分组复制')).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast(game==='dlt'?'已按基本/追加分组复制':'已按双色球倍数分组复制');
+    });
+  }
+
+  function downloadBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+  function csvEscape(s){s=String(s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}
+  function exportCSV(){
+    if(!rows.length)return toast('请先生成号码');
+    const headers=game==='dlt'?['序号','投注类型','前区1','前区2','前区3','前区4','前区5','后区1','后区2','单注金额(元)','组合号码']:['序号','投注倍数','红球1','红球2','红球3','红球4','红球5','红球6','蓝球','单注金额(元)','组合号码'];
+    const groupData=(title,groupRows)=>{
+      const out=[[title],headers];
+      groupRows.forEach((r,i)=>out.push([i+1,r.type,...r.front.map(pad),...r.back.map(pad),r.cost,`${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}`]));
+      return out;
+    };
+    let data=[];
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本'), addRows=rows.filter(r=>r.type==='追加');
+      if(basicRows.length)data.push(...groupData(`基本投注（${basicRows.length}注）`,basicRows));
+      if(basicRows.length&&addRows.length)data.push([]);
+      if(addRows.length)data.push(...groupData(`追加投注（${addRows.length}注）`,addRows));
+    }else{
+      for(let m=1;m<=3;m++){
+        const groupRows=rows.filter(r=>r.multiplier===m);
+        if(!groupRows.length)continue;
+        if(data.length)data.push([]);
+        data.push(...groupData(`双色球 ${m} 倍投注（${groupRows.length}注）`,groupRows));
+      }
+    }
+    const csv='\ufeff'+data.map(row=>row.map(csvEscape).join(',')).join('\r\n');
+    downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),`${game==='dlt'?'大乐透':'双色球'}_号码_${rows.length}注_分组${$('block4Consecutive').checked?'_无4连号':''}.csv`);
+    toast(game==='dlt'?'CSV 已按基本/追加分组导出':'CSV 已按双色球倍数分组导出');
+  }
+
+  // ---------- Minimal XLSX writer (ZIP STORE, no external libraries) ----------
+  const crcTable=(()=>{let t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+  function crc32(bytes){let c=0xFFFFFFFF;for(const b of bytes)c=crcTable[(c^b)&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+  function u16(n){return new Uint8Array([n&255,(n>>>8)&255]);}
+  function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255]);}
+  function concatBytes(arrs){let len=arrs.reduce((s,a)=>s+a.length,0),out=new Uint8Array(len),o=0;for(const a of arrs){out.set(a,o);o+=a.length;}return out;}
+  const enc=new TextEncoder();
+  function dosDateTime(){const d=new Date();let time=((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|((Math.floor(d.getSeconds()/2))&31);let date=(((d.getFullYear()-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31);return {time,date};}
+  function zipStore(files){
+    const local=[],central=[];let offset=0;const dt=dosDateTime();
+    for(const f of files){const name=enc.encode(f.name),data=typeof f.data==='string'?enc.encode(f.data):f.data,crc=crc32(data);
+      const lh=concatBytes([u32(0x04034b50),u16(20),u16(0),u16(0),u16(dt.time),u16(dt.date),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name]);
+      local.push(lh,data);
+      const ch=concatBytes([u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(dt.time),u16(dt.date),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name]);
+      central.push(ch); offset+=lh.length+data.length;
+    }
+    const centralBytes=concatBytes(central), localBytes=concatBytes(local);
+    const end=concatBytes([u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralBytes.length),u32(localBytes.length),u16(0)]);
+    return concatBytes([localBytes,centralBytes,end]);
+  }
+  function xmlEsc(v){return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');}
+  function colName(n){let s='';while(n){n--;s=String.fromCharCode(65+n%26)+s;n=Math.floor(n/26);}return s;}
+  function cellXml(v,r,c,style=0){const ref=colName(c)+r;if(typeof v==='number')return `<c r="${ref}" s="${style}"><v>${v}</v></c>`;return `<c r="${ref}" s="${style}" t="inlineStr"><is><t>${xmlEsc(v)}</t></is></c>`;}
+  function sheetXml(matrix){
+    let rs='';matrix.forEach((row,ri)=>{rs+=`<row r="${ri+1}">`;row.forEach((v,ci)=>{let st=ri===0?1:0;if(ci===1&&(v==='追加'||v==='2倍'||v==='3倍'))st=2;rs+=cellXml(v,ri+1,ci+1,st);});rs+='</row>';});
+    const cols=matrix[0].map((_,i)=>{let w=i===0?7:i===1?11:(i===matrix[0].length-1?32:12);return `<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`;}).join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${cols}</cols><sheetData>${rs}</sheetData><autoFilter ref="A1:${colName(matrix[0].length)}${matrix.length}"/></worksheet>`;
+  }
+  function exportXLSX(){
+    if(!rows.length)return toast('请先生成号码');
+    const headers=game==='dlt'?['序号','投注类型','前区1','前区2','前区3','前区4','前区5','后区1','后区2','单注金额(元)','组合号码']:['序号','投注倍数','红球1','红球2','红球3','红球4','红球5','红球6','蓝球','单注金额(元)','组合号码'];
+    const makeMatrix=groupRows=>[headers,...groupRows.map((r,i)=>[i+1,r.type,...r.front.map(pad),...r.back.map(pad),r.cost,`${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}`])];
+
+    let sheets=[];
+    if(game==='dlt'){
+      const basicRows=rows.filter(r=>r.type==='基本'), addRows=rows.filter(r=>r.type==='追加');
+      if(basicRows.length)sheets.push({name:'基本投注',matrix:makeMatrix(basicRows)});
+      if(addRows.length)sheets.push({name:'追加投注',matrix:makeMatrix(addRows)});
+    }else{
+      for(let m=1;m<=3;m++){
+        const groupRows=rows.filter(r=>r.multiplier===m);
+        if(groupRows.length)sheets.push({name:`双色球${m}倍`,matrix:makeMatrix(groupRows)});
+      }
+    }
+
+    const overrides=sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('');
+    const workbookSheets=sheets.map((sh,i)=>`<sheet name="${xmlEsc(sh.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('');
+    const workbookRels=sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>`;
+
+    const files=[
+      {name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${overrides}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats.org/spreadsheetml.styles+xml"/></Types>`},
+      {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+      {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${workbookSheets}</sheets></workbook>`},
+      {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${workbookRels}</Relationships>`},
+      {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFB78116"/><sz val="11"/><name val="Microsoft YaHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF176B55"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}
+    ];
+    sheets.forEach((sh,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(sh.matrix)}));
+
+    const zip=zipStore(files);
+    const suffix=game==='dlt'&&sheets.length>1?'_基本追加分表':game==='ssq'&&sheets.length>1?'_倍数分表':'';
+    downloadBlob(new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),`${game==='dlt'?'大乐透':'双色球'}_号码_${rows.length}组${suffix}${$('block4Consecutive').checked?'_无4连号':''}.xlsx`);
+    toast(game==='dlt'&&sheets.length>1?'Excel 已拆分为“基本投注 / 追加投注”两个工作表':game==='ssq'&&sheets.length>1?'Excel 已按双色球倍数拆分工作表':'Excel 已导出');
+  }
+
+  function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800);}
+
+  tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game)));
+  $('strategy').addEventListener('change',()=>{if(game==='dlt'&&$('strategy').value==='custom'){updateBudgetNote();}else syncByStrategy();});
+  $('budget').addEventListener('input',()=>{getBudget();if(game==='dlt'&&$('strategy').value==='custom')updateBudgetNote();else syncByStrategy();});
+  $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
+  $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
+  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算各奖级覆盖概率。';});
+  $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
+
+  runAlgorithmSelfCheck();
+  updateStrategyLabels();
+  syncByStrategy();
+  updateFilterStatus();
+})();
+</script>
+</body>
+</html>
