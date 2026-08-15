@@ -280,7 +280,7 @@
             <div class="stat prob"><div class="k">一/二等奖奖金权重</div><div class="v" id="statPrizeWeight">—</div><div class="s" id="statPrizeWeightSub">基本等效注</div></div>
           </div>
           <div class="prob-status" id="probStatus">概率说明：一、二等奖及“一或二等奖”会立即给出精确值；三至七等奖会在后台线程中精确枚举完整开奖空间。双色球无七等奖；当前福运奖暂停。倍投不改变中奖概率，只改变同一号码中奖后的奖金倍数。</div>
-          <div class="audit-status" id="auditStatus">算法自检中…</div>
+          <div class="audit-status" id="auditStatus">算法自检中…（已启用奖级覆盖并集校验）</div>
 
           <div class="table-wrap" id="tableWrap">
             <div class="empty">点击“生成号码”开始</div>
@@ -426,18 +426,27 @@
   function dltSystemCoverage(frontCount,backCount){
     const f=Math.max(5,Math.min(35,Math.floor(Number(frontCount)||5)));
     const b=Math.max(2,Math.min(12,Math.floor(Number(backCount)||2)));
-    const counts=Array(7).fill(0),total=choose(35,5)*choose(12,2);let top2Count=0;
+    const exact=Array(7).fill(0),total=choose(35,5)*choose(12,2);
     for(let r=0;r<=5;r++)for(let s=0;s<=2;s++){
       const ways=choose(f,r)*choose(35-f,5-r)*choose(b,s)*choose(12-b,2-s);
       if(!ways)continue;
       const minF=Math.max(0,5-(f-r)),maxF=Math.min(5,r);
       const minB=Math.max(0,2-(b-s)),maxB=Math.min(2,s);
       const hit=new Set();
-      for(let hf=minF;hf<=maxF;hf++)for(let hb=minB;hb<=maxB;hb++){const prize=DLT_PRIZE_MAP[hf][hb];if(prize>=0)hit.add(prize);}
-      hit.forEach(prize=>counts[prize]+=ways);
-      if(hit.has(0)||hit.has(1))top2Count+=ways;
+      for(let hf=minF;hf<=maxF;hf++)for(let hb=minB;hb<=maxB;hb++){
+        const prize=DLT_PRIZE_MAP[hf][hb];
+        if(prize>=0)hit.add(prize);
+      }
+      // 覆盖概率必须按“至少达到该奖级”统计。
+      // 不能只统计最高奖，否则复式后区全选时七等奖会被高等奖吸收。
+      if(hit.size){
+        for(let level=0;level<7;level++){
+          if([...hit].some(p=>p<=level)) exact[level]+=ways;
+        }
+      }
     }
-    return {counts,total,probs:counts.map(x=>x/total),top2:top2Count/total};
+    const probs=exact.map(x=>x/total);
+    return {counts:exact,total,probs,top2:(probs[0]||0)};
   }
   function isDLTSystemMode(){return game==='dlt'&&$('strategy').value==='system';}
   function overlap(a,b){let s=new Set(a),c=0;for(const x of b)if(s.has(x))c++;return c;}
