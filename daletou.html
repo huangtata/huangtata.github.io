@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>大乐透 / 双色球 号码组合生成器</title>
+<title>大乐透 / 双色球 号码组合生成器 · 现行奖级概率核对版</title>
 <style>
   :root{
     --bg:#f5f7fa; --card:#ffffff; --text:#172033; --muted:#6b7280;
@@ -11,6 +11,7 @@
     --red:#df3146; --blue:#3276d2; --gold:#b78116; --soft:#edf7f3;
   }
   *{box-sizing:border-box}
+  html,body{max-width:100%;overflow-x:hidden}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
   .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 50px}
   .hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
@@ -48,7 +49,9 @@
   .stat .v{font-size:20px;font-weight:850;letter-spacing:-.4px;overflow-wrap:anywhere;word-break:break-word}
   .stat .s{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.45}
   .stat.prob .v{font-size:18px}
-  .prob-status{margin:-3px 0 14px;padding:9px 11px;border:1px dashed #d7dce3;border-radius:10px;background:#fbfcfd;color:#64748b;font-size:11px;line-height:1.55}
+  .prob-status{margin:-3px 0 10px;padding:9px 11px;border:1px dashed #d7dce3;border-radius:10px;background:#fbfcfd;color:#64748b;font-size:11px;line-height:1.55}
+  .audit-status{margin:0 0 14px;padding:9px 11px;border-radius:10px;background:#f8fcfa;border:1px solid #dfe8e4;color:#46635a;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+  .audit-status.bad{background:#fff5f5;border-color:#f1c6c6;color:#9b2c2c}
   .table-wrap{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:640px;background:white;width:100%;max-width:100%;min-width:0;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   table{border-collapse:collapse;width:100%;min-width:730px}
   th{position:sticky;top:0;background:#f8fafc;z-index:2;font-size:12px;color:#64748b;text-align:left;padding:11px;border-bottom:1px solid var(--line)}
@@ -74,9 +77,9 @@
   <div class="hero">
     <div>
       <h1>彩票号码组合生成器</h1>
-      <div class="sub">支持大乐透与双色球。核心原则是：在预算内避免重复购买相同关键组合，并让号码使用次数尽量均匀。它不预测开奖号码，也不会改变单注的随机中奖概率。</div>
+      <div class="sub">支持大乐透与双色球。按 2026-08-16 核验的现行中奖规则计算一等奖至末等奖覆盖概率；在预算内避免重复购买相同关键组合，并让号码使用次数尽量均匀。它不预测开奖号码，也不会改变单注的随机中奖概率。</div>
     </div>
-    <div class="badge">单文件 · 离线可用 · 可导出 XLSX</div>
+    <div class="badge">现行规则核对版 · 离线可用 · 可导出 XLSX</div>
   </div>
 
   <div class="panel">
@@ -146,7 +149,7 @@
           <div class="algo">
             <b>生成逻辑：</b><br>
             ① 关键号码组合不重复；② <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；③ 候选组合优先选择当前使用次数较少的号码；④ 尽量降低与已有组合的高度重合；⑤ 后区/蓝球做均衡轮换。<br><br>
-            <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。<br><br><b>概率口径：</b>一等奖、二等奖及一或二等奖可直接按互不重复的前区/红球组合精确计算；三等奖及以下会出现不同投注对应同一开奖号码的重叠，因此程序使用完整开奖空间精确枚举去重，不使用简单的“单注概率 × 注数”。
+            <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。<br><br><b>概率口径：</b>一等奖、二等奖及一或二等奖可直接按互不重复的前区/红球组合精确计算；三等奖及以下会出现不同投注对应同一开奖号码的重叠，因此程序使用完整开奖空间精确枚举并对重复开奖情形去重，不使用错误的“单注概率 × 注数”。<br><br><b>现行奖级：</b>大乐透按 7 个奖级（第26014期起规则）计算；双色球按 6 个常规奖级（第2026014期起规则）计算，双色球不存在常规七等奖。
           </div>
         </section>
 
@@ -164,7 +167,8 @@
             <div class="stat prob"><div class="k">六等奖覆盖概率</div><div class="v" id="statSixth">—</div><div class="s" id="statSixthSub">—</div></div>
             <div class="stat prob"><div class="k">七等奖覆盖概率</div><div class="v" id="statSeventh">—</div><div class="s" id="statSeventhSub">—</div></div>
           </div>
-          <div class="prob-status" id="probStatus">概率说明：生成号码后，将按官方中奖条件计算当前整组号码在一次开奖中“至少有 1 注命中该奖级”的覆盖概率。追加投注只改变一等奖、二等奖的奖金，不改变中奖概率。</div>
+          <div class="prob-status" id="probStatus">概率说明：生成号码后，将按现行中奖条件计算当前整组号码在一次开奖中“至少有 1 注命中该奖级”的覆盖概率。追加投注只改变大乐透一等奖、二等奖的奖金，不改变中奖概率。各奖级覆盖事件可能同时发生，因此不同奖级概率不可直接相加。</div>
+          <div class="audit-status" id="auditStatus">算法自检中…</div>
 
           <div class="table-wrap" id="tableWrap">
             <div class="empty">点击“生成号码”开始</div>
@@ -348,71 +352,130 @@
 
   function probabilityConditions(g){
     if(g==='dlt') return [
-      '5+2', '5+1', '5+0 或 4+2', '4+1', '4+0 或 3+2', '3+1 或 2+2', '3+0 / 2+1 / 1+2 / 0+2'
+      '5+2', '5+1', '5+0 / 4+2', '4+1', '4+0 / 3+2', '3+1 / 2+2', '3+0 / 2+1 / 1+2 / 0+2'
     ];
     return [
-      '6红+蓝', '6红+蓝不中', '5红+蓝', '5红 或 4红+蓝', '4红 或 3红+蓝', '蓝球命中且红球≤2', '双色球常规奖级无七等奖'
+      '6+1', '6+0', '5+1', '5+0 / 4+1', '4+0 / 3+1', '2+1 / 1+1 / 0+1', '双色球常规奖级无七等奖'
     ];
   }
 
-  // 在 Web Worker 中精确枚举官方开奖空间，避免低奖级事件重叠时错误使用“单注概率 × 注数”。
+  // 奖级映射：索引为“前区/红球命中数”，第二维为“后区/蓝球命中数”；-1 表示未中奖。
+  // 大乐透后区命中数为 0/1/2；双色球蓝球命中数为 0/1。奖级编号 0=一等奖，以此类推。
+  const DLT_PRIZE_MAP=[
+    [-1,-1,6], // 前区0：仅0+2为七等奖
+    [-1,-1,6], // 前区1：仅1+2为七等奖
+    [-1, 6, 5], // 2+1七等奖，2+2六等奖
+    [ 6, 5, 4], // 3+0七，3+1六，3+2五
+    [ 4, 3, 2], // 4+0五，4+1四，4+2三
+    [ 2, 1, 0]  // 5+0三，5+1二，5+2一
+  ];
+  const SSQ_PRIZE_MAP=[
+    [-1,5], // 0+1 六等奖
+    [-1,5], // 1+1 六等奖
+    [-1,5], // 2+1 六等奖
+    [-1,4], // 3+1 五等奖；3+0不中奖
+    [ 4,3], // 4+0五，4+1四
+    [ 3,2], // 5+0四，5+1三
+    [ 1,0]  // 6+0二，6+1一
+  ];
+
+  function singleTicketWaysFromRules(g){
+    if(g==='dlt'){
+      const out=Array(7).fill(0);
+      for(let f=0;f<=5;f++)for(let b=0;b<=2;b++){
+        const prize=DLT_PRIZE_MAP[f][b];
+        if(prize>=0) out[prize]+=comb(5,f)*comb(30,5-f)*comb(2,b)*comb(10,2-b);
+      }
+      return out;
+    }
+    const out=Array(6).fill(0);
+    for(let r=0;r<=6;r++)for(let b=0;b<=1;b++){
+      const prize=SSQ_PRIZE_MAP[r][b];
+      if(prize>=0) out[prize]+=comb(6,r)*comb(27,6-r)*(b===1?1:15);
+    }
+    return out;
+  }
+
+  function runAlgorithmSelfCheck(){
+    const dltExpected=[1,20,195,3000,11100,127600,1287281];
+    const ssqExpected=[1,15,162,7695,137475,1043640];
+    const dltGot=singleTicketWaysFromRules('dlt'),ssqGot=singleTicketWaysFromRules('ssq');
+    const dltTotal=comb(35,5)*comb(12,2),ssqTotal=comb(33,6)*16;
+    const ok=dltTotal===21425712 && ssqTotal===17721088 && dltGot.every((v,i)=>v===dltExpected[i]) && ssqGot.every((v,i)=>v===ssqExpected[i]);
+    const el=$('auditStatus');
+    if(ok){
+      el.classList.remove('bad');
+      el.innerHTML='算法自检：<b>通过</b>。大乐透总开奖空间 21,425,712；单注各奖级开奖情形数 1 / 20 / 195 / 3,000 / 11,100 / 127,600 / 1,287,281。双色球总开奖空间 17,721,088；单注一至六等奖开奖情形数 1 / 15 / 162 / 7,695 / 137,475 / 1,043,640。';
+    }else{
+      el.classList.add('bad');
+      el.textContent='算法自检未通过：奖级映射或组合数常量异常，请勿使用当前概率结果。';
+    }
+    return ok;
+  }
+
+  // 在 Web Worker 中精确枚举完整开奖空间，避免低奖级事件重叠时错误使用“单注概率 × 注数”。
   function coverageWorkerMain(){
     'use strict';
     function pc32(x){x=x>>>0;x=x-((x>>>1)&0x55555555);x=(x&0x33333333)+((x>>>2)&0x33333333);return (((x+(x>>>4))&0x0F0F0F0F)*0x01010101)>>>24;}
     function bits(max){
-      const lo=new Int32Array(max+1),hi=new Int32Array(max+1);
-      for(let n=1;n<=max;n++){if(n<=31)lo[n]=1<<(n-1);else hi[n]=1<<(n-32);}
+      const lo=new Uint32Array(max+1),hi=new Uint32Array(max+1);
+      for(let n=1;n<=max;n++){if(n<=32)lo[n]=(1<<(n-1))>>>0;else hi[n]=(1<<(n-33))>>>0;}
       return {lo,hi};
     }
-    function rowMasks(rows){
-      const B=bits(35);
-      return rows.map(r=>{let lo=0,hi=0;for(const n of r.front){lo|=B.lo[n];hi|=B.hi[n];}return {lo,hi,back:r.back.slice()};});
+    function rowMasks(rows,max){
+      const B=bits(max);
+      return {B,rows:rows.map(r=>{let lo=0,hi=0;for(const n of r.front){lo|=B.lo[n];hi|=B.hi[n];}return {lo:lo>>>0,hi:hi>>>0,back:r.back.slice()};})};
     }
     function dltBackMasks(rms){
       const outcomes=[];for(let a=1;a<=12;a++)for(let b=a+1;b<=12;b++)outcomes.push([a,b]);
       return rms.map(r=>{
         const m=[new Uint32Array(3),new Uint32Array(3),new Uint32Array(3)];
-        for(let i=0;i<outcomes.length;i++){const o=outcomes[i];let h=0;if(r.back[0]===o[0]||r.back[0]===o[1])h++;if(r.back[1]===o[0]||r.back[1]===o[1])h++;const seg=i>>>5,bit=i&31;m[h][seg]|=(1<<bit)>>>0;}
+        for(let i=0;i<outcomes.length;i++){
+          const o=outcomes[i];let h=0;
+          if(r.back[0]===o[0]||r.back[0]===o[1])h++;
+          if(r.back[1]===o[0]||r.back[1]===o[1])h++;
+          const seg=i>>>5,bit=i&31;m[h][seg]|=(1<<bit)>>>0;
+        }
         return m;
       });
     }
-    function calcDLT(rows){
-      const B=bits(35),rms=rowMasks(rows),bm=dltBackMasks(rms),counts=new Float64Array(7),pm=new Uint32Array(21);
-      function add(off,m){pm[off]|=m[0];pm[off+1]|=m[1];pm[off+2]|=m[2];}
+    function calcDLT(rows,map){
+      const packed=rowMasks(rows,35),B=packed.B,rms=packed.rows,bm=dltBackMasks(rms),counts=new Float64Array(7),pm=new Uint32Array(21);
+      function add(prize,m){const off=prize*3;pm[off]|=m[0];pm[off+1]|=m[1];pm[off+2]|=m[2];}
       for(let a=1;a<=31;a++)for(let b=a+1;b<=32;b++)for(let c=b+1;c<=33;c++)for(let d=c+1;d<=34;d++)for(let e=d+1;e<=35;e++){
-        const lo=B.lo[a]|B.lo[b]|B.lo[c]|B.lo[d]|B.lo[e], hi=B.hi[a]|B.hi[b]|B.hi[c]|B.hi[d]|B.hi[e];
+        const lo=(B.lo[a]|B.lo[b]|B.lo[c]|B.lo[d]|B.lo[e])>>>0,hi=(B.hi[a]|B.hi[b]|B.hi[c]|B.hi[d]|B.hi[e])>>>0;
         pm.fill(0);
         for(let i=0;i<rms.length;i++){
-          const f=pc32(lo&rms[i].lo)+pc32(hi&rms[i].hi),m=bm[i];
-          if(f===5){add(0,m[2]);add(3,m[1]);add(6,m[0]);}
-          else if(f===4){add(6,m[2]);add(9,m[1]);add(12,m[0]);}
-          else if(f===3){add(12,m[2]);add(15,m[1]);add(18,m[0]);}
-          else if(f===2){add(15,m[2]);add(18,m[1]);}
-          else {add(18,m[2]);}
+          const f=pc32(lo&rms[i].lo)+pc32(hi&rms[i].hi),m=bm[i],rule=map[f];
+          for(let backHit=0;backHit<=2;backHit++){const prize=rule[backHit];if(prize>=0)add(prize,m[backHit]);}
         }
         for(let t=0;t<7;t++){const o=t*3;counts[t]+=pc32(pm[o])+pc32(pm[o+1])+pc32(pm[o+2]);}
       }
       return {counts:Array.from(counts),total:21425712};
     }
-    function calcSSQ(rows){
-      const B=bits(33),rms=rowMasks(rows),counts=new Float64Array(6),pm=new Uint32Array(6),ALL=0xFFFF;
+    function calcSSQ(rows,map){
+      const packed=rowMasks(rows,33),B=packed.B,rms=packed.rows,counts=new Float64Array(6),pm=new Uint32Array(6),ALL=0xFFFF;
       const blue=rms.map(r=>(1<<(r.back[0]-1))>>>0);
       for(let a=1;a<=28;a++)for(let b=a+1;b<=29;b++)for(let c=b+1;c<=30;c++)for(let d=c+1;d<=31;d++)for(let e=d+1;e<=32;e++)for(let f=e+1;f<=33;f++){
-        const lo=B.lo[a]|B.lo[b]|B.lo[c]|B.lo[d]|B.lo[e]|B.lo[f], hi=B.hi[a]|B.hi[b]|B.hi[c]|B.hi[d]|B.hi[e]|B.hi[f];
+        const lo=(B.lo[a]|B.lo[b]|B.lo[c]|B.lo[d]|B.lo[e]|B.lo[f])>>>0,hi=(B.hi[a]|B.hi[b]|B.hi[c]|B.hi[d]|B.hi[e]|B.hi[f])>>>0;
         pm.fill(0);
         for(let i=0;i<rms.length;i++){
-          const h=pc32(lo&rms[i].lo)+pc32(hi&rms[i].hi),yes=blue[i],no=(ALL^yes)>>>0;
-          if(h===6){pm[0]|=yes;pm[1]|=no;}
-          else if(h===5){pm[2]|=yes;pm[3]|=no;}
-          else if(h===4){pm[3]|=yes;pm[4]|=no;}
-          else if(h===3){pm[4]|=yes;}
-          else {pm[5]|=yes;}
+          const redHit=pc32(lo&rms[i].lo)+pc32(hi&rms[i].hi),yes=blue[i],no=(ALL^yes)>>>0,rule=map[redHit];
+          const p0=rule[0],p1=rule[1];
+          if(p0>=0)pm[p0]|=no;
+          if(p1>=0)pm[p1]|=yes;
         }
         for(let t=0;t<6;t++)counts[t]+=pc32(pm[t]&ALL);
       }
       return {counts:Array.from(counts),total:17721088};
     }
-    self.onmessage=e=>{try{const {game,rows}=e.data;const result=game==='dlt'?calcDLT(rows):calcSSQ(rows);self.postMessage({ok:true,...result});}catch(err){self.postMessage({ok:false,error:String(err&&err.message||err)});}};
+    self.onmessage=e=>{
+      try{
+        const {game,rows,ruleMap}=e.data;
+        const result=game==='dlt'?calcDLT(rows,ruleMap):calcSSQ(rows,ruleMap);
+        self.postMessage({ok:true,...result});
+      }catch(err){self.postMessage({ok:false,error:String(err&&err.message||err)});}
+    };
   }
 
   function setProbabilityLoading(){
@@ -445,11 +508,11 @@
           else $(subs[i]).textContent=cond[i];
         }
         $('statTop2Sub').textContent=`一或二等奖 · 精确覆盖 ${(top2*100).toFixed(top2<.001?6:4)}%`;
-        $('probStatus').textContent=`已完成精确枚举：以上概率均指当前 ${rows.length} 注号码在一次开奖中“至少有 1 注命中对应奖级”的概率；不同奖级可由不同投注同时命中。追加投注不改变中奖概率。`;
+        $('probStatus').textContent=`已完成精确枚举：以上概率均指当前 ${rows.length} 注号码在一次开奖中“至少有 1 注命中对应奖级”的概率；不同奖级可由不同投注同时命中，所以各奖级概率不能相加。追加投注不改变中奖概率。`;
         w.terminate();if(coverageWorker===w)coverageWorker=null;
       };
       w.onerror=()=>{if(token===coverageToken)$('probStatus').textContent='浏览器无法启动精确概率计算线程；一等奖、二等奖和一或二等奖仍为精确值。';w.terminate();if(coverageWorker===w)coverageWorker=null;};
-      w.postMessage({game:g,rows:snapshot});
+      w.postMessage({game:g,rows:snapshot,ruleMap:g==='dlt'?DLT_PRIZE_MAP:SSQ_PRIZE_MAP});
     }catch(err){$('probStatus').textContent='浏览器不支持离线精确概率线程；一等奖、二等奖和一或二等奖仍为精确值。';}
   }
 
@@ -492,7 +555,7 @@
     }
     $('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';
     ['statCost','statLines','statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent=id==='statCost'?'¥0':id==='statLines'?'0':'—');
-    $('probStatus').textContent='概率说明：生成号码后，将按官方中奖条件计算当前整组号码在一次开奖中“至少有 1 注命中该奖级”的覆盖概率。追加投注只改变一等奖、二等奖的奖金，不改变中奖概率。';
+    $('probStatus').textContent='概率说明：生成号码后，将按现行中奖条件计算当前整组号码在一次开奖中“至少有 1 注命中该奖级”的覆盖概率。追加投注只改变大乐透一等奖、二等奖的奖金，不改变中奖概率。各奖级覆盖事件可能同时发生，因此不同奖级概率不可直接相加。';
     updateBudgetNote();
   }
 
@@ -579,6 +642,7 @@
   $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算概率。';});
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
 
+  runAlgorithmSelfCheck();
   updateBudgetNote();
   updateFilterStatus();
 })();
