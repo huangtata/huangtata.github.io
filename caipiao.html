@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>大乐透与双色球超级算法系统</title>
+    <script>
+        (function () {
+            function showStartupError(message) {
+                var root = document.getElementById('root') || document.body;
+                if (!root) {
+                    document.addEventListener('DOMContentLoaded', function () { showStartupError(message); }, { once: true });
+                    return;
+                }
+                var boxId = 'startup-error-box';
+                var existing = document.getElementById(boxId);
+                if (!existing) {
+                    existing = document.createElement('div');
+                    existing.id = boxId;
+                    existing.style.cssText = 'margin:16px;padding:14px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55;white-space:pre-wrap;';
+                    root.appendChild(existing);
+                }
+                existing.textContent = '页面加载异常：\n' + message + '\n\n建议：使用 Chrome/Edge 打开；如果是 CDN 加载失败，请检查网络或把页面部署到可联网环境。';
+            }
+            window.__showStartupError = showStartupError;
+            window.addEventListener('error', function (event) {
+                if (event && event.message) showStartupError(event.message);
+            }, true);
+            window.addEventListener('unhandledrejection', function (event) {
+                var reason = event && event.reason;
+                showStartupError(reason && reason.message ? reason.message : String(reason || '未知 Promise 错误'));
+            });
+        })();
+    </script>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com" onerror="window.__showStartupError && window.__showStartupError('Tailwind CSS 加载失败，页面样式可能异常。')"></script>
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" onerror="window.__showStartupError && window.__showStartupError('React 加载失败，请检查网络或 CDN 访问。')"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" onerror="window.__showStartupError && window.__showStartupError('ReactDOM 加载失败，请检查网络或 CDN 访问。')"></script>
+    <!-- 已预编译 JSX：不再依赖浏览器实时 Babel 编译 -->
+    <!-- 引入 Lucide Icons -->
+    <script src="https://unpkg.com/lucide@0.468.0" onerror="window.__showStartupError && window.__showStartupError('Lucide 图标库加载失败，不影响核心计算，但图标可能不显示。')"></script>
+    
+    <style>
+        /* 隐藏滚动条但保留滚动功能 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        body {
+            overscroll-behavior-y: none; /* 防止 iOS 橡皮筋效应导致页面上下拉动 */
+            -webkit-user-select: none;
+            user-select: none; /* 整体防误触选中 */
+        }
+        input, textarea, button {
+            -webkit-user-select: auto;
+            user-select: auto; /* 允许输入框选中 */
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        (function () {
+            try {
+                if (!window.React || !window.ReactDOM) {
+                    throw new Error('React 或 ReactDOM 未加载成功。');
+                }
+                const { useState, useEffect, useMemo, createElement } = React;
+                // === 图标组件封装 (由于 CDN 引入，需要这样封装 Lucide 图标) ===
+                const Icon = ({ name, size = 24, className = '', ...props }) => {
+                    const iconRef = React.useRef(null);
+                    useEffect(() => {
+                        if (iconRef.current && window.lucide && window.lucide.icons[name]) {
+                            iconRef.current.innerHTML = ''; // 清空之前的内容
+                            const svg = window.lucide.createElement(window.lucide.icons[name]);
+                            svg.setAttribute('width', size);
+                            svg.setAttribute('height', size);
+                            svg.setAttribute('class', className);
+                            if (props.color)
+                                svg.setAttribute('stroke', props.color);
+                            iconRef.current.appendChild(svg);
+                        }
+                    }, [name, size, className, props.color]);
+                    return React.createElement("span", { ref: iconRef, className: `inline-flex items-center justify-center ${className}`, ...props });
+                };
+                // === 基础常量配置 ===
+                const PRIMES = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31];
+                const PRIME_SET = new Set(PRIMES);
+                // 大乐透前区 01-35
+                const DLT_SQUARE_SET = new Set([1, 4, 9, 16, 25]);
+                const DLT_FIB_SET = new Set([1, 2, 3, 5, 8, 13, 21, 34]);
+                // 双色球红球 01-33
+                const SSQ_SQUARE_SET = new Set([1, 4, 9, 16, 25]);
+                const SSQ_FIB_SET = new Set([1, 2, 3, 5, 8, 13, 21]);
+                const maxRun = (arr) => {
+                    let max = 1, cur = 1;
+                    for (let i = 1; i < arr.length; i++) {
+                        if (arr[i] === arr[i - 1] + 1) {
+                            cur++;
+                            max = Math.max(max, cur);
+                        }
+                        else {
+                            cur = 1;
+                        }
+                    }
+                    return max;
+                };
+                const maxTailCountOf = (arr) => {
+                    const counts = {};
+                    arr.forEach(n => {
+                        const t = n % 10;
+                        counts[t] = (counts[t] || 0) + 1;
+                    });
+                    return Math.max(...Object.values(counts));
+                };
+                const isStrictArithmeticProgression = (arr) => {
+                    const d = arr[1] - arr[0];
+                    if (d <= 0)
+                        return false;
+                    for (let i = 2; i < arr.length; i++) {
+                        if (arr[i] - arr[i - 1] !== d)
+                            return false;
+                    }
+                    return true;
+                };
+                const allSameMod = (arr, mod) => new Set(arr.map(n => n % mod)).size === 1;
+                const allGapAtLeast = (arr, gap) => {
+                    for (let i = 1; i < arr.length; i++) {
+                        if (arr[i] - arr[i - 1] < gap)
+                            return false;
+                    }
+                    return true;
+                };
+                const countWhere = (arr, fn) => arr.filter(fn).length;
+                const acValue = (arr) => {
+                    const diffs = new Set();
+                    for (let i = 0; i < arr.length; i++) {
+                        for (let j = i + 1; j < arr.length; j++) {
+                            diffs.add(arr[j] - arr[i]);
+                        }
+                    }
+                    return diffs.size - (arr.length - 1);
+                };
+                const isDLTMirror18 = (arr) => {
+                    const s = new Set(arr);
+                    return arr.every(n => s.has(36 - n));
+                };
+                const isSSQMirror17 = (arr) => {
+                    const s = new Set(arr);
+                    return arr.every(n => s.has(34 - n));
+                };
+                const containsAll = (arr, target) => {
+                    const s = new Set(arr);
+                    return target.every(n => s.has(n));
+                };
+                // 格式化数字为两位数
+                const padZero = (num) => num.toString().padStart(2, '0');
+                // === 扫描框模糊识别：支持 22283031340105、2228303134 0105、22 28 30 31 34 01 05 ===
+                const splitTwoDigitString = (digitStr) => {
+                    if (!digitStr || digitStr.length % 2 !== 0)
+                        return null;
+                    const arr = [];
+                    for (let i = 0; i < digitStr.length; i += 2) {
+                        arr.push(parseInt(digitStr.slice(i, i + 2), 10));
+                    }
+                    return arr;
+                };
+                const checkParsedNums = (nums, frontCount, backCount, frontMax, backMax) => {
+                    const reqTotal = frontCount + backCount;
+                    if (!Array.isArray(nums) || nums.length !== reqTotal)
+                        return null;
+                    if (nums.some(n => Number.isNaN(n)))
+                        return null;
+                    const frontRaw = nums.slice(0, frontCount);
+                    const backRaw = nums.slice(frontCount, reqTotal);
+                    const frontOk = frontRaw.every(n => n >= 1 && n <= frontMax) &&
+                        new Set(frontRaw).size === frontCount;
+                    const backOk = backRaw.every(n => n >= 1 && n <= backMax) &&
+                        new Set(backRaw).size === backCount;
+                    if (!frontOk || !backOk)
+                        return null;
+                    return {
+                        front: [...frontRaw].sort((a, b) => a - b),
+                        back: [...backRaw].sort((a, b) => a - b)
+                    };
+                };
+                const parseLotteryLine = (line, frontCount, backCount, frontMax, backMax) => {
+                    const reqTotal = frontCount + backCount;
+                    const groups = line.match(/\d+/g) || [];
+                    if (groups.length === 0) {
+                        return { error: "未识别到数字" };
+                    }
+                    const candidates = [];
+                    // 方案1：整行数字合并后，从最后 reqTotal*2 位开始按两位切分
+                    // 可识别：22283031340105、2228303134 0105、前面带序号的文本
+                    const allDigits = groups.join('');
+                    const needLen = reqTotal * 2;
+                    if (allDigits.length >= needLen) {
+                        const tailDigits = allDigits.slice(-needLen);
+                        const paired = splitTwoDigitString(tailDigits);
+                        if (paired)
+                            candidates.push(paired);
+                    }
+                    // 方案2：普通空格/逗号/符号分隔
+                    // 可识别：22 28 30 31 34 01 05
+                    const separatedNums = groups.map(Number);
+                    if (separatedNums.length >= reqTotal) {
+                        candidates.push(separatedNums.slice(-reqTotal));
+                    }
+                    // 方案3：混合分隔，长数字块按两位拆，短数字块按原数字
+                    // 可识别：2228303134 0105
+                    const mixedNums = [];
+                    groups.forEach(g => {
+                        if (g.length > 2 && g.length % 2 === 0) {
+                            const paired = splitTwoDigitString(g);
+                            if (paired)
+                                mixedNums.push(...paired);
+                        }
+                        else {
+                            mixedNums.push(Number(g));
+                        }
+                    });
+                    if (mixedNums.length >= reqTotal) {
+                        candidates.push(mixedNums.slice(-reqTotal));
+                    }
+                    for (const nums of candidates) {
+                        const parsed = checkParsedNums(nums, frontCount, backCount, frontMax, backMax);
+                        if (parsed)
+                            return { success: true, ...parsed };
+                    }
+                    return {
+                        error: `无法识别为合法 ${frontCount}+${backCount} 号码；请检查是否每个号码都是两位数，且前后区范围正确`
+                    };
+                };
+                const validateDLT = (frontArr, backArr, historySet = new Set(), mode = 'scan') => {
+                    const warnings = [];
+                    if (frontArr.length !== 5 || backArr.length !== 2)
+                        return warnings;
+                    const f = [...frontArr].sort((a, b) => a - b);
+                    const b = [...backArr].sort((a, b) => a - b);
+                    const block = (msg) => warnings.push(msg);
+                    const remind = (msg) => {
+                        if (mode !== 'generate')
+                            warnings.push(msg);
+                    };
+                    const maxConsecutive = maxRun(f);
+                    const sumF = f.reduce((sum, n) => sum + n, 0);
+                    const sumB = b[0] + b[1];
+                    const spanF = f[4] - f[0];
+                    const spanB = b[1] - b[0];
+                    const maxTailCount = maxTailCountOf(f);
+                    const ac = acValue(f);
+                    const comboKey = [...f, ...b].map(padZero).join(',');
+                    if (historySet.has(comboKey)) {
+                        block("【死号拦截】历史完全重复组合，生成时直接剔除");
+                    }
+                    // ====== 大乐透：严格 <1% 的生成拦截规则 ======
+                    if (f.every(n => DLT_SQUARE_SET.has(n))) {
+                        block("【极度偏态】前区全平方数：01 04 09 16 25，概率0.0003%");
+                    }
+                    if (f.every(n => n % 7 === 0)) {
+                        block("【极度偏态】前区全为7的倍数，概率0.0003%");
+                    }
+                    if (allSameMod(f, 8)) {
+                        block("【极度偏态】前区除8余数全部相同，概率0.0009%");
+                    }
+                    if (f[0] >= 30) {
+                        block("【极度偏态】前区全在30-35，概率0.0018%");
+                    }
+                    if (allSameMod(f, 7)) {
+                        block("【极度偏态】前区除7余数全部相同，概率0.0021%");
+                    }
+                    if (f.every(n => n % 5 === 0)) {
+                        block("【极度偏态】前区全为5的倍数，概率0.0064%");
+                    }
+                    if (allGapAtLeast(f, 8)) {
+                        block("【极度偏态】前区相邻间隔全部≥8，概率0.0064%");
+                    }
+                    if (maxConsecutive >= 5) {
+                        block("【极度偏态】前区5连号，概率0.0095%");
+                    }
+                    else if (maxConsecutive === 4) {
+                        block("【极度偏态】前区4连号，概率0.2960%");
+                    }
+                    if (containsAll(f, [1, 2, 34, 35])) {
+                        block("【极度偏态】前区同时含01、02、34、35，概率0.0095%");
+                    }
+                    if (allSameMod(f, 6)) {
+                        block("【极度偏态】前区除6余数全部相同，概率0.0095%");
+                    }
+                    if (f.every(n => DLT_FIB_SET.has(n))) {
+                        block("【极度偏态】前区全斐波那契数，概率0.0172%");
+                    }
+                    if (allSameMod(f, 5)) {
+                        block("【极度偏态】前区除5余数全部相同，概率0.0323%");
+                    }
+                    if (f[4] <= 9) {
+                        block("【极度偏态】前区全部为个位数01-09，概率0.0388%");
+                    }
+                    if (isStrictArithmeticProgression(f)) {
+                        block("【极度偏态】前区严格等差数列，概率0.0418%");
+                    }
+                    if (isDLTMirror18(f)) {
+                        block("【极度偏态】前区关于18完全镜像，概率0.0418%");
+                    }
+                    if (maxTailCount >= 4) {
+                        block("【极度偏态】前区至少4个同尾，概率0.0477%");
+                    }
+                    if (countWhere(f, n => DLT_SQUARE_SET.has(n)) >= 4) {
+                        block("【极度偏态】前区4个及以上平方数，概率0.0465%");
+                    }
+                    if (countWhere(f, n => n % 7 === 0) >= 4) {
+                        block("【极度偏态】前区4个及以上7的倍数，概率0.0465%");
+                    }
+                    if (f.every(n => n <= 5 || n >= 31)) {
+                        block("【极度偏态】前区全部落在两端10码内，概率0.0776%");
+                    }
+                    if (f[4] <= 10 ||
+                        (f[0] >= 11 && f[4] <= 20) ||
+                        (f[0] >= 21 && f[4] <= 30) ||
+                        (f[0] >= 26 && f[4] <= 35)) {
+                        block("【极度偏态】前区全部集中在固定10码段，概率约0.31%");
+                    }
+                    if (sumF <= 25) {
+                        block(`【极度偏态】前区和值≤25，当前${sumF}，概率0.0348%`);
+                    }
+                    else if (sumF <= 30) {
+                        block(`【极度偏态】前区和值≤30，当前${sumF}，概率0.1257%`);
+                    }
+                    else if (sumF <= 35) {
+                        block(`【极度偏态】前区和值≤35，当前${sumF}，概率0.3465%`);
+                    }
+                    else if (sumF <= 40) {
+                        block(`【极度偏态】前区和值≤40，当前${sumF}，概率0.8015%`);
+                    }
+                    if (sumF >= 155) {
+                        block(`【极度偏态】前区和值≥155，当前${sumF}，概率0.0348%`);
+                    }
+                    else if (sumF >= 150) {
+                        block(`【极度偏态】前区和值≥150，当前${sumF}，概率0.1257%`);
+                    }
+                    else if (sumF >= 145) {
+                        block(`【极度偏态】前区和值≥145，当前${sumF}，概率0.3465%`);
+                    }
+                    else if (sumF >= 140) {
+                        block(`【极度偏态】前区和值≥140，当前${sumF}，概率0.8015%`);
+                    }
+                    if (spanF <= 5) {
+                        block(`【极度偏态】前区跨度≤5，当前${spanF}，概率0.0465%`);
+                    }
+                    else if (spanF <= 6) {
+                        block(`【极度偏态】前区跨度≤6，当前${spanF}，概率0.1358%`);
+                    }
+                    else if (spanF <= 7) {
+                        block(`【极度偏态】前区跨度≤7，当前${spanF}，概率0.3083%`);
+                    }
+                    else if (spanF <= 8) {
+                        block(`【极度偏态】前区跨度≤8，当前${spanF}，概率0.5994%`);
+                    }
+                    if (allSameMod(f, 4)) {
+                        block("【极度偏态】前区除4余数全部相同，概率0.1337%");
+                    }
+                    if (f.every(n => PRIME_SET.has(n))) {
+                        block("【极度偏态】前区全质数，概率0.1423%");
+                    }
+                    if (f.every(n => n % 3 === 0)) {
+                        block("【极度偏态】前区全为3的倍数，概率0.1423%");
+                    }
+                    if (allGapAtLeast(f, 7)) {
+                        block("【极度偏态】前区相邻间隔全部≥7，概率0.1423%");
+                    }
+                    else if (allGapAtLeast(f, 6)) {
+                        block("【极度偏态】前区相邻间隔全部≥6，概率0.9250%");
+                    }
+                    if (ac <= 1) {
+                        block(`【极度偏态】前区AC值≤1，当前${ac}，概率0.1974%`);
+                    }
+                    if (countWhere(f, n => n % 5 === 0) >= 4) {
+                        block("【极度偏态】前区4个及以上5的倍数，概率0.3083%");
+                    }
+                    if (countWhere(f, n => DLT_FIB_SET.has(n)) >= 4) {
+                        block("【极度偏态】前区4个及以上斐波那契数，概率0.5994%");
+                    }
+                    if (allSameMod(f, 3)) {
+                        block("【极度偏态】前区除3余数全部相同，概率0.6302%");
+                    }
+                    // ====== 大乐透：>=1% 的扫描提醒，不参与生成拦截 ======
+                    if (sumF > 40 && sumF <= 45) {
+                        remind(`【扫描提醒】前区和值偏低≤45，当前${sumF}，概率约1.64%`);
+                    }
+                    if (sumF < 140 && sumF >= 135) {
+                        remind(`【扫描提醒】前区和值偏高≥135，当前${sumF}，概率约1.64%`);
+                    }
+                    if (spanF === 9) {
+                        remind(`【扫描提醒】前区集中在任意连续10码内，跨度${spanF}，概率约1.05%`);
+                    }
+                    if (spanF >= 33) {
+                        remind(`【扫描提醒】前区跨度极大≥33，当前${spanF}，概率约4.73%`);
+                    }
+                    const oddCount = f.filter(n => n % 2 === 1).length;
+                    if (oddCount === 0) {
+                        remind("【扫描提醒】前区全偶，概率约1.91%");
+                    }
+                    else if (oddCount === 5) {
+                        remind("【扫描提醒】前区全奇，概率约2.64%");
+                    }
+                    if (f.every(n => n <= 17)) {
+                        remind("【扫描提醒】前区全小01-17，概率约1.91%");
+                    }
+                    if (f.every(n => n >= 19)) {
+                        remind("【扫描提醒】前区全大19-35，概率约1.91%");
+                    }
+                    if (maxTailCount === 3) {
+                        remind("【扫描提醒】前区至少3个同尾，概率约3.67%");
+                    }
+                    if (maxConsecutive === 3) {
+                        remind("【扫描提醒】前区含3连号，概率约4.73%");
+                    }
+                    // 大乐透后区单独形态没有 <1% 拦截项，全部只做扫描提醒
+                    if (spanB === 1) {
+                        remind("【后区提醒】后区连号，概率16.667%");
+                    }
+                    if (spanB === 11) {
+                        remind("【后区提醒】后区01+12，跨度最大，概率1.515%");
+                    }
+                    else if (spanB >= 10) {
+                        remind(`【后区提醒】后区跨度≥10，当前${spanB}，概率4.545%`);
+                    }
+                    if (b[0] % 10 === b[1] % 10) {
+                        remind("【后区提醒】后区同尾，概率3.030%");
+                    }
+                    if (sumB <= 4) {
+                        remind(`【后区提醒】后区和值≤4，当前${sumB}，概率3.030%`);
+                    }
+                    else if (sumB <= 5) {
+                        remind(`【后区提醒】后区和值≤5，当前${sumB}，概率6.061%`);
+                    }
+                    if (sumB >= 21) {
+                        remind(`【后区提醒】后区和值≥21，当前${sumB}，概率6.061%`);
+                    }
+                    if (b.every(n => n <= 4)) {
+                        remind("【后区提醒】后区全在01-04，概率9.091%");
+                    }
+                    if (b.every(n => n >= 9)) {
+                        remind("【后区提醒】后区全在09-12，概率9.091%");
+                    }
+                    return warnings;
+                };
+                const validateSSQ = (frontArr, backArr, historySet = new Set(), mode = 'scan') => {
+                    const warnings = [];
+                    if (frontArr.length !== 6 || backArr.length !== 1)
+                        return warnings;
+                    const f = [...frontArr].sort((a, b) => a - b);
+                    const b = [...backArr].sort((a, b) => a - b);
+                    const block = (msg) => warnings.push(msg);
+                    const remind = (msg) => {
+                        if (mode !== 'generate')
+                            warnings.push(msg);
+                    };
+                    const maxConsecutive = maxRun(f);
+                    const sumF = f.reduce((sum, n) => sum + n, 0);
+                    const spanF = f[5] - f[0];
+                    const maxTailCount = maxTailCountOf(f);
+                    const ac = acValue(f);
+                    const comboKey = [...f, ...b].map(padZero).join(',');
+                    if (historySet.has(comboKey)) {
+                        block("【死号拦截】历史完全重复组合，生成时直接剔除");
+                    }
+                    // ====== 双色球红球：严格 <1% 的生成拦截规则 ======
+                    if (f.every(n => n % 2 === 0)) {
+                        block("【极度偏态】双色球红球全偶，概率0.7230%");
+                    }
+                    if (f.every(n => n <= 16)) {
+                        block("【极度偏态】双色球红球全小≤16，概率0.7230%");
+                    }
+                    if (f.every(n => n >= 18)) {
+                        block("【极度偏态】双色球红球全大≥18，概率0.7230%");
+                    }
+                    if (sumF <= 45) {
+                        block(`【极度偏态】红球和值≤45，当前${sumF}，概率0.2908%`);
+                    }
+                    else if (sumF <= 50) {
+                        block(`【极度偏态】红球和值≤50，当前${sumF}，概率0.6625%`);
+                    }
+                    if (sumF >= 159) {
+                        block(`【极度偏态】红球和值≥159，当前${sumF}，概率0.2908%`);
+                    }
+                    else if (sumF >= 154) {
+                        block(`【极度偏态】红球和值≥154，当前${sumF}，概率0.6625%`);
+                    }
+                    if (spanF <= 8) {
+                        block(`【极度偏态】红球跨度≤8，当前${spanF}，概率0.1289%`);
+                    }
+                    else if (spanF <= 9) {
+                        block(`【极度偏态】红球跨度≤9，当前${spanF}，概率0.2806%`);
+                    }
+                    else if (spanF <= 10) {
+                        block(`【极度偏态】红球跨度≤10，当前${spanF}，概率0.5423%`);
+                    }
+                    else if (spanF <= 11) {
+                        block(`【极度偏态】红球跨度≤11，当前${spanF}，概率0.9594%`);
+                    }
+                    if (maxConsecutive >= 6) {
+                        block("【极度偏态】双色球红球6连号，概率0.0025%");
+                    }
+                    else if (maxConsecutive === 5) {
+                        block("【极度偏态】双色球红球5连号，概率0.0708%");
+                    }
+                    if (maxTailCount >= 4) {
+                        block("【极度偏态】双色球红球4个同尾，概率0.1100%");
+                    }
+                    if (f.every(n => PRIME_SET.has(n))) {
+                        block("【极度偏态】双色球红球全质数，概率0.0417%");
+                    }
+                    if (f.every(n => SSQ_FIB_SET.has(n))) {
+                        block("【极度偏态】双色球红球全斐波那契数，概率0.0006%");
+                    }
+                    if (countWhere(f, n => SSQ_FIB_SET.has(n)) >= 5) {
+                        block("【极度偏态】双色球红球5个及以上斐波那契数，概率0.0499%");
+                    }
+                    if (countWhere(f, n => SSQ_SQUARE_SET.has(n)) >= 5) {
+                        block("【极度偏态】双色球红球5个及以上平方数，概率0.0025%");
+                    }
+                    if (isStrictArithmeticProgression(f)) {
+                        block("【极度偏态】双色球红球严格等差数列，概率0.0084%");
+                    }
+                    if (isSSQMirror17(f)) {
+                        block("【极度偏态】双色球红球关于17完全镜像，概率0.0506%");
+                    }
+                    if (allSameMod(f, 6)) {
+                        block("【极度偏态】双色球红球除6余数全部相同，概率0.0003%");
+                    }
+                    if (allSameMod(f, 5)) {
+                        block("【极度偏态】双色球红球除5余数全部相同，概率0.0021%");
+                    }
+                    if (allSameMod(f, 4)) {
+                        block("【极度偏态】双色球红球除4余数全部相同，概率0.0152%");
+                    }
+                    if (allSameMod(f, 3)) {
+                        block("【极度偏态】双色球红球除3余数全部相同，概率0.1251%");
+                    }
+                    if (f.every(n => n % 3 === 0)) {
+                        block("【极度偏态】双色球红球全为3的倍数，概率0.0417%");
+                    }
+                    if (countWhere(f, n => n % 3 === 0) >= 5) {
+                        block("【极度偏态】双色球红球5个及以上3的倍数，概率0.9594%");
+                    }
+                    if (countWhere(f, n => n % 5 === 0) >= 5) {
+                        block("【极度偏态】双色球红球5个及以上5的倍数，概率0.0147%");
+                    }
+                    if (countWhere(f, n => n % 7 === 0) >= 4) {
+                        block("【极度偏态】双色球红球4个及以上7的倍数，概率0.0367%");
+                    }
+                    if (allGapAtLeast(f, 6)) {
+                        block("【极度偏态】双色球红球相邻间隔全部≥6，概率0.0025%");
+                    }
+                    else if (allGapAtLeast(f, 5)) {
+                        block("【极度偏态】双色球红球相邻间隔全部≥5，概率0.1549%");
+                    }
+                    if (ac <= 2) {
+                        block(`【极度偏态】双色球红球AC值≤2，当前${ac}，概率0.3271%`);
+                    }
+                    if (containsAll(f, [1, 2, 32, 33])) {
+                        block("【极度偏态】双色球红球同时含01、02、32、33，概率0.0367%");
+                    }
+                    if (f.every(n => n <= 4 || n >= 30)) {
+                        block("【极度偏态】双色球红球全部落在两端8码内，概率0.0025%");
+                    }
+                    // ====== 双色球：>=1% 的扫描提醒，不参与生成拦截 ======
+                    if (f.every(n => n % 2 === 1)) {
+                        remind("【扫描提醒】双色球红球全奇，概率1.1174%");
+                    }
+                    if (!f.every(n => n <= 16) && f.every(n => n <= 17)) {
+                        remind("【扫描提醒】双色球红球全在01-17，概率1.1174%");
+                    }
+                    if (!f.every(n => n >= 18) && f.every(n => n >= 17)) {
+                        remind("【扫描提醒】双色球红球全在17-33，概率1.1174%");
+                    }
+                    if (sumF > 50 && sumF <= 55) {
+                        remind(`【扫描提醒】红球和值偏低≤55，当前${sumF}，概率1.3586%`);
+                    }
+                    if (sumF < 154 && sumF >= 149) {
+                        remind(`【扫描提醒】红球和值偏高≥149，当前${sumF}，概率1.3586%`);
+                    }
+                    if (spanF === 12) {
+                        remind(`【扫描提醒】红球跨度≤12，当前${spanF}，概率1.5851%`);
+                    }
+                    if (spanF >= 32) {
+                        remind(`【扫描提醒】红球跨度极大≥32，当前${spanF}，概率2.8409%`);
+                    }
+                    if (maxConsecutive === 4) {
+                        remind("【扫描提醒】双色球红球4连号，概率1.0264%");
+                    }
+                    if (ac === 3) {
+                        remind(`【扫描提醒】双色球红球AC值=3，当前${ac}，概率约1.20%`);
+                    }
+                    // 双色球蓝球只有1个，任意具体蓝球概率都是1/16=6.25%，不存在单独<1%拦截项
+                    if (b[0] === 1 || b[0] === 16) {
+                        remind(`【蓝球提醒】蓝球处于边界值${padZero(b[0])}，仅提醒，不拦截`);
+                    }
+                    return warnings;
+                };
+                const secureRandomInt = (max) => {
+                    // 返回 1..max 的均匀整数：只使用浏览器 Crypto API，不退回 Math.random。
+                    const cryptoObj = window.crypto || window.msCrypto;
+                    if (!cryptoObj || !cryptoObj.getRandomValues) {
+                        throw new Error("当前浏览器不支持 crypto.getRandomValues，无法保证加密级随机，请更换现代浏览器后再生成。");
+                    }
+                    const range = max;
+                    const maxUint32 = 0x100000000; // 2^32，Uint32Array 的完整取值空间
+                    const limit = maxUint32 - (maxUint32 % range);
+                    const buf = new Uint32Array(1);
+                    do {
+                        cryptoObj.getRandomValues(buf);
+                    } while (buf[0] >= limit);
+                    return (buf[0] % range) + 1;
+                };
+                const sampleUniqueNumbers = (count, max) => {
+                    const set = new Set();
+                    while (set.size < count) {
+                        set.add(secureRandomInt(max));
+                    }
+                    return Array.from(set).sort((a, b) => a - b);
+                };
+                const generateValidCombination = (gameType, historySet) => {
+                    let attempts = 0;
+                    const isDLT = gameType === 'dlt';
+                    const frontCount = isDLT ? 5 : 6;
+                    const backCount = isDLT ? 2 : 1;
+                    const frontMax = isDLT ? 35 : 33;
+                    const backMax = isDLT ? 12 : 16;
+                    const validator = isDLT ? validateDLT : validateSSQ;
+                    while (attempts < 20000) {
+                        attempts++;
+                        // 先完全随机、不加权、不按冷热号、不按任何规律抽取；
+                        // 再用 validator(..., 'generate') 只剔除生成端拦截规则。
+                        const frontArr = sampleUniqueNumbers(frontCount, frontMax);
+                        const backArr = sampleUniqueNumbers(backCount, backMax);
+                        if (validator(frontArr, backArr, historySet, 'generate').length === 0) {
+                            return { front: frontArr, back: backArr };
+                        }
+                    }
+                    return null;
+                };
+                const CombinationRow = ({ front, back, index, warnings = [], customLabel, gameType, onRegenerate, highlightDanger }) => {
+                    const [copied, setCopied] = useState(false);
+                    const handleCopy = () => {
+                        const textToCopy = [...front, ...back].map(padZero).join(' ');
+                        const textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        textArea.style.top = "0";
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                        }
+                        catch (err) { }
+                        document.body.removeChild(textArea);
+                    };
+                    const ballColor = gameType === 'ssq' ? 'bg-red-600' : 'bg-red-500';
+                    const blueColor = gameType === 'ssq' ? 'bg-blue-600' : 'bg-blue-500';
+                    const shouldHighlight = highlightDanger !== undefined ? highlightDanger : warnings.length > 0;
+                    return (React.createElement("div", { className: `flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-3 bg-white rounded-lg shadow-sm border mb-2 transition-shadow
+                               ${shouldHighlight ? 'border-red-200 bg-red-50/40' : 'border-gray-100'}` },
+                        React.createElement("div", { className: "flex flex-col flex-1 w-full sm:w-auto space-y-1 sm:space-y-1.5" },
+                            React.createElement("div", { className: "flex items-center space-x-1.5" },
+                                customLabel && React.createElement("span", { className: "text-gray-400 font-medium text-xs sm:text-sm mr-1 shrink-0" }, customLabel),
+                                index !== undefined && !customLabel && React.createElement("span", { className: "text-gray-400 font-medium text-xs sm:text-sm mr-1 shrink-0 w-4" },
+                                    index + 1,
+                                    "."),
+                                React.createElement("div", { className: "flex flex-wrap gap-1" },
+                                    front.map(n => (React.createElement("div", { key: `f-${n}`, className: `w-6 h-6 sm:w-7 sm:h-7 rounded-full ${ballColor} text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm` }, padZero(n)))),
+                                    React.createElement("div", { className: "w-px h-4 bg-gray-300 mx-0.5 self-center" }),
+                                    back.map(n => (React.createElement("div", { key: `b-${n}`, className: `w-6 h-6 sm:w-7 sm:h-7 rounded-full ${blueColor} text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm` }, padZero(n)))))),
+                            warnings.length > 0 ? (React.createElement("div", { className: "w-full pl-0 sm:pl-7" },
+                                React.createElement("div", { className: "inline-flex items-center bg-red-50 px-1.5 py-0.5 rounded text-red-700 border border-red-100 text-[11px] sm:text-xs font-bold mt-1" },
+                                    React.createElement(Icon, { name: "scan-line", size: 10, className: "mr-1" }),
+                                    " \u626B\u63CF\u7ED3\u679C\uFF1A\u53D1\u73B0\u4EE5\u4E0B\u63D0\u9192"),
+                                React.createElement("ul", { className: "space-y-0.5" }, warnings.map((warn, i) => (React.createElement("li", { key: i, className: "text-red-600 text-[11px] sm:text-xs flex items-start bg-red-100/50 px-1.5 py-0.5 rounded leading-tight mt-1" },
+                                    React.createElement("span", { className: "mr-1 font-bold text-red-800" }, "\u00B7"),
+                                    " ",
+                                    warn)))))) : (React.createElement("div", { className: "pl-0 sm:pl-7 mt-1" },
+                                React.createElement("span", { className: "inline-flex items-center bg-green-50 px-1.5 py-0.5 rounded text-green-600 border border-green-100 text-[11px] sm:text-xs" },
+                                    React.createElement(Icon, { name: "check-circle-2", size: 10, className: "mr-1" }),
+                                    " \u626B\u63CF\u7ED3\u679C\uFF1A\u5DF2\u901A\u8FC7\u5168\u91CF\u626B\u63CF\uFF0C\u672A\u53D1\u73B0\u6781\u7AEF/\u63D0\u9192\u9879")))),
+                        React.createElement("div", { className: "flex flex-col gap-1.5 mt-2 sm:mt-0 ml-0 sm:ml-3 w-full sm:w-auto" },
+                            React.createElement("button", { onClick: handleCopy, className: `flex items-center px-3 py-1.5 rounded-md font-medium text-xs sm:text-sm transition-all whitespace-nowrap w-full sm:w-auto justify-center
+                        ${copied ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 hover:text-blue-600'}` }, copied ? React.createElement(React.Fragment, null,
+                                React.createElement(Icon, { name: "check", size: 14, className: "mr-1" }),
+                                " \u5DF2\u590D\u5236") : React.createElement(React.Fragment, null,
+                                React.createElement(Icon, { name: "copy", size: 14, className: "mr-1" }),
+                                " \u590D\u5236")),
+                            onRegenerate && (React.createElement("button", { onClick: onRegenerate, className: "flex items-center px-3 py-1.5 rounded-md font-medium text-xs sm:text-sm transition-all whitespace-nowrap w-full sm:w-auto justify-center bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100" },
+                                React.createElement(Icon, { name: "refresh-ccw", size: 14, className: "mr-1" }),
+                                " \u91CD\u968F\u4E00\u7EC4")))));
+                };
+                function App() {
+                    const [gameType, setGameType] = useState('dlt'); // 'dlt' | 'ssq'
+                    const [budgetStr, setBudgetStr] = useState("30");
+                    const [isAdditional, setIsAdditional] = useState(true);
+                    const [multiplierStr, setMultiplierStr] = useState("1");
+                    const [activeTab, setActiveTab] = useState('auto');
+                    const [generatedList, setGeneratedList] = useState([]);
+                    const [isGenerating, setIsGenerating] = useState(false);
+                    const [copiedAll, setCopiedAll] = useState(false);
+                    const [copiedScanAll, setCopiedScanAll] = useState(false);
+                    const [manualFront, setManualFront] = useState([]);
+                    const [manualBack, setManualBack] = useState([]);
+                    const [scanInput, setScanInput] = useState("");
+                    const [scanResults, setScanResults] = useState([]);
+                    const [historyInput, setHistoryInput] = useState("");
+                    const [historySet, setHistorySet] = useState(new Set());
+                    const [importStatus, setImportStatus] = useState(null);
+                    useEffect(() => {
+                        setGeneratedList([]);
+                        setManualFront([]);
+                        setManualBack([]);
+                        setScanInput("");
+                        setScanResults([]);
+                        setHistoryInput("");
+                        // 按玩法自动恢复默认倍数：大乐透 1 倍，双色球 2 倍。
+                        setMultiplierStr(gameType === 'dlt' ? "1" : "2");
+                        try {
+                            const saved = localStorage.getItem(`lotto_history_${gameType}`);
+                            setHistorySet(saved ? new Set(JSON.parse(saved)) : new Set());
+                        }
+                        catch (e) {
+                            setHistorySet(new Set());
+                        }
+                    }, [gameType]);
+                    const basePrice = 2;
+                    const activeAdditional = gameType === 'ssq' ? false : isAdditional;
+                    const additionalPrice = activeAdditional ? 1 : 0;
+                    const multiplier = Math.max(1, parseInt(multiplierStr) || 1);
+                    const pricePerTicket = (basePrice + additionalPrice) * multiplier;
+                    const budget = Math.max(0, parseInt(budgetStr) || 0);
+                    const ticketCount = Math.floor(budget / pricePerTicket);
+                    const actualCost = ticketCount * pricePerTicket;
+                    const frontCount = gameType === 'dlt' ? 5 : 6;
+                    const backCount = gameType === 'dlt' ? 2 : 1;
+                    const frontMax = gameType === 'dlt' ? 35 : 33;
+                    const backMax = gameType === 'dlt' ? 12 : 16;
+                    const validateEngine = gameType === 'dlt' ? validateDLT : validateSSQ;
+                    const handleGenerate = () => {
+                        if (ticketCount <= 0)
+                            return;
+                        setIsGenerating(true);
+                        setTimeout(() => {
+                            try {
+                                const newList = [];
+                                for (let i = 0; i < ticketCount; i++) {
+                                    const combo = generateValidCombination(gameType, historySet);
+                                    if (combo) {
+                                        // 生成端仍按 <1% 极端规则拦截；展示端自动跑完整扫描提醒。
+                                        newList.push({
+                                            ...combo,
+                                            warnings: validateEngine(combo.front, combo.back, historySet)
+                                        });
+                                    }
+                                }
+                                setGeneratedList(newList);
+                            }
+                            catch (err) {
+                                alert(err.message || "随机生成失败，请检查浏览器环境。");
+                            }
+                            finally {
+                                setIsGenerating(false);
+                            }
+                        }, 100);
+                    };
+                    const handleRegenerateGeneratedOne = (idx) => {
+                        const combo = generateValidCombination(gameType, historySet);
+                        if (!combo) {
+                            alert("重新随机失败，请稍后再试");
+                            return;
+                        }
+                        const warnings = validateEngine(combo.front, combo.back, historySet);
+                        setGeneratedList(prev => prev.map((item, i) => {
+                            if (i !== idx)
+                                return item;
+                            return {
+                                ...combo,
+                                warnings
+                            };
+                        }));
+                    };
+                    const handleCopyAll = () => {
+                        if (generatedList.length === 0)
+                            return;
+                        const textToCopy = generatedList.map(c => [...c.front, ...c.back].map(padZero).join(' ')).join('\n');
+                        const textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        textArea.style.top = "0";
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            setCopiedAll(true);
+                            setTimeout(() => setCopiedAll(false), 2500);
+                        }
+                        catch (err) { }
+                        document.body.removeChild(textArea);
+                    };
+                    const toggleManualNumber = (zone, num) => {
+                        if (zone === 'front') {
+                            if (manualFront.includes(num))
+                                setManualFront(manualFront.filter(n => n !== num));
+                            else if (manualFront.length < frontCount)
+                                setManualFront([...manualFront, num].sort((a, b) => a - b));
+                        }
+                        else {
+                            if (manualBack.includes(num))
+                                setManualBack(manualBack.filter(n => n !== num));
+                            else if (manualBack.length < backCount)
+                                setManualBack([...manualBack, num].sort((a, b) => a - b));
+                        }
+                    };
+                    const manualWarnings = useMemo(() => {
+                        if (manualFront.length === frontCount && manualBack.length === backCount) {
+                            return validateEngine(manualFront, manualBack, historySet);
+                        }
+                        return [];
+                    }, [manualFront, manualBack, historySet, validateEngine, frontCount, backCount]);
+                    const handleBatchScan = () => {
+                        if (!scanInput.trim()) {
+                            setScanResults([{ error: "请输入号码", originalText: "空" }]);
+                            return;
+                        }
+                        const lines = scanInput
+                            .split('\n')
+                            .map(line => line.trim())
+                            .filter(line => line !== '');
+                        if (lines.length === 0)
+                            return;
+                        const results = lines.map(line => {
+                            const parsed = parseLotteryLine(line, frontCount, backCount, frontMax, backMax);
+                            if (!parsed.success) {
+                                return {
+                                    error: parsed.error,
+                                    originalText: line
+                                };
+                            }
+                            const { front, back } = parsed;
+                            const warnings = validateEngine(front, back, historySet);
+                            return {
+                                success: true,
+                                front,
+                                back,
+                                warnings,
+                                originalText: line
+                            };
+                        });
+                        setScanResults(results);
+                    };
+                    const handleRegenerateScanOne = (idx) => {
+                        const combo = generateValidCombination(gameType, historySet);
+                        if (!combo) {
+                            alert("重新随机失败，请稍后再试");
+                            return;
+                        }
+                        const warnings = validateEngine(combo.front, combo.back, historySet);
+                        setScanResults(prev => prev.map((item, i) => {
+                            if (i !== idx)
+                                return item;
+                            return {
+                                success: true,
+                                front: combo.front,
+                                back: combo.back,
+                                warnings,
+                                originalText: "单独重新随机生成"
+                            };
+                        }));
+                    };
+                    const handleCopyScanAll = () => {
+                        const validRows = scanResults.filter(r => r.success);
+                        if (validRows.length === 0)
+                            return;
+                        const textToCopy = validRows
+                            .map(r => [...r.front, ...r.back].map(padZero).join(' '))
+                            .join('\n');
+                        const textArea = document.createElement("textarea");
+                        textArea.value = textToCopy;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-9999px";
+                        textArea.style.top = "0";
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            setCopiedScanAll(true);
+                            setTimeout(() => setCopiedScanAll(false), 2500);
+                        }
+                        catch (err) { }
+                        document.body.removeChild(textArea);
+                    };
+                    useEffect(() => {
+                        if (activeTab !== 'scan')
+                            return;
+                        const timer = setTimeout(() => {
+                            if (!scanInput.trim()) {
+                                setScanResults([]);
+                                return;
+                            }
+                            handleBatchScan();
+                        }, 200);
+                        return () => clearTimeout(timer);
+                    }, [scanInput, gameType, historySet, activeTab]);
+                    const scanStats = useMemo(() => {
+                        if (!scanResults || scanResults.length === 0)
+                            return null;
+                        return {
+                            total: scanResults.length,
+                            errors: scanResults.filter(r => r.error).length,
+                            safe: scanResults.filter(r => r.success && r.warnings.length === 0).length,
+                            warned: scanResults.filter(r => r.success && r.warnings.length > 0).length
+                        };
+                    }, [scanResults]);
+                    const handleImportHistory = () => {
+                        if (!historyInput.trim())
+                            return;
+                        const lines = historyInput.split('\n').map(l => l.trim()).filter(l => l !== '');
+                        let addedCount = 0;
+                        const newSet = new Set(historySet);
+                        const reqTotal = frontCount + backCount;
+                        lines.forEach(line => {
+                            const nums = (line.match(/\d+/g) || []).map(Number);
+                            if (nums.length >= reqTotal) {
+                                const validNums = nums.slice(-reqTotal);
+                                const front = validNums.slice(0, frontCount).sort((a, b) => a - b);
+                                const back = validNums.slice(frontCount, reqTotal).sort((a, b) => a - b);
+                                if (front.every(n => n >= 1 && n <= frontMax) && new Set(front).size === frontCount &&
+                                    back.every(n => n >= 1 && n <= backMax) && new Set(back).size === backCount) {
+                                    const key = [...front, ...back].map(padZero).join(',');
+                                    if (!newSet.has(key)) {
+                                        newSet.add(key);
+                                        addedCount++;
+                                    }
+                                }
+                            }
+                        });
+                        setHistorySet(newSet);
+                        setHistoryInput("");
+                        setImportStatus(`成功导入 ${addedCount} 条记录！总计: ${newSet.size}`);
+                        try {
+                            localStorage.setItem(`lotto_history_${gameType}`, JSON.stringify(Array.from(newSet)));
+                        }
+                        catch (e) { }
+                        setTimeout(() => setImportStatus(null), 5000);
+                    };
+                    const clearHistory = () => {
+                        if (window.confirm(`确定要清空 ${gameType === 'dlt' ? '大乐透' : '双色球'} 的历史数据吗？`)) {
+                            setHistorySet(new Set());
+                            try {
+                                localStorage.removeItem(`lotto_history_${gameType}`);
+                            }
+                            catch (e) { }
+                            setImportStatus("历史库已清空！");
+                            setTimeout(() => setImportStatus(null), 3000);
+                        }
+                    };
+                    return (React.createElement("div", { className: "h-[100dvh] bg-gray-50 p-2 sm:p-4 font-sans text-gray-800 flex flex-col overflow-hidden box-border" },
+                        React.createElement("div", { className: "max-w-3xl mx-auto w-full flex flex-col flex-1 min-h-0 space-y-2 sm:space-y-3" },
+                            React.createElement("div", { className: "flex flex-col items-center shrink-0 space-y-2 pt-2" },
+                                React.createElement("div", { className: "flex items-center bg-white rounded-full shadow-sm p-1 border border-gray-200" },
+                                    React.createElement("button", { onClick: () => setGameType('dlt'), className: `px-4 py-1.5 rounded-full text-sm font-bold transition-all flex items-center ${gameType === 'dlt' ? 'bg-gradient-to-r from-red-500 to-blue-500 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}` },
+                                        React.createElement("span", { className: "w-2 h-2 rounded-full bg-blue-200 mr-2" }),
+                                        "\u5927\u4E50\u900F (5+2)"),
+                                    React.createElement("button", { onClick: () => setGameType('ssq'), className: `px-4 py-1.5 rounded-full text-sm font-bold transition-all flex items-center ${gameType === 'ssq' ? 'bg-gradient-to-r from-red-600 to-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}` },
+                                        React.createElement("span", { className: "w-2 h-2 rounded-full bg-red-200 mr-2" }),
+                                        "\u53CC\u8272\u7403 (6+1)")),
+                                React.createElement("p", { className: "text-gray-400 text-xs text-center px-4" },
+                                    "\u7CBE\u51C6 ",
+                                    React.createElement("span", { className: "text-red-500 font-bold" }, "< 1%"),
+                                    " \u5C0F\u6982\u7387\u62E6\u622A\u5F15\u64CE\uFF0C\u5254\u9664 ",
+                                    gameType === 'dlt' ? '大乐透' : '双色球',
+                                    " \u6781\u7AEF\u6B7B\u4EA1\u9677\u9631")),
+                            React.createElement("div", { className: "flex justify-center shrink-0" },
+                                React.createElement("div", { className: "bg-gray-200 p-1 rounded-lg inline-flex flex-wrap justify-center gap-1" },
+                                    React.createElement("button", { onClick: () => setActiveTab('auto'), className: `px-2.5 sm:px-4 py-1.5 rounded-md font-medium transition-colors text-[11px] sm:text-xs flex items-center ${activeTab === 'auto' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-300'}` },
+                                        React.createElement(Icon, { name: "sparkles", size: 14, className: "mr-1 hidden sm:block" }),
+                                        " \u751F\u6210"),
+                                    React.createElement("button", { onClick: () => setActiveTab('manual'), className: `px-2.5 sm:px-4 py-1.5 rounded-md font-medium transition-colors text-[11px] sm:text-xs flex items-center ${activeTab === 'manual' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-300'}` },
+                                        React.createElement(Icon, { name: "hand", size: 14, className: "mr-1 hidden sm:block" }),
+                                        " \u70B9\u9009"),
+                                    React.createElement("button", { onClick: () => setActiveTab('scan'), className: `px-2.5 sm:px-4 py-1.5 rounded-md font-medium transition-colors text-[11px] sm:text-xs flex items-center ${activeTab === 'scan' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-300'}` },
+                                        React.createElement(Icon, { name: "scan-line", size: 14, className: "mr-1 hidden sm:block" }),
+                                        " \u626B\u63CF"),
+                                    React.createElement("button", { onClick: () => setActiveTab('history'), className: `px-2.5 sm:px-4 py-1.5 rounded-md font-medium transition-colors text-[11px] sm:text-xs flex items-center ${activeTab === 'history' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-300'}` },
+                                        React.createElement(Icon, { name: "database", size: 14, className: "mr-1 hidden sm:block" }),
+                                        " \u5E93(",
+                                        historySet.size,
+                                        ")"),
+                                    React.createElement("button", { onClick: () => setActiveTab('rules'), className: `px-2.5 sm:px-4 py-1.5 rounded-md font-medium transition-colors text-[11px] sm:text-xs flex items-center ${activeTab === 'rules' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:bg-gray-300'}` },
+                                        React.createElement(Icon, { name: "info", size: 14, className: "mr-1 hidden sm:block" }),
+                                        " \u89C4\u5219"))),
+                            React.createElement("div", { className: "flex-1 flex flex-col min-h-0 relative" },
+                                activeTab === 'auto' && (React.createElement("div", { className: "flex-1 flex flex-col min-h-0 transition-opacity duration-300 space-y-2" },
+                                    React.createElement("div", { className: "bg-white rounded-xl shadow-sm border border-gray-100 p-3 shrink-0 flex flex-col" },
+                                        React.createElement("div", { className: `grid gap-2 ${gameType === 'dlt' ? 'grid-cols-3' : 'grid-cols-2'}` },
+                                            React.createElement("div", { className: "space-y-1" },
+                                                React.createElement("label", { className: "text-xs text-gray-500" }, "\u9884\u7B97 (\u5143)"),
+                                                React.createElement("div", { className: "relative" },
+                                                    React.createElement("span", { className: "absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm" }, "\u00A5"),
+                                                    React.createElement("input", { type: "text", value: budgetStr, onChange: (e) => setBudgetStr(e.target.value.replace(/[^\d]/g, '')), className: "w-full pl-6 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm font-semibold", placeholder: "0" }))),
+                                            React.createElement("div", { className: "space-y-1" },
+                                                React.createElement("label", { className: "text-xs text-gray-500" }, "\u500D\u6570"),
+                                                React.createElement("div", { className: "relative" },
+                                                    React.createElement("input", { type: "text", value: multiplierStr, onChange: (e) => setMultiplierStr(e.target.value.replace(/[^\d]/g, '')), className: "w-full px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm font-semibold", placeholder: "\u500D" }))),
+                                            gameType === 'dlt' && (React.createElement("div", { className: "flex items-end" },
+                                                React.createElement("label", { className: "flex items-center justify-center space-x-1.5 cursor-pointer p-1.5 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors w-full h-[34px]" },
+                                                    React.createElement("input", { type: "checkbox", checked: isAdditional, onChange: () => setIsAdditional(!isAdditional), className: "sr-only" }),
+                                                    React.createElement("div", { className: `relative w-8 h-4 rounded-full transition-colors ${isAdditional ? 'bg-blue-500' : 'bg-gray-300'}` },
+                                                        React.createElement("div", { className: `absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform ${isAdditional ? 'transform translate-x-4' : ''}` })),
+                                                    React.createElement("span", { className: "text-[11px] sm:text-xs text-gray-600 font-medium whitespace-nowrap" }, "\u8FFD\u52A0"))))),
+                                        React.createElement("div", { className: "mt-2.5 bg-blue-50 p-2 sm:p-2.5 rounded-lg flex flex-col items-center justify-center gap-2 border border-blue-100" },
+                                            React.createElement("div", { className: "w-full text-center" },
+                                                React.createElement("div", { className: "text-[11px] sm:text-xs text-gray-600 truncate" },
+                                                    "\u5355\u6CE8: ",
+                                                    React.createElement("span", { className: "font-semibold text-gray-800" },
+                                                        pricePerTicket,
+                                                        "\u5143"),
+                                                    React.createElement("span", { className: "hidden sm:inline" },
+                                                        " (",
+                                                        basePrice,
+                                                        "\u5143",
+                                                        activeAdditional ? '+1元' : '',
+                                                        ")\u00D7",
+                                                        multiplier,
+                                                        "\u500D")),
+                                                React.createElement("div", { className: "text-xs sm:text-sm mt-0.5 text-gray-800 truncate" },
+                                                    "\u53EF\u4E70 ",
+                                                    React.createElement("span", { className: "font-bold text-blue-600" }, ticketCount),
+                                                    " \u6CE8\u65B9\u6848, \u82B1\u8D39 ",
+                                                    React.createElement("span", { className: "font-bold text-red-500" },
+                                                        "\u00A5",
+                                                        actualCost))),
+                                            React.createElement("button", { onClick: handleGenerate, disabled: ticketCount <= 0 || isGenerating, className: "w-full sm:w-56 justify-center px-8 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 text-white rounded-md font-bold text-sm shadow-sm transform active:scale-95 disabled:opacity-50 flex items-center" },
+                                                isGenerating ? React.createElement(Icon, { name: "refresh-ccw", className: "animate-spin mr-1", size: 14 }) : React.createElement(Icon, { name: "sparkles", className: "mr-1", size: 14 }),
+                                                "\u751F\u6210\u6781\u4F18"))),
+                                    React.createElement("div", { className: "flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-100" }, generatedList.length > 0 ? (React.createElement(React.Fragment, null,
+                                        React.createElement("div", { className: "flex justify-between items-center px-3 py-2 border-b border-gray-100 shrink-0" },
+                                            React.createElement("span", { className: "text-xs font-bold text-gray-600 flex items-center" },
+                                                React.createElement(Icon, { name: "check-circle", size: 14, className: "text-green-500 mr-1" }),
+                                                " \u5DF2\u751F\u6210\u5E76\u626B\u63CF ",
+                                                generatedList.length,
+                                                " \u6CE8"),
+                                            React.createElement("button", { onClick: handleCopyAll, className: `text-sm px-8 sm:px-10 py-2 rounded-md font-bold transition-colors flex items-center justify-center min-w-[128px] sm:min-w-[150px] shadow-sm ${copiedAll ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100'}` }, copiedAll ? React.createElement(React.Fragment, null,
+                                                React.createElement(Icon, { name: "check", size: 14, className: "mr-1" }),
+                                                "\u5DF2\u5168\u590D\u5236") : React.createElement(React.Fragment, null,
+                                                React.createElement(Icon, { name: "copy", size: 14, className: "mr-1" }),
+                                                "\u5168\u590D\u5236"))),
+                                        React.createElement("div", { className: "flex-1 overflow-y-auto p-2 overscroll-contain bg-gray-50/50" }, generatedList.map((combo, idx) => {
+                                            const warnings = combo.warnings || validateEngine(combo.front, combo.back, historySet);
+                                            return React.createElement(CombinationRow, { key: idx, front: combo.front, back: combo.back, warnings: warnings, index: idx, gameType: gameType, onRegenerate: () => handleRegenerateGeneratedOne(idx), highlightDanger: warnings.length >= 2 });
+                                        })))) : (React.createElement("div", { className: "flex-1 flex items-center justify-center text-sm text-gray-400" }, "\u8BBE\u7F6E\u9884\u7B97\u540E\uFF0C\u70B9\u51FB\u751F\u6210\u6309\u94AE\u83B7\u53D6\u5B89\u5168\u65B9\u6848"))))),
+                                activeTab === 'manual' && (React.createElement("div", { className: "flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 transition-opacity duration-300" },
+                                    React.createElement("div", { className: "flex items-center justify-between pb-2 shrink-0" },
+                                        React.createElement("span", { className: "text-xs font-medium text-gray-500" },
+                                            "\u7EA2\u7403: ",
+                                            React.createElement("span", { className: manualFront.length === frontCount ? "text-green-500" : "text-red-500 font-bold" },
+                                                manualFront.length,
+                                                "/",
+                                                frontCount),
+                                            React.createElement("span", { className: "mx-1" }, "|"),
+                                            "\u84DD\u7403: ",
+                                            React.createElement("span", { className: manualBack.length === backCount ? "text-green-500" : "text-blue-500 font-bold" },
+                                                manualBack.length,
+                                                "/",
+                                                backCount)),
+                                        React.createElement("button", { onClick: () => { setManualFront([]); setManualBack([]); }, className: "text-xs text-gray-400 hover:text-red-500 underline flex items-center" },
+                                            React.createElement(Icon, { name: "trash-2", size: 12, className: "mr-0.5" }),
+                                            "\u6E05\u7A7A")),
+                                    React.createElement("div", { className: "flex flex-col flex-1 min-h-0" },
+                                        React.createElement("div", { className: "flex-1 overflow-y-auto overscroll-contain pb-2 pr-1" },
+                                            React.createElement("div", { className: "shrink-0 mb-3" },
+                                                React.createElement("div", { className: "grid grid-cols-7 sm:grid-cols-10 gap-1.5 sm:gap-2 justify-items-center" }, Array.from({ length: frontMax }, (_, i) => i + 1).map(num => (React.createElement("button", { key: `mf-${num}`, onClick: () => toggleManualNumber('front', num), className: `w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[11px] sm:text-xs transition-all ${manualFront.includes(num) ? `bg-red-500 text-white shadow-md transform scale-110` : 'bg-red-50 text-red-600 border border-red-100'}` }, padZero(num)))))),
+                                            React.createElement("div", { className: "shrink-0 mb-4" },
+                                                React.createElement("div", { className: "grid grid-cols-6 sm:grid-cols-12 gap-1.5 sm:gap-2 justify-items-center" }, Array.from({ length: backMax }, (_, i) => i + 1).map(num => (React.createElement("button", { key: `mb-${num}`, onClick: () => toggleManualNumber('back', num), className: `w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[11px] sm:text-xs transition-all ${manualBack.includes(num) ? `bg-blue-500 text-white shadow-md transform scale-110` : 'bg-blue-50 text-blue-600 border border-blue-100'}` }, padZero(num)))))),
+                                            React.createElement("div", { className: "shrink-0" }, manualFront.length === frontCount && manualBack.length === backCount ? (React.createElement(CombinationRow, { front: manualFront, back: manualBack, warnings: manualWarnings, customLabel: "\u9009\u53F7:", gameType: gameType })) : (React.createElement("div", { className: "h-20 flex items-center justify-center p-4 rounded-lg bg-gray-50 border border-gray-100 text-center text-gray-400 text-[11px] sm:text-xs leading-relaxed" },
+                                                "\u9009\u6EE1 ",
+                                                frontCount,
+                                                "\u7EA2 ",
+                                                backCount,
+                                                "\u84DD",
+                                                React.createElement("br", null),
+                                                "\u7CFB\u7EDF\u5C06\u8FDB\u884C\u6DF1\u5EA6\u7684\u6392\u5F02\u4E0E\u6B7B\u53F7\u62E6\u622A"))))))),
+                                activeTab === 'scan' && (React.createElement("div", { className: "flex-1 flex flex-col min-h-0 space-y-2 transition-opacity duration-300" },
+                                    React.createElement("div", { className: "bg-white rounded-xl shadow-sm border border-gray-100 p-3 shrink-0 flex flex-col space-y-2" },
+                                        React.createElement("textarea", { rows: 3, value: scanInput, onChange: (e) => setScanInput(e.target.value), placeholder: gameType === 'dlt'
+                                                ? "粘贴大乐透号码，支持：22 28 30 31 34 01 05 / 22283031340105 / 2228303134 0105"
+                                                : "粘贴双色球号码，支持：01 02 03 04 05 06 16 / 01020304050616 / 010203040506 16", className: "w-full p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-blue-500 outline-none text-xs sm:text-sm font-mono transition-all resize-none" }),
+                                        React.createElement("div", { className: "flex justify-between items-center gap-2" },
+                                            React.createElement("button", { onClick: () => { setScanInput(""); setScanResults([]); }, className: "px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md text-sm font-bold transition-colors border border-gray-200 shadow-sm" }, "\u6E05\u7A7A"),
+                                            React.createElement("div", { className: "flex items-center px-4 py-2 bg-green-50 text-green-600 rounded-md text-xs font-bold border border-green-100" },
+                                                React.createElement(Icon, { name: "radar", size: 14, className: "mr-1" }),
+                                                " \u5B9E\u65F6\u626B\u63CF\u4E2D"))),
+                                    React.createElement("div", { className: "flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-100" }, scanResults.length > 0 && scanStats ? (React.createElement(React.Fragment, null,
+                                        React.createElement("div", { className: "flex flex-wrap gap-2 sm:gap-4 p-2 bg-gray-50 border-b border-gray-100 shrink-0 justify-between items-center" },
+                                            React.createElement("div", { className: "flex flex-wrap gap-2 sm:gap-4 justify-center" },
+                                                React.createElement("div", { className: "text-[11px] sm:text-xs" },
+                                                    "\u626B\u63CF:",
+                                                    React.createElement("span", { className: "font-bold ml-1" }, scanStats.total)),
+                                                React.createElement("div", { className: "text-[11px] sm:text-xs" },
+                                                    "\u5B89\u5168:",
+                                                    React.createElement("span", { className: "font-bold text-green-600 ml-1" }, scanStats.safe)),
+                                                React.createElement("div", { className: "text-[11px] sm:text-xs" },
+                                                    "\u8B66\u544A:",
+                                                    React.createElement("span", { className: "font-bold text-red-500 ml-1" }, scanStats.warned)),
+                                                scanStats.errors > 0 && React.createElement("div", { className: "text-[11px] sm:text-xs" },
+                                                    "\u9519\u8BEF:",
+                                                    React.createElement("span", { className: "font-bold text-orange-500 ml-1" }, scanStats.errors))),
+                                            React.createElement("button", { onClick: handleCopyScanAll, disabled: scanResults.filter(r => r.success).length === 0, className: `text-sm px-8 sm:px-10 py-2 rounded-md font-bold transition-colors flex items-center justify-center min-w-[128px] sm:min-w-[150px] shadow-sm disabled:opacity-40
+                ${copiedScanAll ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100'}` }, copiedScanAll ? (React.createElement(React.Fragment, null,
+                                                React.createElement(Icon, { name: "check", size: 12, className: "mr-1" }),
+                                                "\u5DF2\u5168\u590D\u5236")) : (React.createElement(React.Fragment, null,
+                                                React.createElement(Icon, { name: "copy", size: 12, className: "mr-1" }),
+                                                "\u5168\u590D\u5236")))),
+                                        React.createElement("div", { className: "flex-1 overflow-y-auto p-2 overscroll-contain bg-gray-50/50" }, scanResults.map((result, idx) => (React.createElement("div", { key: idx }, result.error ? (React.createElement("div", { className: "p-2 bg-orange-50 border border-orange-200 rounded-lg flex items-center mb-2" },
+                                            React.createElement(Icon, { name: "alert-circle", className: "mr-1.5 flex-shrink-0 text-orange-500", size: 14 }),
+                                            React.createElement("span", { className: "font-medium text-[11px] sm:text-xs text-orange-700" }, result.error))) : (React.createElement(CombinationRow, { front: result.front, back: result.back, warnings: result.warnings, customLabel: `#${idx + 1}`, gameType: gameType, onRegenerate: () => handleRegenerateScanOne(idx), highlightDanger: result.warnings.length >= 2 })))))))) : (React.createElement("div", { className: "flex-1 flex items-center justify-center text-xs text-gray-400" }, "\u626B\u63CF\u7ED3\u679C\u5C06\u5728\u6B64\u663E\u793A"))))),
+                                activeTab === 'history' && (React.createElement("div", { className: "flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 space-y-2 transition-opacity duration-300" },
+                                    React.createElement("div", { className: "text-[11px] sm:text-xs text-gray-500 bg-indigo-50 p-2 sm:p-3 rounded-lg border border-indigo-100 shrink-0" },
+                                        React.createElement("p", null,
+                                            "\u7C98\u8D34\u5386\u53F2\u4E2D\u5956\u8868\u683C\u81EA\u52A8\u5B58\u5E93 (\u5F53\u524D\u6A21\u5F0F: ",
+                                            React.createElement("b", null, gameType === 'dlt' ? '大乐透' : '双色球'),
+                                            "\uFF0C\u4E24\u5E93\u72EC\u7ACB\u9632\u6DF7\u6DC6)\u3002")),
+                                    React.createElement("textarea", { value: historyInput, onChange: (e) => setHistoryInput(e.target.value), placeholder: `在此粘贴历史开奖数据... (需包含 ${frontCount}+${backCount} 码)`, className: "flex-1 w-full p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none text-xs font-mono resize-none" }),
+                                    importStatus && (React.createElement("div", { className: `p-2 rounded text-[11px] sm:text-xs flex items-center shrink-0 ${importStatus.includes('成功') ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}` },
+                                        React.createElement(Icon, { name: "check-circle", size: 14, className: "mr-1" }),
+                                        " ",
+                                        importStatus)),
+                                    React.createElement("div", { className: "flex justify-between items-center shrink-0 pt-2" },
+                                        React.createElement("button", { onClick: clearHistory, className: "px-3 py-1.5 text-red-500 hover:bg-red-50 rounded text-[11px] sm:text-xs transition-colors" }, "\u6E05\u7A7A\u5E93"),
+                                        React.createElement("button", { onClick: handleImportHistory, className: "flex items-center px-6 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded font-bold text-xs shadow-sm" },
+                                            React.createElement(Icon, { name: "upload", size: 14, className: "mr-1" }),
+                                            " \u5BFC\u5165\u6392\u91CD")))),
+                                activeTab === 'rules' && (React.createElement("div", { className: "flex-1 flex flex-col min-h-0 bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 transition-opacity duration-300" },
+                                    React.createElement("h2", { className: "text-sm font-bold flex items-center border-b border-gray-100 pb-2 shrink-0" },
+                                        React.createElement(Icon, { name: "shield-alert", size: 16, className: "mr-1.5 text-gray-500" }),
+                                        " ",
+                                        gameType === 'dlt' ? '大乐透 (5+2)' : '双色球 (6+1)',
+                                        " ",
+                                        React.createElement("span", { className: "text-red-500 ml-1" }, "< 1%"),
+                                        " \u89C4\u5219\u77E9\u9635"),
+                                    React.createElement("div", { className: "flex-1 overflow-y-auto text-[11px] sm:text-xs text-gray-600 space-y-3 pt-2 pr-2 overscroll-contain" },
+                                        React.createElement("div", null,
+                                            React.createElement("h3", { className: "font-bold text-indigo-600 mb-1" }, "\u4E00\u3001\u6392\u91CD\u673A\u5236 (\u53CC\u73A9\u6CD5\u901A\u7528)\uFF1A"),
+                                            React.createElement("p", { className: "bg-indigo-50 p-1.5 rounded" }, "\u4E0E\u5BF9\u5E94\u7684\u5386\u53F2\u4E2D\u5956\u5E93\u5B8C\u7F8E\u5339\u914D\uFF0C\u5C06\u76F4\u63A5\u5224\u4E3A\u6B7B\u53F7\u5254\u9664\u3002")),
+                                        gameType === 'dlt' ? (React.createElement(React.Fragment, null,
+                                            React.createElement("div", null,
+                                                React.createElement("h3", { className: "font-bold text-red-600 mb-1" }, "\u4E8C\u3001\u5927\u4E50\u900F \u751F\u6210\u7AEF\u62E6\u622A\u89C4\u5219\uFF08\u6982\u7387\uFF1C1%\uFF09\uFF1A"),
+                                                React.createElement("p", null, "\u751F\u6210\u7AEF\u53EA\u62E6\u622A\u6982\u7387<1%\u7684\u6781\u7AEF\u5F62\u6001\uFF1A\u5168\u5E73\u65B9\u6570\u3001\u51687\u500D\u6570\u3001\u51685\u500D\u6570\u3001\u96643/4/5/6/7/8\u4F59\u6570\u5168\u540C\u30015\u8FDE\u53F7\u30014\u8FDE\u53F7\u3001\u5168\u4E2A\u4F4D\u6570\u3001\u4E25\u683C\u7B49\u5DEE\u3001\u955C\u50CF\u53F7\u3001\u548C\u503C\u226440\u6216\u2265140\u3001\u8DE8\u5EA6\u22648\u30014\u540C\u5C3E\u3001AC\u22641\u3001\u76F8\u90BB\u95F4\u9694\u5168\u90E8\u22656\u3001\u5168\u8D28\u6570\u3001\u5168\u6590\u6CE2\u90A3\u5951\u6570\u30014\u4E2A\u53CA\u4EE5\u4E0A\u7279\u6B8A\u6570\u7B49\u3002")),
+                                            React.createElement("div", null,
+                                                React.createElement("h3", { className: "font-bold text-orange-500 mb-1" }, "\u4E09\u3001\u5927\u4E50\u900F \u626B\u63CF\u7AEF\u63D0\u9192\u89C4\u5219\uFF08\u6982\u7387\uFF1E1%\uFF0C\u4E0D\u62E6\u622A\uFF09\uFF1A"),
+                                                React.createElement("p", null, "\u626B\u63CF\u7AEF\u989D\u5916\u63D0\u9192\u6982\u7387>1%\u7684\u504F\u6001\u5F62\u6001\uFF1A\u548C\u503C41-45\u6216135-139\u3001\u5168\u5947\u5168\u5076\u3001\u5168\u5C0F\u5168\u5927\u3001\u8DE8\u5EA6\u226533\u30013\u540C\u5C3E\u30013\u8FDE\u53F7\u3001\u540E\u533A01+12\u3001\u540E\u533A\u540C\u5C3E\u3001\u540E\u533A\u548C\u503C\u6781\u7AEF\u7B49\uFF1B\u8FD9\u4E9B\u4E0D\u5F71\u54CD\u968F\u673A\u751F\u6210\u3002")),
+                                            React.createElement("div", { className: "bg-gray-50 p-2 rounded border border-gray-100" },
+                                                React.createElement("span", { className: "text-gray-400 font-bold" }, "\u5DF2\u653E\u5F00\u9650\u5236(\u53D1\u751F\u7387\uFF1E1%)\uFF1A"),
+                                                React.createElement("p", { className: "text-gray-400 mt-1" }, "\u548C\u503C41-45/135-139\u3001\u5168\u5947\u5168\u5076\u3001\u5168\u5927\u5168\u5C0F\u3001\u8DE8\u5EA6\u226533\u3001\u81F3\u5C113\u540C\u5C3E\u30013\u8FDE\u53F7\u7B49\u89C4\u5219\u5747\u5DF2\u653E\u884C\uFF0C\u4FDD\u6301\u53F7\u7801\u751F\u673A\u3002")))) : (React.createElement(React.Fragment, null,
+                                            React.createElement("div", null,
+                                                React.createElement("h3", { className: "font-bold text-red-600 mb-1" }, "\u4E8C\u3001\u53CC\u8272\u7403 \u751F\u6210\u7AEF\u62E6\u622A\u4E0E\u626B\u63CF\u7AEF\u63D0\u9192\u89C4\u5219\uFF1A"),
+                                                React.createElement("ul", { className: "list-decimal pl-5 space-y-0.5" },
+                                                    React.createElement("li", null, "\u751F\u6210\u7AEF\u53EA\u62E6\u622A\u6982\u7387<1%\u7684\u7EA2\u7403\u5F62\u6001\uFF1A\u5168\u5076\u3001\u5168\u5C0F\u226416\u3001\u5168\u5927\u226518\u3001\u548C\u503C\u226450\u6216\u2265154\u3001\u8DE8\u5EA6\u226411\u30015\u8FDE\u53F7\u53CA\u4EE5\u4E0A\u30014\u540C\u5C3E\u3001\u5168\u8D28\u6570\u3001\u4E25\u683C\u7B49\u5DEE\u3001\u955C\u50CF\u53F7\u3001\u96643/4/5/6\u4F59\u6570\u5168\u540C\u3001AC\u22642\u30015\u4E2A\u53CA\u4EE5\u4E0A\u6590\u6CE2\u90A3\u5951\u6570/\u5E73\u65B9\u6570/3\u500D\u6570/5\u500D\u6570\u30014\u4E2A\u53CA\u4EE5\u4E0A7\u500D\u6570\u3002"),
+                                                    React.createElement("li", null, "\u626B\u63CF\u7AEF\u989D\u5916\u63D0\u9192\u6982\u7387>1%\u7684\u504F\u6001\u5F62\u6001\uFF1A\u5168\u5947\u3001\u5168\u572801-17\u3001\u5168\u572817-33\u3001\u548C\u503C51-55\u6216149-153\u3001\u8DE8\u5EA6=12\u3001\u8DE8\u5EA6\u226532\u30014\u8FDE\u53F7\u3001AC=3\uFF1B\u8FD9\u4E9B\u4E0D\u5F71\u54CD\u968F\u673A\u751F\u6210\u3002"),
+                                                    React.createElement("li", null, "\u53CC\u8272\u7403\u84DD\u7403\u53EA\u67091\u4E2A\uFF0C\u4EFB\u610F\u84DD\u7403\u6982\u7387\u4E3A1/16=6.25%\uFF0C\u6CA1\u6709\u5355\u72EC<1%\u7684\u84DD\u7403\u62E6\u622A\uFF0C\u53EA\u505A\u8FB9\u754C\u63D0\u9192\u3002"))),
+                                            React.createElement("div", { className: "bg-gray-50 p-2 rounded border border-gray-100" },
+                                                React.createElement("span", { className: "text-gray-400 font-bold" }, "\u5DF2\u653E\u5F00\u9650\u5236(\u53D1\u751F\u7387\uFF1E1%)\uFF1A"),
+                                                React.createElement("p", { className: "text-gray-400 mt-1" }, "\u7EA2\u7403\u5168\u5947\u3001\u7EA2\u7403\u5168\u5927\u226517(\u7EA61.11%)\u5747\u5DF2\u653E\u884C\uFF0C\u9075\u5B88\u4E25\u683C\u7684 1% \u9608\u503C\u3002")))))))),
+                            React.createElement("div", { className: "shrink-0 text-center text-[10px] text-gray-400 pb-1 pt-1" },
+                                React.createElement("p", null, "\u4EC5\u62E6\u622A < 1% \u6B7B\u4EA1\u9677\u9631 \u2022 \u52A9\u60A8\u6355\u6349\u5927\u5956\u751F\u673A")))));
+                }
+                const root = ReactDOM.createRoot(document.getElementById('root'));
+                root.render(React.createElement(App, null));
+            } catch (err) {
+                console.error(err);
+                if (window.__showStartupError) {
+                    window.__showStartupError(err && err.stack ? err.stack : String(err));
+                }
+            }
+        })();
+    </script>
+</body>
+</html>
