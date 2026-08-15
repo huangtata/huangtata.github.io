@@ -129,7 +129,7 @@
   <div class="hero">
     <div>
       <h1>彩票号码组合生成器 · 超级双目标优化版</h1>
-      <div class="sub">支持大乐透与双色球。按 2026-08-16 核验的现行中奖规则，显示一等奖至七等奖（双色球无七等奖）的覆盖概率；大乐透在基本/追加之间做整数优化，并新增“复式”模式，可指定前区/后区选号个数并选择是否追加，复式预算固定不回写，按预算自动组合标准复式票并尽量完整花满；双色球在 1–3 倍之间智能分配且每个方案最多使用两种倍数。两种彩票都提供“均衡 / 奖金最大化 / 一二奖覆盖最大化”自动策略；预算硬上限 1000 元。它不预测开奖号码，也不会改变单个合法号码组合的开奖概率。</div>
+      <div class="sub">支持大乐透与双色球。按 2026-08-16 核验的现行中奖规则，显示一等奖至七等奖（双色球无七等奖）的覆盖概率；大乐透在基本/追加之间做整数优化，并新增“复式”模式，可指定前区/后区选号个数并选择是否追加，复式预算固定不回写，按预算自动组合标准复式票并尽量完整花满；双色球在 1–3 倍之间智能分配且每个方案最多使用两种倍数。两种彩票都提供“均衡 / 奖金最大化 / 一二奖覆盖最大化”自动策略；预算硬上限 1000 元。它不预测开奖号码，也不会改变单个合法号码组合的开奖概率。随机号码由浏览器 crypto.getRandomValues() 提供密码学安全随机熵。</div>
     </div>
     <div class="badge">现行规则核对版 · 离线可用 · 可导出 XLSX</div>
   </div>
@@ -206,9 +206,9 @@
           </div>
 
           <div class="field">
-            <label>随机种子（可选）</label>
-            <input id="seed" type="text" placeholder="留空则每次不同；填同样内容可复现" />
-            <div class="hint">适合保存某次方案。相同游戏、设置、过滤规则和种子会生成相同结果。</div>
+            <label>密码学随机附加扰动（可选）</label>
+            <input id="seed" type="text" placeholder="可留空；填写内容仅作为附加扰动，不用于复现" />
+            <div class="hint">号码随机源始终使用浏览器 <b>crypto.getRandomValues()</b>。填写此项只会额外扰动随机流；即使填写相同内容，每次生成仍然不同，以保持密码学随机性。</div>
           </div>
 
           <div class="field">
@@ -229,7 +229,7 @@
           <div class="note" id="budgetNote"></div>
           <div class="algo">
             <b>生成逻辑：</b><br>
-            ① 关键号码组合不重复；② <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；③ 候选组合优先选择当前使用次数较少的号码；④ 尽量降低与已有组合的高度重合；⑤ 后区/蓝球做均衡轮换。<br><br>
+            ① 随机熵来自浏览器 <b>crypto.getRandomValues()</b>，洗牌整数抽样采用拒绝采样避免取模偏差；② 关键号码组合不重复；③ <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；④ 候选组合优先选择当前使用次数较少的号码；⑤ 尽量降低与已有组合的高度重合；⑥ 后区/蓝球做均衡轮换。<br><br>
             <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。<br><br>
             <b>概率口径：</b>一等奖、二等奖及“一或二等奖”由唯一前区/红球组合数直接得到精确值；三至七等奖通过 Web Worker 精确枚举完整开奖空间，计算“当前整组号码至少有 1 注命中该奖级”的覆盖概率。倍投只放大同一号码命中后的奖金，不会提高该号码本身的中奖概率。<br><br>
             <b>大乐透均衡算法：</b>穷举预算内所有“基本 + 追加”整数分配。目标 A 是一/二等奖覆盖；目标 B 是一/二等奖奖金权重（基本=1，追加=1.8），在 Pareto 端点之间标准化后用 Nash 乘积选折中点。<br><br>
@@ -320,24 +320,66 @@
   const tabs = [...document.querySelectorAll('.tab')];
 
   function xmur3(str) {
+    // 仅用于把用户填写的“附加扰动字符串”扩散成 32 位扰动量。
+    // 真正随机熵始终来自 crypto.getRandomValues()；该确定性扰动与 CSPRNG 输出异或不会降低均匀性。
     let h = 1779033703 ^ str.length;
     for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
     return function() { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return (h ^= h >>> 16) >>> 0; };
   }
-  function mulberry32(a) { return function() { let t = a += 0x6D2B79F5; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function cryptoAvailable(){
+    try{
+      if(typeof globalThis==='undefined'||!globalThis.crypto||typeof globalThis.crypto.getRandomValues!=='function')return false;
+      globalThis.crypto.getRandomValues(new Uint32Array(1));
+      return true;
+    }catch(_){return false;}
+  }
+  // 密码学安全随机源：浏览器/操作系统 CSPRNG。
+  // 整数使用 rejection sampling 消除取模偏差；浮点值使用 53 个随机有效位。
   function makeRng() {
-    const s = $('seed').value.trim();
-    if (!s) return Math.random;
-    return mulberry32(xmur3(`${game}|${s}|strategy=${$('strategy').value}|${$('budget').value}|${$('basicCount').value}|${$('addCount').value}|sysF=${$('systemFrontCount').value}|sysB=${$('systemBackCount').value}|sysAdd=${$('systemAdd').checked?'1':'0'}|${$('ssqCount').value}|block4=${$('block4Consecutive').checked}`)());
+    if(!cryptoAvailable()) throw new Error('当前浏览器不支持 crypto.getRandomValues()，已停止生成，避免退回非密码学随机源。');
+    const s=$('seed').value.trim();
+    const mix=s ? xmur3(`${game}|${s}|strategy=${$('strategy').value}|${$('budget').value}|${$('basicCount').value}|${$('addCount').value}|sysF=${$('systemFrontCount').value}|sysB=${$('systemBackCount').value}|sysAdd=${$('systemAdd').checked?'1':'0'}|${$('ssqCount').value}|block4=${$('block4Consecutive').checked}`) : null;
+    const u32buf=new Uint32Array(1);
+    function nextU32(){
+      globalThis.crypto.getRandomValues(u32buf);
+      const raw=u32buf[0]>>>0;
+      return mix ? (raw ^ mix())>>>0 : raw;
+    }
+    function randomInt(maxExclusive){
+      const m=Math.floor(Number(maxExclusive));
+      if(!Number.isSafeInteger(m)||m<=0||m>0x100000000) throw new RangeError('randomInt 范围非法');
+      const range=0x100000000, limit=range-(range % m);
+      let x; do{x=nextU32();}while(x>=limit);
+      return x % m;
+    }
+    function randomFloat(){
+      const a=nextU32()>>>5, b=nextU32()>>>6;
+      return (a*67108864+b)/9007199254740992;
+    }
+    randomFloat.int=randomInt;
+    randomFloat.u32=nextU32;
+    return randomFloat;
   }
   function shuffle(arr, rng) {
     const a = arr.slice();
-    for (let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+    for (let i=a.length-1;i>0;i--){
+      const j=typeof rng.int==='function' ? rng.int(i+1) : Math.floor(rng()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
     return a;
   }
   function pad(n){return String(n).padStart(2,'0');}
-  function comb(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r;}
-  function choose(n,k){if(k<0||n<0||k>n)return 0;return comb(n,k);}
+  function comb(n,k){
+    n=Math.floor(Number(n));k=Math.floor(Number(k));
+    if(!Number.isSafeInteger(n)||!Number.isSafeInteger(k)||n<0||k<0||k>n)return 0;
+    k=Math.min(k,n-k);
+    let r=1n;
+    for(let i=1;i<=k;i++)r=r*BigInt(n-k+i)/BigInt(i);
+    const out=Number(r);
+    if(!Number.isSafeInteger(out))throw new RangeError('组合数超过 JavaScript 安全整数范围');
+    return out;
+  }
+  function choose(n,k){return comb(n,k);}
   function combinations(arr,k){
     const out=[],pick=[];
     function walk(start,left){
@@ -926,8 +968,9 @@
 
   function generate(silent=false){
     if(isDLTSystemMode()){coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}}
-    const rng=makeRng(); rows=[];systemInfo=null;
+    rows=[];systemInfo=null;
     try{
+    const rng=makeRng();
     const budget=getBudget();
     if(game==='dlt'){
       if(isDLTSystemMode()){
@@ -1041,19 +1084,31 @@
   }
 
   function runAlgorithmSelfCheck(){
-    const dltExpected=[1,20,195,3000,11100,127600,1287281];
-    const ssqExpected=[1,15,162,7695,137475,1043640];
+    const dltExpected=[1,20,195,3000,11100,127600,1287281]; // 恰好命中各奖级
+    const ssqExpected=[1,15,162,7695,137475,1043640];       // 恰好命中各奖级
+    const dltAtLeastExpected=dltExpected.map((_,i)=>dltExpected.slice(0,i+1).reduce((sum,v)=>sum+v,0));
     const dltGot=singleTicketWaysFromRules('dlt'),ssqGot=singleTicketWaysFromRules('ssq');
     const dltTotal=comb(35,5)*comb(12,2),ssqTotal=comb(33,6)*16;
-    const sysSingle=dltSystemCoverage(5,2).counts;
-    const ok=dltTotal===21425712 && ssqTotal===17721088 && dltGot.every((v,i)=>v===dltExpected[i]) && ssqGot.every((v,i)=>v===ssqExpected[i]) && sysSingle.every((v,i)=>v===dltExpected[i]);
+    const sysSingleAtLeast=dltSystemCoverage(5,2).counts;
+
+    // 旧版 BUG：dltSystemCoverage().counts 是“至少达到该奖级”的累计覆盖，
+    // 却被拿去和“恰好命中该奖级”的 dltExpected 直接比较，因此从二等奖开始必然不相等。
+    const checks=[
+      {name:'大乐透总开奖空间',ok:dltTotal===21425712,got:dltTotal,expected:21425712},
+      {name:'双色球总开奖空间',ok:ssqTotal===17721088,got:ssqTotal,expected:17721088},
+      {name:'大乐透单注精确奖级映射',ok:dltGot.every((v,i)=>v===dltExpected[i]),got:dltGot.join('/'),expected:dltExpected.join('/')},
+      {name:'双色球单注精确奖级映射',ok:ssqGot.every((v,i)=>v===ssqExpected[i]),got:ssqGot.join('/'),expected:ssqExpected.join('/')},
+      {name:'大乐透5+2复式累计覆盖等价校验',ok:sysSingleAtLeast.every((v,i)=>v===dltAtLeastExpected[i]),got:sysSingleAtLeast.join('/'),expected:dltAtLeastExpected.join('/')},
+      {name:'密码学随机源 crypto.getRandomValues',ok:cryptoAvailable(),got:cryptoAvailable()?'可用':'不可用',expected:'可用'}
+    ];
+    const failed=checks.filter(x=>!x.ok), ok=failed.length===0;
     const el=$('auditStatus');
     if(ok){
       el.classList.remove('bad');
-      el.innerHTML='内部组合数学自检：<b>通过</b>。大乐透总开奖空间 21425712；单注一至七等奖开奖情形数 1 / 20 / 195 / 3000 / 11100 / 127600 / 1287281；复式交集算法已用“前5后2 = 单注”等价情形交叉核验。双色球总开奖空间 17721088；按当前非特别规定，单注一至六等奖开奖情形数 1 / 15 / 162 / 7695 / 137475 / 1043640；双色球无七等奖，福运奖当前暂停。';
+      el.innerHTML='内部数学 / 随机源自检：<b>通过</b>。大乐透总开奖空间 21425712；单注一至七等奖精确开奖情形数 1 / 20 / 195 / 3000 / 11100 / 127600 / 1287281；“前5后2”复式按累计覆盖口径校验为 1 / 21 / 216 / 3216 / 14316 / 141916 / 1429197。双色球总开奖空间 17721088；单注一至六等奖精确开奖情形数 1 / 15 / 162 / 7695 / 137475 / 1043640。随机源：<b>crypto.getRandomValues()</b>，洗牌整数抽样采用拒绝采样。';
     }else{
       el.classList.add('bad');
-      el.textContent='内部组合数学自检未通过：奖级映射或组合数常量异常，请勿使用当前概率结果。';
+      el.innerHTML='内部自检未通过，请勿使用当前结果。<br>'+failed.map(x=>`• ${x.name}：实际 ${x.got}；应为 ${x.expected}`).join('<br>');
     }
     return ok;
   }
@@ -1531,7 +1586,7 @@
   $('resultSystemBackCount').addEventListener('change',()=>{syncSystemControlsFromResults();systemConditionChanged('result-system-back');});
   $('resultSystemAdd').addEventListener('change',()=>{syncSystemControlsFromResults();systemConditionChanged('result-system-add');});
 
-  // 随机种子也属于生成条件；输入停止后自动按新种子生成。
+  // 附加扰动字符串属于生成条件；随机熵仍始终来自 crypto.getRandomValues()。
   $('seed').addEventListener('input',()=>{
     rowsCache.dlt=null;rowsCache.ssq=null;probabilityCache.dlt=null;probabilityCache.ssq=null;
     scheduleLiveRecalculate('seed');
