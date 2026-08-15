@@ -11,7 +11,10 @@
     --red:#df3146; --blue:#3276d2; --gold:#b78116; --soft:#edf7f3;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
+  html,body{max-width:100%;overflow-x:hidden}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;-webkit-text-size-adjust:100%}
+  img,svg,canvas{max-width:100%}
+  input,select,button{min-width:0}
   .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 50px}
   .hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
   h1{font-size:28px;margin:0 0 8px;letter-spacing:-.5px}
@@ -60,8 +63,75 @@
   .footer{margin-top:14px;color:#94a3b8;font-size:11px;line-height:1.65}
   .toast{position:fixed;right:18px;bottom:18px;background:#172033;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.2s}
   .toast.show{opacity:1;transform:translateY(0)}
-  @media(max-width:880px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.hero{align-items:flex-start;flex-direction:column}.badge{align-self:flex-start}}
-  @media(max-width:520px){.wrap{padding:16px 10px 34px}.content{padding:12px}.stats{grid-template-columns:1fr 1fr}.stat .v{font-size:17px}.row2{grid-template-columns:1fr}}
+  @media(max-width:880px){
+    .wrap{padding:20px 14px 40px}
+    .grid{grid-template-columns:minmax(0,1fr)}
+    .settings,.results{min-width:0}
+    .stats{grid-template-columns:1fr 1fr}
+    .hero{align-items:flex-start;flex-direction:column;gap:10px}
+    .badge{align-self:flex-start;max-width:100%;white-space:normal}
+    .table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  }
+
+  @media(max-width:640px){
+    .wrap{padding:12px 8px 28px}
+    .hero{margin-bottom:12px;padding:0 2px}
+    h1{font-size:23px;line-height:1.25;margin-bottom:6px}
+    .sub{font-size:12px;line-height:1.55}
+    .badge{font-size:11px;padding:5px 8px}
+    .panel{border-radius:14px}
+    .tabs{position:sticky;top:0;z-index:5}
+    .tab{padding:12px 8px;font-size:14px}
+    .content{padding:10px}
+    .grid{gap:12px}
+    .settings{padding:12px;border-radius:12px}
+    .settings h2,.results h2{font-size:16px;margin-bottom:11px}
+    .field{margin-bottom:11px}
+    label{font-size:12px;margin-bottom:6px}
+    input,select{height:40px;font-size:16px;border-radius:9px}
+    .preset{font-size:13px;padding:9px 10px;margin-bottom:11px}
+    .row2{grid-template-columns:1fr 1fr;gap:8px}
+    .hint{font-size:11px;line-height:1.5}
+    .filterbox{padding:9px}
+    .checkrow{font-size:12px;gap:7px}
+    .checkrow input{width:16px;height:16px}
+    .actions{grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    button.action{height:42px;font-size:13px}
+    button.primary{grid-column:1/-1}
+    .note,.algo{font-size:11px;line-height:1.55;padding:11px;margin-top:10px;overflow-wrap:anywhere}
+    .stats{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .stat{padding:10px;border-radius:11px;min-width:0}
+    .stat .k{font-size:11px}
+    .stat .v{font-size:16px;overflow-wrap:anywhere}
+    .stat .s{font-size:10px;line-height:1.35}
+
+    /* 手机端将横向大表改为卡片列表，彻底避免超出屏幕 */
+    .table-wrap{border:0;border-radius:0;overflow:visible;max-height:none;background:transparent}
+    table{display:block;width:100%;min-width:0}
+    thead{display:none}
+    tbody{display:block;width:100%}
+    tr{display:block;width:100%;margin-bottom:9px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(20,30,50,.035)}
+    tr:hover td{background:transparent}
+    td{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px;width:100%;padding:5px 0;border:0;font-size:12px;min-width:0}
+    td::before{content:attr(data-label);font-size:10px;color:#94a3b8;font-weight:700}
+    td[data-label="#"]{display:none}
+    td[data-label="前区（5）"],td[data-label="红球（6）"],td[data-label="后区（2）"],td[data-label="蓝球（1）"]{align-items:start}
+    td[data-label="组合键"]{grid-template-columns:72px minmax(0,1fr);overflow-wrap:anywhere;word-break:break-word}
+    .balls{gap:4px;min-width:0}
+    .ball{width:27px;height:27px;font-size:11px;flex:0 0 27px}
+    .empty{padding:34px 12px;font-size:12px}
+    .footer{font-size:10px;line-height:1.55;padding:0 2px}
+    .toast{left:12px;right:12px;bottom:12px;text-align:center}
+  }
+
+  @media(max-width:390px){
+    .row2{grid-template-columns:1fr}
+    .stats{grid-template-columns:1fr}
+    .actions{grid-template-columns:1fr}
+    button.primary{grid-column:auto}
+    td{grid-template-columns:64px minmax(0,1fr)}
+    td[data-label="组合键"]{grid-template-columns:64px minmax(0,1fr)}
+  }
 </style>
 </head>
 <body>
@@ -334,7 +404,9 @@
     if(!rows.length){$('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';return;}
     let html='<table><thead><tr><th>#</th><th>投注类型</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
     rows.forEach(r=>{
-      html+=`<tr><td>${r.no}</td><td class="${r.type==='追加'?'type-add':'type-basic'}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
+      const frontLabel=game==='dlt'?'前区（5）':'红球（6）';
+      const backLabel=game==='dlt'?'后区（2）':'蓝球（1）';
+      html+=`<tr><td data-label="#">${r.no}</td><td data-label="投注类型" class="${r.type==='追加'?'type-add':'type-basic'}">${r.type}</td><td data-label="${frontLabel}"><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td data-label="${backLabel}"><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td data-label="金额">¥${r.cost}</td><td data-label="组合键" style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
     });
     html+='</tbody></table>';$('tableWrap').innerHTML=html;
 
