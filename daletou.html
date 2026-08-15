@@ -51,6 +51,13 @@
   .result-mode-btn{height:29px;padding:0 10px;border:1px solid #d7dce3;border-radius:8px;background:#fff;color:#64748b;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;transition:.15s}
   .result-mode-btn:hover{border-color:#9fc9bc;color:var(--primary2);background:#f8fcfa}
   .result-mode-btn.active{border-color:#8fc5b5;background:#eaf7f1;color:var(--primary2);box-shadow:inset 0 0 0 1px rgba(23,107,85,.04)}
+  .result-system-row{flex:0 0 100%;display:none;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px;padding:9px 10px;border:1px solid #dfe8e4;border-radius:10px;background:#f8fcfa}
+  .result-system-row.show{display:flex}
+  .result-system-label{font-size:11px;color:#64748b;font-weight:800;white-space:nowrap}
+  .result-system-select{width:auto;min-width:76px;height:32px;padding:0 28px 0 9px;border-radius:8px;font-size:12px;font-weight:800;background:#fff}
+  .result-system-check{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border:1px solid #cfe2dc;border-radius:8px;background:#fff;color:#334155;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+  .result-system-check input{width:16px;height:16px;margin:0;padding:0;accent-color:var(--primary);box-shadow:none}
+  .result-system-cost{font-size:11px;color:var(--primary2);font-weight:800;white-space:nowrap}
   .auto-live-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#ecf8f2;border:1px solid #cce9dc;color:#176b55;font-size:11px;font-weight:800;white-space:nowrap}
   .auto-live-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:#2fa36b;box-shadow:0 0 0 3px rgba(47,163,107,.12)}
   .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px rgba(23,107,85,.10)}
@@ -103,7 +110,7 @@
   .toast{position:fixed;right:18px;bottom:18px;background:#172033;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.2s}
   .toast.show{opacity:1;transform:translateY(0)}
   @media(max-width:880px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.hero{align-items:flex-start;flex-direction:column}.badge{align-self:flex-start}}
-  @media(max-width:520px){.wrap{padding:16px 10px 34px;max-width:100%;overflow-x:hidden}.panel{max-width:100%;overflow:hidden}.content{padding:12px;min-width:0}.grid{width:100%;min-width:0}.settings,.results{width:100%;min-width:0;max-width:100%}.result-head{gap:7px}.result-head h2{width:100%;margin-bottom:2px}.result-switch{flex:1}.result-game-btn{flex:1;padding:0 9px}.result-budget{flex:0 0 auto}.result-budget input{width:72px}.result-mode-row{justify-content:flex-start;overflow-x:auto;padding-bottom:2px}.result-mode-label{display:none}.result-mode-btn{flex:1;min-width:max-content;padding:0 8px}.stats{grid-template-columns:1fr 1fr;width:100%;min-width:0}.stat{padding:10px}.stat .v{font-size:15px;line-height:1.25}.stat .k{font-size:11px}.stat .s{font-size:10px;overflow-wrap:anywhere}.prob-status{overflow-wrap:anywhere}.row2{grid-template-columns:1fr}.table-wrap{width:100%;max-width:100%}table{width:max-content;min-width:730px}}
+  @media(max-width:520px){.wrap{padding:16px 10px 34px;max-width:100%;overflow-x:hidden}.panel{max-width:100%;overflow:hidden}.content{padding:12px;min-width:0}.grid{width:100%;min-width:0}.settings,.results{width:100%;min-width:0;max-width:100%}.result-head{gap:7px}.result-head h2{width:100%;margin-bottom:2px}.result-switch{flex:1}.result-game-btn{flex:1;padding:0 9px}.result-budget{flex:0 0 auto}.result-budget input{width:72px}.result-mode-row{justify-content:flex-start;overflow-x:auto;padding-bottom:2px}.result-mode-label{display:none}.result-mode-btn{flex:1;min-width:max-content;padding:0 8px}.result-system-row{justify-content:flex-start;gap:6px}.result-system-label{font-size:10px}.result-system-select{min-width:70px;flex:1}.result-system-check{flex:0 0 auto}.result-system-cost{flex:0 0 100%}.stats{grid-template-columns:1fr 1fr;width:100%;min-width:0}.stat{padding:10px}.stat .v{font-size:15px;line-height:1.25}.stat .k{font-size:11px}.stat .s{font-size:10px;overflow-wrap:anywhere}.prob-status{overflow-wrap:anywhere}.row2{grid-template-columns:1fr}.table-wrap{width:100%;max-width:100%}table{width:max-content;min-width:730px}}
   @media(max-width:380px){.stats{grid-template-columns:1fr}.stat .v{font-size:16px}}
 </style>
 </head>
@@ -160,16 +167,16 @@
             <div class="row2">
               <div class="field" style="margin-bottom:10px">
                 <label>前区选择个数（5–35）</label>
-                <input id="systemFrontCount" type="number" min="5" max="35" step="1" value="7" inputmode="numeric" />
+                <select id="systemFrontCount" aria-label="复式前区选择个数"><option value="5" selected>5 个</option><option value="6">6 个</option><option value="7">7 个</option><option value="8">8 个</option><option value="9">9 个</option><option value="10">10 个</option><option value="11">11 个</option><option value="12">12 个</option><option value="13">13 个</option><option value="14">14 个</option><option value="15">15 个</option><option value="16">16 个</option><option value="17">17 个</option><option value="18">18 个</option><option value="19">19 个</option><option value="20">20 个</option><option value="21">21 个</option><option value="22">22 个</option><option value="23">23 个</option><option value="24">24 个</option><option value="25">25 个</option><option value="26">26 个</option><option value="27">27 个</option><option value="28">28 个</option><option value="29">29 个</option><option value="30">30 个</option><option value="31">31 个</option><option value="32">32 个</option><option value="33">33 个</option><option value="34">34 个</option><option value="35">35 个</option></select>
               </div>
               <div class="field" style="margin-bottom:10px">
                 <label>后区选择个数（2–12）</label>
-                <input id="systemBackCount" type="number" min="2" max="12" step="1" value="3" inputmode="numeric" />
+                <select id="systemBackCount" aria-label="复式后区选择个数"><option value="2">2 个</option><option value="3">3 个</option><option value="4">4 个</option><option value="5">5 个</option><option value="6">6 个</option><option value="7">7 个</option><option value="8">8 个</option><option value="9">9 个</option><option value="10">10 个</option><option value="11">11 个</option><option value="12" selected>12 个</option></select>
               </div>
             </div>
             <div class="filterbox">
               <label class="checkrow"><input id="systemAdd" type="checkbox" /> <span><b>追加投注</b><br><span style="font-weight:400;color:#64748b">勾选后复式展开的每一注按 3 元计算；不勾选按基本投注 2 元计算。</span></span></label>
-              <div class="filter-status" id="systemSummary">前区 7 个 × 后区 3 个 = 63 注，基本投注 ¥126。</div>
+              <div class="filter-status" id="systemSummary">前区 5 个 × 后区 12 个 = 66 注，基本投注 ¥132。</div>
             </div>
             <div class="hint">复式会完整展开为 C(前区个数,5) × C(后区个数,2) 注。为保持标准复式完整性，“4 连号过滤”在复式模式下自动停用，不会删除复式中的子注。</div>
           </div>
@@ -238,6 +245,15 @@
               <button class="result-mode-btn" type="button" data-quick-strategy="prob">一二等奖最大化</button>
               <button class="result-mode-btn" type="button" data-quick-strategy="system">复式</button>
             </div>
+            <div class="result-system-row" id="resultSystemRow" aria-label="复式快速设置">
+              <span class="result-system-label">复式设置</span>
+              <span class="result-system-label">前区</span>
+              <select class="result-system-select" id="resultSystemFrontCount" aria-label="结果区复式前区选择个数"><option value="5" selected>5 个</option><option value="6">6 个</option><option value="7">7 个</option><option value="8">8 个</option><option value="9">9 个</option><option value="10">10 个</option><option value="11">11 个</option><option value="12">12 个</option><option value="13">13 个</option><option value="14">14 个</option><option value="15">15 个</option><option value="16">16 个</option><option value="17">17 个</option><option value="18">18 个</option><option value="19">19 个</option><option value="20">20 个</option><option value="21">21 个</option><option value="22">22 个</option><option value="23">23 个</option><option value="24">24 个</option><option value="25">25 个</option><option value="26">26 个</option><option value="27">27 个</option><option value="28">28 个</option><option value="29">29 个</option><option value="30">30 个</option><option value="31">31 个</option><option value="32">32 个</option><option value="33">33 个</option><option value="34">34 个</option><option value="35">35 个</option></select>
+              <span class="result-system-label">后区</span>
+              <select class="result-system-select" id="resultSystemBackCount" aria-label="结果区复式后区选择个数"><option value="2">2 个</option><option value="3">3 个</option><option value="4">4 个</option><option value="5">5 个</option><option value="6">6 个</option><option value="7">7 个</option><option value="8">8 个</option><option value="9">9 个</option><option value="10">10 个</option><option value="11">11 个</option><option value="12" selected>12 个</option></select>
+              <label class="result-system-check"><input id="resultSystemAdd" type="checkbox" />追加</label>
+              <span class="result-system-cost" id="resultSystemCost">66 注 · ¥132</span>
+            </div>
           </div>
           <div class="stats">
             <div class="stat"><div class="k">实际金额</div><div class="v" id="statCost">¥0</div><div class="s" id="statCostSub">—</div></div>
@@ -278,7 +294,7 @@
   let liveTimer = null;
   let systemInfo = null;
   const gameState = {
-    dlt:{strategy:'balanced',basic:57,add:38,systemFront:7,systemBack:3,systemAdd:false},
+    dlt:{strategy:'balanced',basic:57,add:38,systemFront:5,systemBack:12,systemAdd:false},
     ssq:{strategy:'balanced'}
   };
   const rowsCache = {dlt:null,ssq:null};
@@ -327,6 +343,20 @@
     return {frontCount:f,backCount:b,isAdd:!!isAdd,lines,unitCost,cost};
   }
   function dltSystemConfig(){return dltSystemMath($('systemFrontCount').value,$('systemBackCount').value,$('systemAdd').checked);}
+  function syncSystemControlsFromSettings(){
+    if(!$('resultSystemFrontCount'))return;
+    $('resultSystemFrontCount').value=$('systemFrontCount').value;
+    $('resultSystemBackCount').value=$('systemBackCount').value;
+    $('resultSystemAdd').checked=$('systemAdd').checked;
+    const cfg=dltSystemConfig();
+    $('resultSystemCost').textContent=`${cfg.lines} 注 · ¥${cfg.cost}`;
+  }
+  function syncSystemControlsFromResults(){
+    $('systemFrontCount').value=$('resultSystemFrontCount').value;
+    $('systemBackCount').value=$('resultSystemBackCount').value;
+    $('systemAdd').checked=$('resultSystemAdd').checked;
+    syncSystemControlsFromSettings();
+  }
   function dltSystemCoverage(frontCount,backCount){
     const f=Math.max(5,Math.min(35,Math.floor(Number(frontCount)||5)));
     const b=Math.max(2,Math.min(12,Math.floor(Number(backCount)||2)));
@@ -415,8 +445,9 @@
     if(g==='dlt'){
       $('basicCount').value=state.basic;
       $('addCount').value=state.add;
-      $('systemFrontCount').value=state.systemFront||7;
-      $('systemBackCount').value=state.systemBack||3;
+      $('systemFrontCount').value=state.systemFront||5;
+      $('systemBackCount').value=state.systemBack||12;
+      syncSystemControlsFromSettings();
       $('systemAdd').checked=!!state.systemAdd;
     }
   }
@@ -748,6 +779,8 @@
     const system=isDLTSystemMode();
     $('dltCounts').style.display=game==='dlt'&&!system?'grid':'none';
     $('dltSystemField').style.display=system?'block':'none';
+    $('resultSystemRow').classList.toggle('show',system);
+    syncSystemControlsFromSettings();
     $('budget').readOnly=system;$('resultBudget').readOnly=system;
     $('budget').title=system?'复式金额由前区/后区个数和是否追加自动计算':'';
     $('resultBudget').title=system?'复式金额自动联动，不需要手动输入':'输入时不强制纠正；离开输入框后校验并自动重新计算';
@@ -761,7 +794,7 @@
     if(game==='dlt'){
       if(strategy==='system'){
         const cfg=dltSystemConfig();
-        committedBudget=cfg.cost;syncBudgetBoxes(cfg.cost);
+        committedBudget=cfg.cost;syncBudgetBoxes(cfg.cost);syncSystemControlsFromSettings();
       }else if(strategy!=='custom'){
         const budget=getBudget();
         const best=optimizeDLTAllocation(budget,strategy);
@@ -1370,11 +1403,14 @@
     updateModeFields();syncByStrategy();updateQuickStrategyButtons();saveGameState('dlt');
     scheduleLiveRecalculate(source);
   }
-  $('systemFrontCount').addEventListener('input',()=>{const v=Number($('systemFrontCount').value);if(Number.isFinite(v)&&v>=5&&v<=35)systemConditionChanged('system-front');});
-  $('systemBackCount').addEventListener('input',()=>{const v=Number($('systemBackCount').value);if(Number.isFinite(v)&&v>=2&&v<=12)systemConditionChanged('system-back');});
-  $('systemFrontCount').addEventListener('change',()=>{const cfg=dltSystemConfig();$('systemFrontCount').value=cfg.frontCount;systemConditionChanged('system-front-commit');});
-  $('systemBackCount').addEventListener('change',()=>{const cfg=dltSystemConfig();$('systemBackCount').value=cfg.backCount;systemConditionChanged('system-back-commit');});
-  $('systemAdd').addEventListener('change',()=>systemConditionChanged('system-add'));
+  $('systemFrontCount').addEventListener('change',()=>{syncSystemControlsFromSettings();systemConditionChanged('system-front');});
+  $('systemBackCount').addEventListener('change',()=>{syncSystemControlsFromSettings();systemConditionChanged('system-back');});
+  $('systemAdd').addEventListener('change',()=>{syncSystemControlsFromSettings();systemConditionChanged('system-add');});
+
+  // 结果区复式设置与左侧设置双向同步；任一处修改都会自动切到复式并实时重算。
+  $('resultSystemFrontCount').addEventListener('change',()=>{syncSystemControlsFromResults();systemConditionChanged('result-system-front');});
+  $('resultSystemBackCount').addEventListener('change',()=>{syncSystemControlsFromResults();systemConditionChanged('result-system-back');});
+  $('resultSystemAdd').addEventListener('change',()=>{syncSystemControlsFromResults();systemConditionChanged('result-system-add');});
 
   // 随机种子也属于生成条件；输入停止后自动按新种子生成。
   $('seed').addEventListener('input',()=>{
