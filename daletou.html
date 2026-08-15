@@ -160,7 +160,7 @@
       <h1>彩票号码组合生成器</h1>
       <div class="sub">支持大乐透与双色球。核心原则是：在预算内避免重复购买相同关键组合，并让号码使用次数尽量均匀。它不预测开奖号码，也不会改变单注的随机中奖概率。</div>
     </div>
-    <div class="badge">单文件 · 离线可用 · 可导出 XLSX</div>
+    <div class="badge">V4 · 预算≤1000 · 打单分组 · 离线可用</div>
   </div>
 
   <div class="panel">
@@ -175,8 +175,9 @@
           <button class="preset" id="presetBtn">一键载入：228 元综合方案</button>
 
           <div class="field">
-            <label>预算（元）</label>
-            <input id="budget" type="number" min="2" step="1" value="228" />
+            <label>预算（元，最高 1000）</label>
+            <input id="budget" type="number" min="2" max="1000" step="1" value="228" inputmode="numeric" />
+            <div class="hint">单次生成预算上限为 1000 元；超过后会自动限制为 1000 元。</div>
           </div>
 
           <div class="field" id="strategyField">
@@ -192,17 +193,17 @@
           <div class="row2" id="dltCounts">
             <div class="field">
               <label>基本投注（注）</label>
-              <input id="basicCount" type="number" min="0" value="60" />
+              <input id="basicCount" type="number" min="0" max="500" value="75" />
             </div>
             <div class="field">
               <label>追加投注（注）</label>
-              <input id="addCount" type="number" min="0" value="36" />
+              <input id="addCount" type="number" min="0" max="333" value="26" />
             </div>
           </div>
 
           <div class="field" id="ssqCountField" style="display:none">
             <label>生成注数</label>
-            <input id="ssqCount" type="number" min="1" value="114" />
+            <input id="ssqCount" type="number" min="1" max="500" value="114" />
           </div>
 
           <div class="field">
@@ -229,7 +230,8 @@
           <div class="note" id="budgetNote"></div>
           <div class="algo">
             <b>生成逻辑：</b><br>
-            ① 关键号码组合不重复；② <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；③ 候选组合优先选择当前使用次数较少的号码；④ 尽量降低与已有组合的高度重合；⑤ 后区/蓝球做均衡轮换。<br><br>
+            ① 关键号码组合不重复；② <b>默认淘汰任何含 4 连号及以上的前区/红球组合</b>；③ 优先让各号码的总体使用次数尽量均衡；④ 全局降低号码对重复，并避免近期组合高度重合；⑤ 后区/蓝球做均衡轮换；⑥ 综合策略默认约 25% 的号码做追加，优先保留更多不同组合。<br><br>
+            <b>策略说明：</b>追加投注不会增加某一组号码本身被开出的概率，主要改变中奖后的奖金水平；因此“概率优先”会全部使用基本投注，“综合”只保留适量追加。单次预算最高 1000 元。<br><br>
             <b>重要：</b>“4 连号过滤”属于选号形态偏好。彩票开奖中每一个具体合法组合的理论概率相同；过滤不会让保留下来的某一注变成“更容易开”，只是确保生成结果不出现你不想购买的形态。
           </div>
         </section>
@@ -304,36 +306,67 @@
       : '当前：<b>未启用</b> 连号过滤。';
   }
 
-  // Greedy randomized balanced generator. It intentionally does NOT use historical draws.
-  function generateBalancedSets(poolMax, pick, count, rng, candidateBatch=650, validator=()=>true) {
+  // Balanced coverage generator. It intentionally does NOT use historical draws.
+  // Compared with the earlier version, this avoids repeated full-array shuffles and
+  // uses global pair-frequency penalties, so up to 500 lines stays mobile-friendly.
+  function sampleSorted(poolMax,pick,rng){
+    const chosen=new Set();
+    while(chosen.size<pick) chosen.add(1+Math.floor(rng()*poolMax));
+    return [...chosen].sort((a,b)=>a-b);
+  }
+  function pairKey(a,b){return a<b?a*100+b:b*100+a;}
+  function generateBalancedSets(poolMax, pick, count, rng, candidateBatch=240, validator=()=>true) {
     const used = new Set();
     const freq = Array(poolMax+1).fill(0);
+    const pairFreq = new Map();
     const out = [];
+    const effectiveBatch = Math.min(candidateBatch, count>=400?120:count>=250?150:count>=120?190:240);
+
     for (let idx=0; idx<count; idx++) {
       let best=null, bestScore=Infinity;
-      for (let c=0;c<candidateBatch;c++) {
-        const candidate = shuffle(Array.from({length:poolMax},(_,i)=>i+1), rng).slice(0,pick).sort((a,b)=>a-b);
+      for (let c=0;c<effectiveBatch;c++) {
+        const candidate=sampleSorted(poolMax,pick,rng);
         const key=candidate.join('-');
         if(used.has(key) || !validator(candidate)) continue;
-        const newFreq=freq.slice(); candidate.forEach(n=>newFreq[n]++);
+
+        const newFreq=freq.slice();
+        candidate.forEach(n=>newFreq[n]++);
         const v=variance(newFreq.slice(1));
-        let maxOv=0, sumHigh=0;
-        for (let j=Math.max(0,out.length-50); j<out.length; j++) {
-          const ov=overlap(candidate,out[j]); maxOv=Math.max(maxOv,ov); if(ov>=pick-1)sumHigh++;
+
+        let pairPenalty=0, pairMax=0;
+        for(let i=0;i<candidate.length;i++)for(let j=i+1;j<candidate.length;j++){
+          const pf=pairFreq.get(pairKey(candidate[i],candidate[j]))||0;
+          pairPenalty+=pf;
+          if(pf>pairMax)pairMax=pf;
         }
-        // The random term only breaks ties and adds diversity.
-        const score=v*13 + maxOv*1.35 + sumHigh*4.5 + rng()*0.04;
+
+        let maxOv=0, highOv=0;
+        for (let j=Math.max(0,out.length-24); j<out.length; j++) {
+          const ov=overlap(candidate,out[j]);
+          if(ov>maxOv)maxOv=ov;
+          if(ov>=pick-1)highOv++;
+        }
+
+        const score=v*12 + pairPenalty*.58 + pairMax*.35 + maxOv*1.15 + highOv*4.8 + rng()*.03;
         if(score<bestScore){bestScore=score;best=candidate;}
       }
+
       if(!best){
         let attempts=0;
         do {
-          best=shuffle(Array.from({length:poolMax},(_,i)=>i+1),rng).slice(0,pick).sort((a,b)=>a-b);
+          best=sampleSorted(poolMax,pick,rng);
           attempts++;
           if(attempts>50000) throw new Error('过滤条件过严，无法生成足够号码');
         } while(used.has(best.join('-')) || !validator(best));
       }
-      used.add(best.join('-')); best.forEach(n=>freq[n]++); out.push(best);
+
+      used.add(best.join('-'));
+      best.forEach(n=>freq[n]++);
+      for(let i=0;i<best.length;i++)for(let j=i+1;j<best.length;j++){
+        const k=pairKey(best[i],best[j]);
+        pairFreq.set(k,(pairFreq.get(k)||0)+1);
+      }
+      out.push(best);
     }
     return out;
   }
@@ -357,30 +390,50 @@
     return out;
   }
 
+  const MAX_BUDGET=1000;
+  const BALANCED_ADD_RATIO=.25;
+
+  function normalizeBudget(showToast=false,forceMinimum=false){
+    const el=$('budget');
+    let raw=Number(el.value);
+    if(!Number.isFinite(raw)) raw=0;
+    let value=Math.floor(raw);
+    if(value>MAX_BUDGET){
+      value=MAX_BUDGET;
+      el.value=String(value);
+      if(showToast) toast('单次预算最高 1000 元，已自动调整');
+    }
+    if(forceMinimum && value<2){
+      value=2;
+      el.value='2';
+      if(showToast) toast('预算最低为 2 元');
+    }
+    return Math.max(0,value);
+  }
+
   function syncByStrategy(){
     if(game!=='dlt')return;
-    const budget=Math.max(0,Number($('budget').value)||0), strategy=$('strategy').value;
+    const budget=normalizeBudget(false), strategy=$('strategy').value;
     if(strategy==='prob') { $('basicCount').value=Math.floor(budget/2); $('addCount').value=0; }
     if(strategy==='prize') { $('basicCount').value=0; $('addCount').value=Math.floor(budget/3); }
     if(strategy==='balanced') {
-      if(budget===228){$('basicCount').value=60;$('addCount').value=36;}
-      else {
-        // Roughly keep 37.5% of lines as additional while spending no more than budget.
-        let best={b:Math.floor(budget/2),a:0,score:Infinity};
-        for(let a=0;a<=Math.floor(budget/3);a++){
-          const b=Math.floor((budget-3*a)/2); const lines=a+b; if(lines<=0)continue;
-          const ratio=a/lines, unused=budget-(3*a+2*b);
-          const score=Math.abs(ratio-.375)*20+unused;
-          if(score<best.score)best={a,b,score};
-        }
-        $('basicCount').value=best.b;$('addCount').value=best.a;
+      // Coverage-first compromise: target about 25% of lines as additional.
+      // This preserves more distinct combinations than the old 37.5% additional ratio.
+      let best={b:Math.floor(budget/2),a:0,score:Infinity};
+      for(let a=0;a<=Math.floor(budget/3);a++){
+        const b=Math.floor((budget-3*a)/2);
+        const lines=a+b; if(lines<=0)continue;
+        const ratio=a/lines, unused=budget-(3*a+2*b);
+        const score=Math.abs(ratio-BALANCED_ADD_RATIO)*100 + unused*2 - lines*.0001;
+        if(score<best.score)best={a,b,score};
       }
+      $('basicCount').value=best.b;$('addCount').value=best.a;
     }
     updateBudgetNote();
   }
 
   function updateBudgetNote(){
-    const budget=Math.max(0,Number($('budget').value)||0);
+    const budget=normalizeBudget(false);
     if(game==='dlt'){
       const b=Math.max(0,parseInt($('basicCount').value)||0),a=Math.max(0,parseInt($('addCount').value)||0),cost=b*2+a*3;
       $('budgetNote').innerHTML=`当前设置：<b>${b}</b> 注基本 + <b>${a}</b> 注追加，共 <b>${b+a}</b> 组号码；费用 <b>¥${cost}</b>${cost>budget?'，<span style="color:#b42318">已超预算 ¥'+(cost-budget)+'</span>':cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。`;
@@ -391,27 +444,42 @@
   }
 
   function generate(){
-    const rng=makeRng(); rows=[];
+    rows=[];
     try{
-    if(game==='dlt'){
-      const b=Math.max(0,parseInt($('basicCount').value)||0), a=Math.max(0,parseInt($('addCount').value)||0), n=b+a;
-      if(n<1)return toast('请至少生成 1 注');
-      const fronts=generateBalancedSets(35,5,n,rng,350,passesPatternFilters), backs=generateBackPairs(n,rng);
-      // 打单友好：基本投注与追加投注从数据源开始就分组，不再随机混排。
-      const types=[...Array(b).fill('基本'),...Array(a).fill('追加')];
-      let basicNo=0, addNo=0;
-      rows=fronts.map((front,i)=>{
-        const type=types[i];
-        const groupNo=type==='追加'?++addNo:++basicNo;
-        return {no:i+1,groupNo,type,front,back:backs[i],cost:type==='追加'?3:2};
-      });
-    }else{
-      const n=Math.max(0,parseInt($('ssqCount').value)||0); if(n<1)return toast('请至少生成 1 注');
-      const reds=generateBalancedSets(33,6,n,rng,350,passesPatternFilters), blues=generateBlue(n,rng);
-      rows=reds.map((front,i)=>({no:i+1,groupNo:i+1,type:'基本',front,back:[blues[i]],cost:2}));
-    }
-    render();
-    toast(`已生成 ${rows.length} 注${$('block4Consecutive').checked?'（无4连号+）':''}`);
+      const budget=normalizeBudget(true,true);
+      const rng=makeRng();
+      if(game==='dlt'){
+        const b=Math.max(0,parseInt($('basicCount').value)||0);
+        const a=Math.max(0,parseInt($('addCount').value)||0);
+        const n=b+a, cost=b*2+a*3;
+        if(n<1)return toast('请至少生成 1 注');
+        if(cost>MAX_BUDGET)return toast('单次投注金额不能超过 1000 元');
+        if(cost>budget)return toast(`当前设置需 ¥${cost}，超过预算 ¥${budget}，请减少注数`);
+        if(n>500)return toast('单次最多生成 500 组号码');
+
+        const fronts=generateBalancedSets(35,5,n,rng,240,passesPatternFilters);
+        const backs=generateBackPairs(n,rng);
+        // 打单友好：基本投注与追加投注从数据源开始就分组，不再随机混排。
+        const types=[...Array(b).fill('基本'),...Array(a).fill('追加')];
+        let basicNo=0, addNo=0;
+        rows=fronts.map((front,i)=>{
+          const type=types[i];
+          const groupNo=type==='追加'?++addNo:++basicNo;
+          return {no:i+1,groupNo,type,front,back:backs[i],cost:type==='追加'?3:2};
+        });
+      }else{
+        const n=Math.max(0,parseInt($('ssqCount').value)||0), cost=n*2;
+        if(n<1)return toast('请至少生成 1 注');
+        if(cost>MAX_BUDGET)return toast('单次投注金额不能超过 1000 元');
+        if(cost>budget)return toast(`当前设置需 ¥${cost}，超过预算 ¥${budget}，请减少注数`);
+        if(n>500)return toast('单次最多生成 500 注');
+
+        const reds=generateBalancedSets(33,6,n,rng,240,passesPatternFilters);
+        const blues=generateBlue(n,rng);
+        rows=reds.map((front,i)=>({no:i+1,groupNo:i+1,type:'基本',front,back:[blues[i]],cost:2}));
+      }
+      render();
+      toast(`已生成 ${rows.length} 注${$('block4Consecutive').checked?'（无4连号+）':''}`);
     }catch(err){
       console.error(err);
       rows=[]; render(); toast(err.message||'生成失败，请调整过滤规则');
@@ -499,7 +567,7 @@
     }else{
       $('settingTitle').textContent='双色球设置';$('presetBtn').textContent='一键载入：228 元概率覆盖方案';
       $('strategyField').style.display='none';$('dltCounts').style.display='none';$('ssqCountField').style.display='block';
-      $('ssqCount').value=Math.floor((Number($('budget').value)||228)/2);
+      $('ssqCount').value=Math.floor((normalizeBudget(false)||228)/2);
     }
     $('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';
     ['statCost','statLines','statFirst','statTop2'].forEach(id=>$(id).textContent=id==='statCost'?'¥0':id==='statLines'?'0':'—');
@@ -508,9 +576,9 @@
 
   function preset(){
     $('budget').value=228;
-    if(game==='dlt'){$('strategy').value='balanced';$('basicCount').value=60;$('addCount').value=36;}
-    else {$('ssqCount').value=114;}
-    updateBudgetNote();generate();
+    if(game==='dlt'){$('strategy').value='balanced';syncByStrategy();}
+    else {$('ssqCount').value=114;updateBudgetNote();}
+    generate();
   }
 
   function copyAll(){
@@ -615,7 +683,15 @@
 
   tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game)));
   $('strategy').addEventListener('change',()=>{if($('strategy').value==='custom'){}else syncByStrategy();});
-  $('budget').addEventListener('input',()=>{if(game==='dlt'&&$('strategy').value!=='custom')syncByStrategy();else if(game==='ssq'){$('ssqCount').value=Math.floor((Number($('budget').value)||0)/2);updateBudgetNote();}else updateBudgetNote();});
+  $('budget').addEventListener('input',()=>{
+    const raw=Number($('budget').value);
+    if(Number.isFinite(raw)&&raw>MAX_BUDGET){$('budget').value=String(MAX_BUDGET);toast('预算最高 1000 元，已自动限制');}
+    const budget=normalizeBudget(false);
+    if(game==='dlt'&&$('strategy').value!=='custom')syncByStrategy();
+    else if(game==='ssq'){$('ssqCount').value=Math.floor(budget/2);updateBudgetNote();}
+    else updateBudgetNote();
+  });
+  $('budget').addEventListener('blur',()=>{normalizeBudget(false,true);if(game==='dlt'&&$('strategy').value!=='custom')syncByStrategy();else if(game==='ssq'){$('ssqCount').value=Math.floor(normalizeBudget(false)/2);updateBudgetNote();}else updateBudgetNote();});
   $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
   $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
   $('ssqCount').addEventListener('input',updateBudgetNote);
