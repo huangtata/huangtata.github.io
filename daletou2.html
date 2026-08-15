@@ -188,8 +188,8 @@
               <button class="result-game-btn active" id="resultGameDLT" type="button" data-result-game="dlt">大乐透</button>
               <button class="result-game-btn" id="resultGameSSQ" type="button" data-result-game="ssq">双色球</button>
             </div>
-            <label class="result-budget" title="修改后自动按当前策略重新计算"><span class="live-dot"></span>预算 ¥<input id="resultBudget" type="number" min="2" max="1000" step="1" value="228" inputmode="numeric" /></label>
-            <span class="auto-live-badge" title="切换模式或修改条件后会自动重新生成并刷新概率">自动实时更新</span>
+            <label class="result-budget" title="输入时不强制纠正；离开输入框后校验并自动重新计算"><span class="live-dot"></span>预算 ¥<input id="resultBudget" type="number" min="2" max="1000" step="1" value="228" inputmode="numeric" /></label>
+            <span class="auto-live-badge" title="切换模式或修改条件后会自动重新生成并刷新概率；预算输入完成后再校验">自动实时更新</span>
           </div>
           <div class="stats">
             <div class="stat"><div class="k">实际金额</div><div class="v" id="statCost">¥0</div><div class="s" id="statCostSub">—</div></div>
@@ -265,11 +265,38 @@
   function overlap(a,b){let s=new Set(a),c=0;for(const x of b)if(s.has(x))c++;return c;}
   function variance(arr){const m=arr.reduce((a,b)=>a+b,0)/arr.length;return arr.reduce((s,x)=>s+(x-m)*(x-m),0)/arr.length;}
 
-  function getBudget(){
-    let v=Math.floor(Number($('budget').value)||0);
+  // 预算输入采用“编辑态宽松、结束编辑后再强制校验”。
+  // 用户清空、输入 0/1 或暂时超过 1000 时，不在输入过程中把值弹回 2/1000。
+  let committedBudget=228;
+  function activeBudgetInput(){
+    const el=document.activeElement;
+    return el && (el.id==='budget'||el.id==='resultBudget') ? el : null;
+  }
+  function budgetDraftState(){
+    const active=activeBudgetInput(), el=active||$('budget');
+    const raw=String(el.value??'').trim(), num=raw===''?NaN:Number(raw);
+    const value=Number.isFinite(num)?Math.floor(num):null;
+    return {editing:!!active,raw,value,valid:value!==null&&value>=2&&value<=1000};
+  }
+  function getBudget(forceCommit=false){
+    const active=activeBudgetInput(), el=active||$('budget');
+    const raw=String(el.value??'').trim(), num=raw===''?NaN:Number(raw);
+
+    // 正在编辑时：合法值可用于实时计算，但不改写输入框；非法/空值也绝不强行回填。
+    if(active&&!forceCommit){
+      if(Number.isFinite(num)){
+        const draft=Math.floor(num);
+        if(draft>=2&&draft<=1000){committedBudget=draft;return draft;}
+      }
+      return committedBudget;
+    }
+
+    // 只有离开输入框（或按 Enter 主动结束输入）才执行硬边界修正。
+    let v=Number.isFinite(num)?Math.floor(num):2;
     if(v<2)v=2;
     if(v>1000)v=1000;
-    if(String(v)!==$('budget').value)$('budget').value=v;
+    committedBudget=v;
+    syncBudgetBoxes(v);
     return v;
   }
 
@@ -392,8 +419,11 @@
   function scheduleLiveRecalculate(source='condition'){
     clearTimeout(liveTimer);
     liveTimer=setTimeout(()=>{
-      const budget=getBudget();
-      syncBudgetBoxes(budget);
+      const draft=budgetDraftState();
+      // 预算框仍在编辑且当前只是“中间态”时（空白/0/1/>1000），完全不干预，也不重算旧条件。
+      // 等用户离开输入框后，由 blur/Enter 统一校验并触发计算。
+      if(draft.editing&&!draft.valid)return;
+      const budget=getBudget(false);
       if(game==='dlt'&&$('strategy').value==='custom'){
         updateBudgetNote();
         saveGameState('dlt');
@@ -1110,7 +1140,8 @@
     scheduleLiveRecalculate('strategy');
   });
 
-  // 两个预算框双向同步，并采用轻量防抖实时重算。
+  // 两个预算框双向同步：输入过程中只同步“原始文字”，绝不强制修正。
+  // 合法的 2~1000 仍按防抖实时重算；空白、0、1、>1000 等中间态等离开输入框后再处理。
   $('budget').addEventListener('input',()=>{
     $('resultBudget').value=$('budget').value;
     scheduleLiveRecalculate('settings-budget');
@@ -1119,8 +1150,17 @@
     $('budget').value=$('resultBudget').value;
     scheduleLiveRecalculate('result-budget');
   });
-  $('budget').addEventListener('change',()=>{syncBudgetBoxes(getBudget());scheduleLiveRecalculate('settings-budget-change');});
-  $('resultBudget').addEventListener('change',()=>{syncBudgetBoxes(getBudget());scheduleLiveRecalculate('result-budget-change');});
+  function commitBudgetEdit(source){
+    clearTimeout(liveTimer);
+    const budget=getBudget(true);
+    syncBudgetBoxes(budget);
+    scheduleLiveRecalculate(source);
+  }
+  $('budget').addEventListener('blur',()=>commitBudgetEdit('settings-budget-blur'));
+  $('resultBudget').addEventListener('blur',()=>commitBudgetEdit('result-budget-blur'));
+  [$('budget'),$('resultBudget')].forEach(el=>el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();el.blur();}
+  }));
 
   // 大乐透自定义注数变化：自动切为自定义模式并实时重算。
   $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');scheduleLiveRecalculate('basic-count');});
