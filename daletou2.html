@@ -5,14 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>大乐透 / 双色球 号码组合生成器 · 现行奖级概率核对版</title>
 <style>
+  /* 数字专用字体：仅 0-9 使用本机苹方粗体；其他文字保持原有字重。 */
+  @font-face{
+    font-family:"LotteryNumberPingFangBold";
+    src:local("PingFang SC Semibold"),local("PingFangSC-Semibold"),local("PingFang SC Bold"),local("PingFangSC-Bold");
+    font-style:normal;
+    font-weight:100 900;
+    unicode-range:U+0030-0039;
+  }
   :root{
     --bg:#f5f7fa; --card:#ffffff; --text:#172033; --muted:#6b7280;
     --line:#e5e7eb; --primary:#176b55; --primary2:#0f513f;
     --red:#df3146; --blue:#3276d2; --gold:#b78116; --soft:#edf7f3;
   }
   *{box-sizing:border-box}
+  input,select,button,table{font-family:"LotteryNumberPingFangBold",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
   html,body{max-width:100%;overflow-x:hidden}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:"LotteryNumberPingFangBold",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif}
   .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 50px}
   .hero{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}
   h1{font-size:28px;margin:0 0 8px;letter-spacing:-.5px}
@@ -707,7 +716,7 @@
   function probText(p){
     if(!p||p<=0)return '—';
     const denom=Math.round(1/p);
-    if(denom>=1000)return `约 1/${denom.toLocaleString('zh-CN')}`;
+    if(denom>=1000)return `约 1/${denom}`;
     if(p>=.999995)return `${(p*100).toFixed(3)}%`;
     if(p>=.01)return `${(p*100).toFixed(3)}%`;
     return `${(p*100).toFixed(5)}%`;
@@ -768,7 +777,7 @@
     const el=$('auditStatus');
     if(ok){
       el.classList.remove('bad');
-      el.innerHTML='内部组合数学自检：<b>通过</b>。大乐透总开奖空间 21,425,712；单注一至七等奖开奖情形数 1 / 20 / 195 / 3,000 / 11,100 / 127,600 / 1,287,281。双色球总开奖空间 17,721,088；按当前非特别规定，单注一至六等奖开奖情形数 1 / 15 / 162 / 7,695 / 137,475 / 1,043,640；双色球无七等奖，福运奖当前暂停。';
+      el.innerHTML='内部组合数学自检：<b>通过</b>。大乐透总开奖空间 21425712；单注一至七等奖开奖情形数 1 / 20 / 195 / 3000 / 11100 / 127600 / 1287281。双色球总开奖空间 17721088；按当前非特别规定，单注一至六等奖开奖情形数 1 / 15 / 162 / 7695 / 137475 / 1043640；双色球无七等奖，福运奖当前暂停。';
     }else{
       el.classList.add('bad');
       el.textContent='内部组合数学自检未通过：奖级映射或组合数常量异常，请勿使用当前概率结果。';
@@ -847,7 +856,7 @@
     $('statSeventhLabel').textContent=game==='dlt'?'七等奖覆盖概率':'七等奖 / 福运奖';
     const cond=probabilityConditions(game);
     $('statThirdSub').textContent=cond[2];$('statFourthSub').textContent=cond[3];$('statFifthSub').textContent=cond[4];$('statSixthSub').textContent=cond[5];$('statSeventhSub').textContent=cond[6];
-    $('probStatus').textContent=`正在精确枚举${game==='dlt'?'21,425,712':'17,721,088'}种可能的开奖号码，计算当前 ${rows.length} 注组合至少命中一次各奖级的概率…`;
+    $('probStatus').textContent=`正在精确枚举${game==='dlt'?'21425712':'17721088'}种可能的开奖号码，计算当前 ${rows.length} 注组合至少命中一次各奖级的概率…`;
     updateProbabilityHighlights();
   }
 
@@ -897,7 +906,7 @@
       let html=`<div style="padding:12px 12px 7px;font-size:14px;font-weight:850;color:#334155;background:#f8fafc;border-bottom:1px solid var(--line)">${title} · ${groupRows.length} 注</div>`;
       html+='<table><thead><tr><th>组内序号</th><th>'+ (game==='dlt'?'投注类型':'投注倍数') +'</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
       groupRows.forEach((r,idx)=>{
-        html+=`<tr><td>${idx+1}</td><td class="${typeClass}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
+        html+=`<tr><td>${idx+1}</td><td class="${typeClass}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:'LotteryNumberPingFangBold','PingFang SC',sans-serif;font-weight:700">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
       });
       html+='</tbody></table>';
       return html;
@@ -1117,7 +1126,7 @@
       {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
       {name:'xl/workbook.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${workbookSheets}</sheets></workbook>`},
       {name:'xl/_rels/workbook.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${workbookRels}</Relationships>`},
-      {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><color rgb="FFB78116"/><sz val="11"/><name val="Microsoft YaHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF176B55"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}
+      {name:'xl/styles.xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="3"><font><sz val="11"/><name val="PingFang SC"/></font><font><b/><color rgb="FFFFFFFF"/><sz val="11"/><name val="PingFang SC"/></font><font><b/><color rgb="FFB78116"/><sz val="11"/><name val="PingFang SC"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF176B55"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFill="1" applyFont="1" applyAlignment="1"><alignment vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`}
     ];
     sheets.forEach((sh,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:sheetXml(sh.matrix)}));
 
