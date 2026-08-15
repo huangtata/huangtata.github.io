@@ -37,6 +37,8 @@
   .result-budget{display:flex;align-items:center;gap:6px;height:36px;padding:0 7px 0 10px;border:1px solid #d7dce3;border-radius:10px;background:#fff;color:#64748b;font-size:12px;font-weight:700}
   .result-budget input{width:84px;height:28px;border:0;border-left:1px solid #e5e7eb;border-radius:0;padding:0 7px;font-size:13px;font-weight:800;color:var(--text);box-shadow:none}
   .result-budget input:focus{border-color:#e5e7eb;box-shadow:none}
+  .auto-live-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#ecf8f2;border:1px solid #cce9dc;color:#176b55;font-size:11px;font-weight:800;white-space:nowrap}
+  .auto-live-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:#2fa36b;box-shadow:0 0 0 3px rgba(47,163,107,.12)}
   .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px rgba(23,107,85,.10)}
   .field{margin-bottom:14px}
   label{display:block;font-size:13px;color:#475569;font-weight:700;margin-bottom:7px}
@@ -161,7 +163,7 @@
           </div>
 
           <div class="actions">
-            <button class="action primary" id="generateBtn">生成号码</button>
+            <button class="action primary" id="generateBtn">重新随机生成</button>
             <button class="action" id="copyBtn">复制全部</button>
             <button class="action" id="xlsxBtn">导出 Excel (.xlsx)</button>
             <button class="action" id="csvBtn">导出 CSV</button>
@@ -187,6 +189,7 @@
               <button class="result-game-btn" id="resultGameSSQ" type="button" data-result-game="ssq">双色球</button>
             </div>
             <label class="result-budget" title="修改后自动按当前策略重新计算"><span class="live-dot"></span>预算 ¥<input id="resultBudget" type="number" min="2" max="1000" step="1" value="228" inputmode="numeric" /></label>
+            <span class="auto-live-badge" title="切换模式或修改条件后会自动重新生成并刷新概率">自动实时更新</span>
           </div>
           <div class="stats">
             <div class="stat"><div class="k">实际金额</div><div class="v" id="statCost">¥0</div><div class="s" id="statCostSub">—</div></div>
@@ -374,14 +377,34 @@
     if(rows.length)rowsCache[game]={key:scenarioKey(game),rows};
   }
 
-  function scheduleLiveRecalculate(source='budget'){
+  function showLiveInvalid(message){
+    rows=[];
+    coverageToken++;
+    if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}
+    invalidateCurrentExactProbability();
+    $('tableWrap').innerHTML=`<div class="empty">${message}<br><span style="font-size:12px">修改为合法条件后会自动重新生成，无需再点按钮。</span></div>`;
+    ['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');
+    $('statCost').textContent='—';$('statLines').textContent='0';$('statPrizeMult').textContent='—';$('statPrizeWeight').textContent='—';
+    $('probStatus').textContent='当前条件暂时无效；修正后将自动实时重新计算。';
+    updateProbabilityHighlights();
+  }
+
+  function scheduleLiveRecalculate(source='condition'){
     clearTimeout(liveTimer);
     liveTimer=setTimeout(()=>{
       const budget=getBudget();
       syncBudgetBoxes(budget);
-      if(game==='dlt'&&$('strategy').value==='custom')updateBudgetNote();else syncByStrategy();
-      saveGameState(game);
-      // 即时重生成当前彩种；render 内一/二等奖立即更新，低奖级在 Worker 中继续精确计算。
+      if(game==='dlt'&&$('strategy').value==='custom'){
+        updateBudgetNote();
+        saveGameState('dlt');
+        const b=Math.max(0,parseInt($('basicCount').value)||0),a=Math.max(0,parseInt($('addCount').value)||0);
+        if(b+a<1)return showLiveInvalid('请至少设置 1 注大乐透号码');
+        if(b*2+a*3>budget)return showLiveInvalid('当前大乐透自定义注数已超过预算');
+      }else{
+        syncByStrategy();
+        saveGameState(game);
+      }
+      // 条件一旦稳定就自动重生成；render 内一/二等奖立即更新，低奖级由 Worker 继续精确计算。
       generate(true);
     },220);
   }
@@ -1076,9 +1099,18 @@
 
   function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800);}
 
-  tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game,false)));
+  // 任一彩种切换都自动加载/生成，不再要求额外点击“生成号码”。
+  tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game,true)));
   document.querySelectorAll('.result-game-btn').forEach(btn=>btn.addEventListener('click',()=>switchGame(btn.dataset.resultGame,true)));
-  $('strategy').addEventListener('change',()=>{if(game==='dlt'&&$('strategy').value==='custom'){updateBudgetNote();}else syncByStrategy();saveGameState(game);});
+
+  // 策略模式改变：立即按新策略重新分配并自动生成。
+  $('strategy').addEventListener('change',()=>{
+    if(game==='dlt'&&$('strategy').value==='custom')updateBudgetNote();else syncByStrategy();
+    saveGameState(game);
+    scheduleLiveRecalculate('strategy');
+  });
+
+  // 两个预算框双向同步，并采用轻量防抖实时重算。
   $('budget').addEventListener('input',()=>{
     $('resultBudget').value=$('budget').value;
     scheduleLiveRecalculate('settings-budget');
@@ -1087,11 +1119,27 @@
     $('budget').value=$('resultBudget').value;
     scheduleLiveRecalculate('result-budget');
   });
-  $('budget').addEventListener('change',()=>syncBudgetBoxes(getBudget()));
-  $('resultBudget').addEventListener('change',()=>syncBudgetBoxes(getBudget()));
-  $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');});
-  $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');});
-  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];rowsCache.dlt=null;rowsCache.ssq=null;probabilityCache.dlt=null;probabilityCache.ssq=null;coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算各奖级覆盖概率。';updateProbabilityHighlights();});
+  $('budget').addEventListener('change',()=>{syncBudgetBoxes(getBudget());scheduleLiveRecalculate('settings-budget-change');});
+  $('resultBudget').addEventListener('change',()=>{syncBudgetBoxes(getBudget());scheduleLiveRecalculate('result-budget-change');});
+
+  // 大乐透自定义注数变化：自动切为自定义模式并实时重算。
+  $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');scheduleLiveRecalculate('basic-count');});
+  $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');scheduleLiveRecalculate('add-count');});
+
+  // 随机种子也属于生成条件；输入停止后自动按新种子生成。
+  $('seed').addEventListener('input',()=>{
+    rowsCache.dlt=null;rowsCache.ssq=null;probabilityCache.dlt=null;probabilityCache.ssq=null;
+    scheduleLiveRecalculate('seed');
+  });
+
+  // 过滤条件变化：立即终止旧精确计算并按新过滤条件自动生成。
+  $('block4Consecutive').addEventListener('change',()=>{
+    updateFilterStatus();
+    rowsCache.dlt=null;rowsCache.ssq=null;probabilityCache.dlt=null;probabilityCache.ssq=null;
+    coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}
+    scheduleLiveRecalculate('filter');
+  });
+
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
 
   runAlgorithmSelfCheck();
@@ -1101,6 +1149,8 @@
   syncBudgetBoxes(getBudget());
   updateResultGameButtons();
   updateFilterStatus();
+  // 首次打开页面也直接生成默认方案，避免用户忘记点击。
+  generate(true);
 })();
 </script>
 </body>
