@@ -545,12 +545,15 @@
         if(n<1||b*2+a*3>budget)return {first:null,second:null,top2:null};
       }else n=optimizeDLTAllocation(budget,st.strategy||'balanced').lines;
       total=comb(35,5)*comb(12,2);
-      return {first:n/total,second:n*20/total,top2:n*21/total};
+      // 多注覆盖概率必须计算事件并集，不能使用“单注概率×注数”。
+      // 这里交给 Web Worker 对完整开奖空间进行精确枚举。
+      return {first:null,second:null,top2:null};
     }
     const mode=gameState.ssq.strategy==='custom'?'balanced':(gameState.ssq.strategy||'balanced');
     n=optimizeSSQAllocation(budget,mode).lines;
     total=comb(33,6)*16;
-    return {first:n/total,second:n*15/total,top2:n*16/total};
+    // 双色球多注覆盖同样存在重叠，统一采用完整开奖空间枚举。
+    return {first:null,second:null,top2:null};
   }
 
   function getProbabilityCache(g){
@@ -1156,9 +1159,9 @@
         updateProbabilityHighlights();
         w.terminate();if(coverageWorker===w)coverageWorker=null;
       };
-      w.onerror=()=>{if(token===coverageToken)$('probStatus').textContent='浏览器无法启动精确概率计算线程；一等奖、二等奖和一或二等奖仍为精确值。';w.terminate();if(coverageWorker===w)coverageWorker=null;};
+      w.onerror=()=>{if(token===coverageToken)$('probStatus').textContent='浏览器无法启动精确概率计算线程；请更换现代浏览器后重新计算。';w.terminate();if(coverageWorker===w)coverageWorker=null;};
       w.postMessage({game:g,rows:snapshot,ruleMap:g==='dlt'?DLT_PRIZE_MAP:SSQ_PRIZE_MAP});
-    }catch(err){$('probStatus').textContent='浏览器不支持离线精确概率线程；一等奖、二等奖和一或二等奖仍为精确值。';}
+    }catch(err){$('probStatus').textContent='浏览器不支持离线精确概率线程；无法保证概率精度。';}
   }
 
   function render(){
@@ -1208,10 +1211,10 @@
       const basicN=rows.filter(r=>r.type==='基本').length, addN=rows.filter(r=>r.type==='追加').length;
       const prizeWeight=basicN+1.8*addN, prizeMult=n?prizeWeight/n:0;
       if(isDLTSystemMode()&&systemInfo){
-        first=n/total;second=null;top2=null;
+        first=null;second=null;top2=null;
         $('statLinesSub').textContent=`${systemInfo.groups.length} 张复式票 · 内部展开 ${n} 个唯一子注 · ${systemInfo.isAdd?'追加':'基本'}`;
       }else{
-        first=n/total; second=n*20/total; top2=n*21/total;
+        first=null; second=null; top2=null;
         $('statLinesSub').textContent=`基本 ${basicN} / 追加 ${addN}${$('block4Consecutive').checked?' · 无4连号+':''}`;
       }
       $('statPrizeMult').textContent=`${prizeMult.toFixed(2)}×`;
@@ -1219,7 +1222,9 @@
       $('statPrizeWeight').textContent=prizeWeight.toFixed(1);
       $('statPrizeWeightSub').textContent=`基本等效注 · 追加占比 ${(addN/n*100).toFixed(1)}%`;
     }else{
-      total=comb(33,6)*16; first=n/total; second=n*15/total; top2=n*16/total;
+      total=comb(33,6)*16;
+      // 双色球覆盖概率统一由完整开奖空间枚举计算，避免组合重叠误差。
+      first=null; second=null; top2=null;
       const counts=[1,2,3].map(m=>rows.filter(r=>r.multiplier===m).length), prizeWeight=rows.reduce((s,r)=>s+(r.multiplier||1),0), prizeMult=n?prizeWeight/n:0;
       const parts=[];for(let m=1;m<=3;m++)if(counts[m-1])parts.push(`${m}倍 ${counts[m-1]}`);
       $('statLinesSub').textContent=`唯一红球组合 ${n} 组 · ${parts.join(' / ')}${$('block4Consecutive').checked?' · 无4连号+':''}`;
@@ -1228,7 +1233,9 @@
     }
     $('statCost').textContent=`¥${cost}`;$('statCostSub').textContent=`预算 ¥${Number($('budget').value)||0}`;
     $('statLines').textContent=n;
-    $('statFirst').textContent=probText(first);$('statSecond').textContent=second==null?'计算中…':probText(second);$('statTop2').textContent=top2==null?'计算中…':probText(top2);
+    $('statFirst').textContent=first==null?'精确计算中…':probText(first);
+    $('statSecond').textContent=second==null?'精确计算中…':probText(second);
+    $('statTop2').textContent=top2==null?'精确计算中…':probText(top2);
     const fastCache=getProbabilityCache(game);
     fastCache.values.first=first;fastCache.values.second=second;fastCache.values.top2=top2;
     if(game==='dlt'&&isDLTSystemMode()&&systemInfo){
@@ -1240,10 +1247,10 @@
       updateProbabilityHighlights();
       startExactCoverage();
     }else{
-      $('statFirstSub').textContent=`${cond[0]} · ${n} 注精确值`;
-      $('statSecondSub').textContent=`${cond[1]} · ${n} 注精确值`;
-      $('statTop2Sub').textContent='前区/红球组合互异，因此为精确值';
-      $('probStatus').textContent=`已按当前 ${n} 组唯一号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率；浅绿色表示当前彩种该项概率高于另一彩种。三至七等奖正在后台做完整开奖空间精确枚举。`;
+      $('statFirstSub').textContent=`${cond[0]} · 完整开奖空间精确枚举`;
+      $('statSecondSub').textContent=`${cond[1]} · 完整开奖空间精确枚举`;
+      $('statTop2Sub').textContent='一或二等奖 · 事件并集精确枚举';
+      $('probStatus').textContent=`正在对当前 ${n} 组唯一号码进行完整开奖空间枚举，所有奖级均按“至少一注命中”的事件并集精确计算；追加和倍投只改变奖金，不改变号码概率。`;
       updateProbabilityHighlights();
       startExactCoverage();
     }
