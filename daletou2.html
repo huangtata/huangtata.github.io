@@ -27,7 +27,17 @@
   .grid>*{min-width:0}
   .results{min-width:0;max-width:100%;overflow:hidden}
   .settings{border:1px solid var(--line);border-radius:15px;padding:16px;background:#fcfdfd;height:max-content}
-  .settings h2,.results h2{font-size:17px;margin:0 0 14px}
+  .settings h2,.results h2{font-size:17px;margin:0}
+  .result-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+  .result-head h2{margin-right:auto}
+  .result-switch{display:inline-flex;border:1px solid #d7dce3;border-radius:10px;overflow:hidden;background:#fff}
+  .result-game-btn{height:36px;padding:0 13px;border:0;border-right:1px solid #e5e7eb;background:#fff;color:#64748b;font-size:13px;font-weight:800;cursor:pointer}
+  .result-game-btn:last-child{border-right:0}
+  .result-game-btn.active{background:var(--primary);color:#fff}
+  .result-budget{display:flex;align-items:center;gap:6px;height:36px;padding:0 7px 0 10px;border:1px solid #d7dce3;border-radius:10px;background:#fff;color:#64748b;font-size:12px;font-weight:700}
+  .result-budget input{width:84px;height:28px;border:0;border-left:1px solid #e5e7eb;border-radius:0;padding:0 7px;font-size:13px;font-weight:800;color:var(--text);box-shadow:none}
+  .result-budget input:focus{border-color:#e5e7eb;box-shadow:none}
+  .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px rgba(23,107,85,.10)}
   .field{margin-bottom:14px}
   label{display:block;font-size:13px;color:#475569;font-weight:700;margin-bottom:7px}
   input,select{width:100%;height:42px;border:1px solid #d7dce3;border-radius:10px;padding:0 11px;font-size:14px;background:white;color:var(--text);outline:none}
@@ -70,7 +80,7 @@
   .toast{position:fixed;right:18px;bottom:18px;background:#172033;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transform:translateY(6px);pointer-events:none;transition:.2s}
   .toast.show{opacity:1;transform:translateY(0)}
   @media(max-width:880px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.hero{align-items:flex-start;flex-direction:column}.badge{align-self:flex-start}}
-  @media(max-width:520px){.wrap{padding:16px 10px 34px;max-width:100%;overflow-x:hidden}.panel{max-width:100%;overflow:hidden}.content{padding:12px;min-width:0}.grid{width:100%;min-width:0}.settings,.results{width:100%;min-width:0;max-width:100%}.stats{grid-template-columns:1fr 1fr;width:100%;min-width:0}.stat{padding:10px}.stat .v{font-size:15px;line-height:1.25}.stat .k{font-size:11px}.stat .s{font-size:10px;overflow-wrap:anywhere}.prob-status{overflow-wrap:anywhere}.row2{grid-template-columns:1fr}.table-wrap{width:100%;max-width:100%}table{width:max-content;min-width:730px}}
+  @media(max-width:520px){.wrap{padding:16px 10px 34px;max-width:100%;overflow-x:hidden}.panel{max-width:100%;overflow:hidden}.content{padding:12px;min-width:0}.grid{width:100%;min-width:0}.settings,.results{width:100%;min-width:0;max-width:100%}.result-head{gap:7px}.result-head h2{width:100%;margin-bottom:2px}.result-switch{flex:1}.result-game-btn{flex:1;padding:0 9px}.result-budget{flex:0 0 auto}.result-budget input{width:72px}.stats{grid-template-columns:1fr 1fr;width:100%;min-width:0}.stat{padding:10px}.stat .v{font-size:15px;line-height:1.25}.stat .k{font-size:11px}.stat .s{font-size:10px;overflow-wrap:anywhere}.prob-status{overflow-wrap:anywhere}.row2{grid-template-columns:1fr}.table-wrap{width:100%;max-width:100%}table{width:max-content;min-width:730px}}
   @media(max-width:380px){.stats{grid-template-columns:1fr}.stat .v{font-size:16px}}
 </style>
 </head>
@@ -169,7 +179,14 @@
         </section>
 
         <section class="results">
-          <h2>生成结果</h2>
+          <div class="result-head">
+            <h2>生成结果</h2>
+            <div class="result-switch" aria-label="结果彩种切换">
+              <button class="result-game-btn active" id="resultGameDLT" type="button" data-result-game="dlt">大乐透</button>
+              <button class="result-game-btn" id="resultGameSSQ" type="button" data-result-game="ssq">双色球</button>
+            </div>
+            <label class="result-budget" title="修改后自动按当前策略重新计算"><span class="live-dot"></span>预算 ¥<input id="resultBudget" type="number" min="2" max="1000" step="1" value="228" inputmode="numeric" /></label>
+          </div>
           <div class="stats">
             <div class="stat"><div class="k">实际金额</div><div class="v" id="statCost">¥0</div><div class="s" id="statCostSub">—</div></div>
             <div class="stat"><div class="k">有效组合数</div><div class="v" id="statLines">0</div><div class="s" id="statLinesSub">—</div></div>
@@ -206,6 +223,12 @@
   let rows = [];
   let coverageWorker = null;
   let coverageToken = 0;
+  let liveTimer = null;
+  const gameState = {
+    dlt:{strategy:'balanced',basic:57,add:38},
+    ssq:{strategy:'balanced'}
+  };
+  const rowsCache = {dlt:null,ssq:null};
 
   const $ = id => document.getElementById(id);
   const tabs = [...document.querySelectorAll('.tab')];
@@ -237,6 +260,62 @@
     if(v>1000)v=1000;
     if(String(v)!==$('budget').value)$('budget').value=v;
     return v;
+  }
+
+  function syncBudgetBoxes(value){
+    const v=String(value);
+    if($('budget').value!==v)$('budget').value=v;
+    if($('resultBudget').value!==v)$('resultBudget').value=v;
+  }
+
+  function saveGameState(g=game){
+    if(g==='dlt'){
+      gameState.dlt.strategy=$('strategy').value;
+      gameState.dlt.basic=Math.max(0,parseInt($('basicCount').value)||0);
+      gameState.dlt.add=Math.max(0,parseInt($('addCount').value)||0);
+    }else{
+      const v=$('strategy').value;
+      gameState.ssq.strategy=v==='custom'?'balanced':v;
+    }
+  }
+
+  function restoreGameState(g){
+    const state=gameState[g];
+    $('strategy').value=state.strategy||'balanced';
+    if(g==='dlt' && state.strategy==='custom'){
+      $('basicCount').value=state.basic;
+      $('addCount').value=state.add;
+    }
+  }
+
+  function updateResultGameButtons(){
+    document.querySelectorAll('.result-game-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.resultGame===game));
+    tabs.forEach(t=>t.classList.toggle('active',t.dataset.game===game));
+  }
+
+  function scenarioKey(g=game){
+    const common=[getBudget(),$('seed').value.trim(),$('block4Consecutive').checked?'1':'0'];
+    if(g==='dlt'){
+      const st=gameState.dlt;
+      return ['dlt',...common,st.strategy,st.strategy==='custom'?st.basic:'auto',st.strategy==='custom'?st.add:'auto'].join('|');
+    }
+    return ['ssq',...common,gameState.ssq.strategy].join('|');
+  }
+
+  function rememberRows(){
+    if(rows.length)rowsCache[game]={key:scenarioKey(game),rows};
+  }
+
+  function scheduleLiveRecalculate(source='budget'){
+    clearTimeout(liveTimer);
+    liveTimer=setTimeout(()=>{
+      const budget=getBudget();
+      syncBudgetBoxes(budget);
+      if(game==='dlt'&&$('strategy').value==='custom')updateBudgetNote();else syncByStrategy();
+      saveGameState(game);
+      // 即时重生成当前彩种；render 内一/二等奖立即更新，低奖级在 Worker 中继续精确计算。
+      generate(true);
+    },220);
   }
 
   function longestConsecutiveRun(nums){
@@ -472,7 +551,7 @@
     }
   }
 
-  function generate(){
+  function generate(silent=false){
     const rng=makeRng(); rows=[];
     try{
     const budget=getBudget();
@@ -494,8 +573,9 @@
       const multipliers=[];for(let m=1;m<=3;m++)for(let k=0;k<opt.counts[m-1];k++)multipliers.push(m);
       rows=reds.map((front,i)=>{const multiplier=multipliers[i];return {no:i+1,type:`${multiplier}倍`,multiplier,front,back:[blues[i]],cost:2*multiplier};});
     }
+    rememberRows();
     render();
-    toast(`已生成 ${rows.length} 注${$('block4Consecutive').checked?'（无4连号+）':''}`);
+    if(!silent)toast(`已生成 ${rows.length} 注${$('block4Consecutive').checked?'（无4连号+）':''}`);
     }catch(err){
       console.error(err);
       rows=[]; render(); toast(err.message||'生成失败，请调整过滤规则');
@@ -754,8 +834,11 @@
     }
   }
 
-  function switchGame(g){
-    game=g; rows=[]; coverageToken++; if(coverageWorker){coverageWorker.terminate();coverageWorker=null;} tabs.forEach(t=>t.classList.toggle('active',t.dataset.game===g));
+  function switchGame(g, autoGenerate=false){
+    if(g!==game)saveGameState(game);
+    game=g; rows=[]; coverageToken++;
+    if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}
+    updateResultGameButtons();
     if(g==='dlt'){
       $('settingTitle').textContent='大乐透设置';$('presetBtn').textContent='一键载入：228 元超级均衡方案';
       $('strategyField').style.display='block';$('dltCounts').style.display='grid';$('ssqCountField').style.display='none';$('ssqAllocationField').style.display='none';
@@ -766,16 +849,30 @@
       $('statSeventhLabel').textContent='七等奖 / 福运奖';
     }
     updateStrategyLabels();
-    $('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';
+    restoreGameState(g);
+    updateStrategyLabels();
+    if(g==='dlt'&&$('strategy').value==='custom')updateBudgetNote();else syncByStrategy();
+    saveGameState(g);
+    syncBudgetBoxes(getBudget());
+
+    const cache=rowsCache[g];
+    if(cache&&cache.key===scenarioKey(g)){
+      rows=cache.rows;
+      render();
+      return;
+    }
+
+    $('tableWrap').innerHTML='<div class="empty">'+(autoGenerate?'正在按相同条件实时生成…':'点击“生成号码”开始')+'</div>';
     ['statCost','statLines','statFirst','statSecond','statTop2','statPrizeMult','statPrizeWeight','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent=id==='statCost'?'¥0':id==='statLines'?'0':'—');
     $('statSeventhSub').textContent=g==='dlt'?'0+2 / 1+2 / 2+1 / 3+0':'无七等奖；福运奖当前暂停（启用时3+0）';
     $('probStatus').textContent=g==='dlt'?'概率说明：一、二等奖及“一或二等奖”立即精确计算；三至七等奖生成后在后台精确枚举。':'概率说明：一、二等奖及“一或二等奖”立即精确计算；三至六等奖生成后在后台精确枚举。双色球无七等奖；福运奖当前暂停。';
-    syncByStrategy();
+    if(autoGenerate)generate(true);
   }
 
+
   function preset(){
-    $('budget').value=228;
-    $('strategy').value='balanced';syncByStrategy();
+    $('budget').value=228;syncBudgetBoxes(228);
+    $('strategy').value='balanced';syncByStrategy();saveGameState(game);
     updateBudgetNote();generate();
   }
 
@@ -897,17 +994,30 @@
 
   function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1800);}
 
-  tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game)));
-  $('strategy').addEventListener('change',()=>{if(game==='dlt'&&$('strategy').value==='custom'){updateBudgetNote();}else syncByStrategy();});
-  $('budget').addEventListener('input',()=>{getBudget();if(game==='dlt'&&$('strategy').value==='custom')updateBudgetNote();else syncByStrategy();});
-  $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
-  $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();});
-  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算各奖级覆盖概率。';});
+  tabs.forEach(t=>t.addEventListener('click',()=>switchGame(t.dataset.game,false)));
+  document.querySelectorAll('.result-game-btn').forEach(btn=>btn.addEventListener('click',()=>switchGame(btn.dataset.resultGame,true)));
+  $('strategy').addEventListener('change',()=>{if(game==='dlt'&&$('strategy').value==='custom'){updateBudgetNote();}else syncByStrategy();saveGameState(game);});
+  $('budget').addEventListener('input',()=>{
+    $('resultBudget').value=$('budget').value;
+    scheduleLiveRecalculate('settings-budget');
+  });
+  $('resultBudget').addEventListener('input',()=>{
+    $('budget').value=$('resultBudget').value;
+    scheduleLiveRecalculate('result-budget');
+  });
+  $('budget').addEventListener('change',()=>syncBudgetBoxes(getBudget()));
+  $('resultBudget').addEventListener('change',()=>syncBudgetBoxes(getBudget()));
+  $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');});
+  $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');});
+  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];rowsCache.dlt=null;rowsCache.ssq=null;coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算各奖级覆盖概率。';});
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
 
   runAlgorithmSelfCheck();
   updateStrategyLabels();
   syncByStrategy();
+  saveGameState('dlt');
+  syncBudgetBoxes(getBudget());
+  updateResultGameButtons();
   updateFilterStatus();
 })();
 </script>
