@@ -11,7 +11,7 @@
     --red:#df3146; --blue:#3276d2; --gold:#b78116; --soft:#edf7f3;
   }
   *{box-sizing:border-box}
-  html,body{max-width:100%;overflow-x:hidden}
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
   body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;-webkit-text-size-adjust:100%}
   img,svg,canvas{max-width:100%}
   input,select,button{min-width:0}
@@ -25,8 +25,9 @@
   .tab{flex:1;padding:15px 18px;border:0;background:transparent;font-size:15px;font-weight:700;color:#64748b;cursor:pointer}
   .tab.active{color:var(--primary);background:white;box-shadow:inset 0 -3px var(--primary)}
   .content{padding:20px}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:20px}
-  .settings{border:1px solid var(--line);border-radius:15px;padding:16px;background:#fcfdfd;height:max-content}
+  .grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:20px;max-width:100%}
+  .settings{border:1px solid var(--line);border-radius:15px;padding:16px;background:#fcfdfd;height:max-content;min-width:0;max-width:100%}
+  .results{min-width:0;max-width:100%;overflow:hidden}
   .settings h2,.results h2{font-size:17px;margin:0 0 14px}
   .field{margin-bottom:14px}
   label{display:block;font-size:13px;color:#475569;font-weight:700;margin-bottom:7px}
@@ -48,7 +49,7 @@
   .stat .k{font-size:12px;color:var(--muted);margin-bottom:5px}
   .stat .v{font-size:20px;font-weight:850;letter-spacing:-.4px}
   .stat .s{font-size:11px;color:#94a3b8;margin-top:4px}
-  .table-wrap{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:640px;background:white}
+  .table-wrap{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:640px;background:white;min-width:0;max-width:100%}
   table{border-collapse:collapse;width:100%;min-width:730px}
   th{position:sticky;top:0;background:#f8fafc;z-index:2;font-size:12px;color:#64748b;text-align:left;padding:11px;border-bottom:1px solid var(--line)}
   td{padding:10px 11px;border-bottom:1px solid #eef1f4;font-size:13px;vertical-align:middle}
@@ -123,6 +124,17 @@
     .footer{font-size:10px;line-height:1.55;padding:0 2px}
     .toast{left:12px;right:12px;bottom:12px;text-align:center}
   }
+
+  /* 生成后手机端使用真正的 div 卡片，不再创建 table，避免大量结果触发表格固有宽度撑开页面 */
+  .ticket-list{display:block;width:100%;max-width:100%;min-width:0}
+  .ticket-card{width:100%;max-width:100%;min-width:0;margin-bottom:9px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:0 3px 12px rgba(20,30,50,.035);overflow:hidden}
+  .ticket-head{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding-bottom:8px;margin-bottom:7px;border-bottom:1px solid #eef1f4}
+  .ticket-index{font-size:11px;color:#94a3b8;white-space:nowrap}
+  .ticket-meta{display:flex;align-items:center;gap:10px;min-width:0;font-size:12px}
+  .ticket-row{display:grid;grid-template-columns:58px minmax(0,1fr);gap:7px;align-items:start;width:100%;max-width:100%;min-width:0;padding:4px 0}
+  .ticket-label{font-size:10px;color:#94a3b8;font-weight:700;line-height:27px;white-space:nowrap}
+  .ticket-value{width:100%;max-width:100%;min-width:0;overflow:hidden}
+  .ticket-key{font-family:ui-monospace,monospace;color:#94a3b8;font-size:11px;line-height:1.45;white-space:normal;overflow-wrap:anywhere;word-break:break-all}
 
   @media(max-width:390px){
     .row2{grid-template-columns:1fr}
@@ -402,13 +414,33 @@
 
   function render(){
     if(!rows.length){$('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';return;}
-    let html='<table><thead><tr><th>#</th><th>投注类型</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
-    rows.forEach(r=>{
-      const frontLabel=game==='dlt'?'前区（5）':'红球（6）';
-      const backLabel=game==='dlt'?'后区（2）':'蓝球（1）';
-      html+=`<tr><td data-label="#">${r.no}</td><td data-label="投注类型" class="${r.type==='追加'?'type-add':'type-basic'}">${r.type}</td><td data-label="${frontLabel}"><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td data-label="${backLabel}"><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td data-label="金额">¥${r.cost}</td><td data-label="组合键" style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
-    });
-    html+='</tbody></table>';$('tableWrap').innerHTML=html;
+
+    const mobile=window.matchMedia('(max-width: 640px)').matches;
+    if(mobile){
+      let html='<div class="ticket-list">';
+      rows.forEach(r=>{
+        const frontLabel=game==='dlt'?'前区':'红球';
+        const backLabel=game==='dlt'?'后区':'蓝球';
+        html+=`<div class="ticket-card">
+          <div class="ticket-head">
+            <div class="ticket-index">第 ${r.no} 注</div>
+            <div class="ticket-meta"><span class="${r.type==='追加'?'type-add':'type-basic'}">${r.type}</span><span>¥${r.cost}</span></div>
+          </div>
+          <div class="ticket-row"><div class="ticket-label">${frontLabel}</div><div class="ticket-value"><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></div></div>
+          <div class="ticket-row"><div class="ticket-label">${backLabel}</div><div class="ticket-value"><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></div></div>
+          <div class="ticket-row"><div class="ticket-label">组合</div><div class="ticket-value ticket-key">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</div></div>
+        </div>`;
+      });
+      html+='</div>';
+      $('tableWrap').innerHTML=html;
+    }else{
+      let html='<table><thead><tr><th>#</th><th>投注类型</th><th>'+ (game==='dlt'?'前区（5）':'红球（6）') +'</th><th>'+ (game==='dlt'?'后区（2）':'蓝球（1）') +'</th><th>金额</th><th>组合键</th></tr></thead><tbody>';
+      rows.forEach(r=>{
+        html+=`<tr><td>${r.no}</td><td class="${r.type==='追加'?'type-add':'type-basic'}">${r.type}</td><td><div class="balls">${r.front.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></td><td><div class="balls">${r.back.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></td><td>¥${r.cost}</td><td style="color:#94a3b8;font-family:ui-monospace,monospace">${r.front.map(pad).join(' ')} | ${r.back.map(pad).join(' ')}</td></tr>`;
+      });
+      html+='</tbody></table>';
+      $('tableWrap').innerHTML=html;
+    }
 
     const cost=rows.reduce((s,r)=>s+r.cost,0), n=rows.length;
     let first,top2,total,top2Ways;
@@ -524,6 +556,9 @@
   $('ssqCount').addEventListener('input',updateBudgetNote);
   $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';});
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
+
+  let resizeTimer;
+  window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(rows.length)render();},120);});
 
   updateBudgetNote();
   updateFilterStatus();
