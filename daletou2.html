@@ -54,7 +54,8 @@
   button.primary{grid-column:1/-1;background:var(--primary);border-color:var(--primary);color:white}
   button.action:hover{filter:brightness(.98)}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr));gap:10px;margin-bottom:14px;min-width:0;max-width:100%}
-  .stat{border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff;min-width:0;overflow:hidden}
+  .stat{border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff;min-width:0;overflow:hidden;transition:background-color .18s,border-color .18s,box-shadow .18s}
+  .stat.compare-high{background:#eef9f1;border-color:#b9dfc3;box-shadow:inset 0 0 0 1px rgba(23,107,85,.04)}
   .stat .k{font-size:12px;color:var(--muted);margin-bottom:5px}
   .stat .v{font-size:20px;font-weight:850;letter-spacing:-.4px;overflow-wrap:anywhere;word-break:break-word}
   .stat .s{font-size:11px;color:#94a3b8;margin-top:4px;line-height:1.45}
@@ -229,6 +230,13 @@
     ssq:{strategy:'balanced'}
   };
   const rowsCache = {dlt:null,ssq:null};
+  // 同预算/同设定下缓存两种彩票的概率，用于结果卡片实时横向比较。
+  const probabilityCache = {dlt:null,ssq:null};
+  const compareProbabilityKeys = [
+    ['first','statFirst'],['second','statSecond'],['top2','statTop2'],
+    ['third','statThird'],['fourth','statFourth'],['fifth','statFifth'],
+    ['sixth','statSixth'],['seventh','statSeventh']
+  ];
 
   const $ = id => document.getElementById(id);
   const tabs = [...document.querySelectorAll('.tab')];
@@ -300,6 +308,66 @@
       return ['dlt',...common,st.strategy,st.strategy==='custom'?st.basic:'auto',st.strategy==='custom'?st.add:'auto'].join('|');
     }
     return ['ssq',...common,gameState.ssq.strategy].join('|');
+  }
+
+  function fastProbabilityValues(g){
+    const budget=getBudget();
+    let n=0,total=1;
+    if(g==='dlt'){
+      const st=gameState.dlt;
+      if(st.strategy==='custom'){
+        const b=Math.max(0,parseInt(st.basic)||0),a=Math.max(0,parseInt(st.add)||0);
+        n=b+a;
+        if(n<1||b*2+a*3>budget)return {first:null,second:null,top2:null};
+      }else n=optimizeDLTAllocation(budget,st.strategy||'balanced').lines;
+      total=comb(35,5)*comb(12,2);
+      return {first:n/total,second:n*20/total,top2:n*21/total};
+    }
+    const mode=gameState.ssq.strategy==='custom'?'balanced':(gameState.ssq.strategy||'balanced');
+    n=optimizeSSQAllocation(budget,mode).lines;
+    total=comb(33,6)*16;
+    return {first:n/total,second:n*15/total,top2:n*16/total};
+  }
+
+  function getProbabilityCache(g){
+    const key=scenarioKey(g);
+    let cache=probabilityCache[g];
+    if(!cache||cache.key!==key){
+      const fast=fastProbabilityValues(g);
+      cache={key,exact:false,values:{
+        first:fast.first,second:fast.second,top2:fast.top2,
+        third:null,fourth:null,fifth:null,sixth:null,seventh:g==='ssq'?0:null
+      }};
+      probabilityCache[g]=cache;
+    }
+    return cache;
+  }
+
+  function invalidateCurrentExactProbability(){
+    const cache=getProbabilityCache(game),fast=fastProbabilityValues(game);
+    cache.exact=false;
+    cache.values={first:fast.first,second:fast.second,top2:fast.top2,third:null,fourth:null,fifth:null,sixth:null,seventh:game==='ssq'?0:null};
+  }
+
+  function updateProbabilityHighlights(){
+    for(const [,id] of compareProbabilityKeys){
+      const card=$(id)?.closest('.stat');
+      if(card){card.classList.remove('compare-high');card.removeAttribute('title');}
+    }
+    const current=getProbabilityCache(game),otherGame=game==='dlt'?'ssq':'dlt',other=getProbabilityCache(otherGame);
+    for(const [key,id] of compareProbabilityKeys){
+      const a=current.values[key],b=other.values[key],card=$(id)?.closest('.stat');
+      if(!card||typeof a!=='number'||typeof b!=='number'||!Number.isFinite(a)||!Number.isFinite(b))continue;
+      // 三至六等奖必须两边都完成精确枚举才比较；七等奖双色球按 0（无该奖级）处理。
+      if(['third','fourth','fifth','sixth'].includes(key)&&(!current.exact||!other.exact))continue;
+      if(key==='seventh'&&game==='dlt'&&!current.exact)continue;
+      if(key==='seventh'&&game==='ssq'&&!other.exact)continue;
+      const eps=Math.max(1e-15,Math.max(Math.abs(a),Math.abs(b))*1e-10);
+      if(a>b+eps){
+        card.classList.add('compare-high');
+        card.title=`当前${game==='dlt'?'大乐透':'双色球'}此项概率高于${otherGame==='dlt'?'大乐透':'双色球'}`;
+      }
+    }
   }
 
   function rememberRows(){
@@ -574,6 +642,7 @@
       rows=reds.map((front,i)=>{const multiplier=multipliers[i];return {no:i+1,type:`${multiplier}倍`,multiplier,front,back:[blues[i]],cost:2*multiplier};});
     }
     rememberRows();
+    invalidateCurrentExactProbability();
     render();
     if(!silent)toast(`已生成 ${rows.length} 注${$('block4Consecutive').checked?'（无4连号+）':''}`);
     }catch(err){
@@ -726,6 +795,7 @@
     const cond=probabilityConditions(game);
     $('statThirdSub').textContent=cond[2];$('statFourthSub').textContent=cond[3];$('statFifthSub').textContent=cond[4];$('statSixthSub').textContent=cond[5];$('statSeventhSub').textContent=cond[6];
     $('probStatus').textContent=`正在精确枚举${game==='dlt'?'21,425,712':'17,721,088'}种可能的开奖号码，计算当前 ${rows.length} 注组合至少命中一次各奖级的概率…`;
+    updateProbabilityHighlights();
   }
 
   function startExactCoverage(){
@@ -743,6 +813,13 @@
         const p=data.counts.map(c=>c/data.total),ids=['statFirst','statSecond','statThird','statFourth','statFifth','statSixth','statSeventh'];
         p.forEach((v,i)=>{if(ids[i])$(ids[i]).textContent=probText(v);});
         const top2=(data.counts[0]+data.counts[1])/data.total;$('statTop2').textContent=probText(top2);
+        const cache=getProbabilityCache(g);
+        if(cache.key===scenarioKey(g)){
+          const keys=['first','second','third','fourth','fifth','sixth','seventh'];
+          keys.forEach((key,i)=>{cache.values[key]=i<p.length?p[i]:(key==='seventh'&&g==='ssq'?0:null);});
+          cache.values.top2=top2;
+          cache.exact=true;
+        }
         const cond=probabilityConditions(g);
         const subs=['statFirstSub','statSecondSub','statThirdSub','statFourthSub','statFifthSub','statSixthSub','statSeventhSub'];
         for(let i=0;i<subs.length;i++){
@@ -750,7 +827,8 @@
           else $(subs[i]).textContent=cond[i];
         }
         $('statTop2Sub').textContent=`一或二等奖 · 精确覆盖 ${(top2*100).toFixed(top2<.001?6:4)}%`;
-        $('probStatus').textContent=`已完成精确枚举：以上概率均指当前 ${rows.length} 组唯一号码在一次开奖中“至少有 1 组命中对应奖级”的概率；不同奖级可由不同投注同时命中，所以各奖级概率不能相加。追加投注/双色球倍投不改变号码中奖概率，只改变命中后的奖金。`;
+        $('probStatus').textContent=`已完成精确枚举：以上概率均指当前 ${rows.length} 组唯一号码在一次开奖中“至少有 1 组命中对应奖级”的概率；不同奖级可由不同投注同时命中，所以各奖级概率不能相加。浅绿色表示当前彩种该项概率高于另一彩种。追加投注/双色球倍投不改变号码中奖概率，只改变命中后的奖金。`;
+        updateProbabilityHighlights();
         w.terminate();if(coverageWorker===w)coverageWorker=null;
       };
       w.onerror=()=>{if(token===coverageToken)$('probStatus').textContent='浏览器无法启动精确概率计算线程；一等奖、二等奖和一或二等奖仍为精确值。';w.terminate();if(coverageWorker===w)coverageWorker=null;};
@@ -814,7 +892,10 @@
     $('statFirstSub').textContent=`${cond[0]} · ${n} 注精确值`;
     $('statSecondSub').textContent=`${cond[1]} · ${n} 注精确值`;
     $('statTop2Sub').textContent='前区/红球组合互异，因此为精确值';
-    $('probStatus').textContent=`已按当前 ${n} 组唯一号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率；三至七等奖正在后台做完整开奖空间精确枚举。页面与导出文件会按投注类型/双色球倍数严格分组，方便打单。`;
+    const fastCache=getProbabilityCache(game);
+    fastCache.values.first=first;fastCache.values.second=second;fastCache.values.top2=top2;
+    $('probStatus').textContent=`已按当前 ${n} 组唯一号码精确计算一等奖、二等奖及“一或二等奖”的覆盖概率；浅绿色表示当前彩种该项概率高于另一彩种。三至七等奖正在后台做完整开奖空间精确枚举。`;
+    updateProbabilityHighlights();
     startExactCoverage();
   }
 
@@ -865,7 +946,8 @@
     $('tableWrap').innerHTML='<div class="empty">'+(autoGenerate?'正在按相同条件实时生成…':'点击“生成号码”开始')+'</div>';
     ['statCost','statLines','statFirst','statSecond','statTop2','statPrizeMult','statPrizeWeight','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent=id==='statCost'?'¥0':id==='statLines'?'0':'—');
     $('statSeventhSub').textContent=g==='dlt'?'0+2 / 1+2 / 2+1 / 3+0':'无七等奖；福运奖当前暂停（启用时3+0）';
-    $('probStatus').textContent=g==='dlt'?'概率说明：一、二等奖及“一或二等奖”立即精确计算；三至七等奖生成后在后台精确枚举。':'概率说明：一、二等奖及“一或二等奖”立即精确计算；三至六等奖生成后在后台精确枚举。双色球无七等奖；福运奖当前暂停。';
+    $('probStatus').textContent=g==='dlt'?'概率说明：一、二等奖及“一或二等奖”立即精确计算；浅绿色表示当前彩种该项概率高于双色球；三至七等奖生成后在后台精确枚举。':'概率说明：一、二等奖及“一或二等奖”立即精确计算；浅绿色表示当前彩种该项概率高于大乐透；三至六等奖生成后在后台精确枚举。双色球无七等奖；福运奖当前暂停。';
+    updateProbabilityHighlights();
     if(autoGenerate)generate(true);
   }
 
@@ -1009,7 +1091,7 @@
   $('resultBudget').addEventListener('change',()=>syncBudgetBoxes(getBudget()));
   $('basicCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');});
   $('addCount').addEventListener('input',()=>{$('strategy').value='custom';updateBudgetNote();saveGameState('dlt');});
-  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];rowsCache.dlt=null;rowsCache.ssq=null;coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算各奖级覆盖概率。';});
+  $('block4Consecutive').addEventListener('change',()=>{updateFilterStatus();rows=[];rowsCache.dlt=null;rowsCache.ssq=null;probabilityCache.dlt=null;probabilityCache.ssq=null;coverageToken++;if(coverageWorker){coverageWorker.terminate();coverageWorker=null;}$('tableWrap').innerHTML='<div class="empty">过滤规则已变更，请重新生成号码</div>';['statFirst','statSecond','statTop2','statThird','statFourth','statFifth','statSixth','statSeventh'].forEach(id=>$(id).textContent='—');$('probStatus').textContent='过滤规则已变更，请重新生成号码后计算各奖级覆盖概率。';updateProbabilityHighlights();});
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
 
   runAlgorithmSelfCheck();
