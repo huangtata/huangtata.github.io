@@ -1084,7 +1084,7 @@
         const opt=optimizeDLTAllocation(budget,$('strategy').value);
         if($('strategy').value==='balanced') extra=`<br>超级均衡推演：覆盖端点 <b>${opt.cover.lines}</b> 注；奖金端点权重 <b>${opt.prize.prizeWeight.toFixed(1)}</b>；当前 Nash 双目标点：覆盖标准化 <b>${(opt.covNorm*100).toFixed(1)}%</b> / 奖金标准化 <b>${(opt.prizeNorm*100).toFixed(1)}%</b>。`;
       }
-      $('budgetNote').innerHTML=`当前设置：<b>${b}</b> 注基本 + <b>${a}</b> 注追加，共 <b>${n}</b> 组号码；费用 <b>¥${cost}</b>${cost>budget?'，<span style="color:#b42318">已超预算 ¥'+(cost-budget)+'</span>':cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。<br>一或二等奖精确覆盖约 <b>${(top2*100).toFixed(6)}%</b>；若命中一/二等奖，按当前追加占比计算的平均奖金倍率约 <b>${mult.toFixed(2)}×</b>；奖金权重 <b>${weight.toFixed(1)}</b> 基本等效注。${extra}`;
+      $('budgetNote').innerHTML=`当前设置：<b>${b}</b> 注基本 + <b>${a}</b> 注追加，共 <b>${n}</b> 组号码；费用 <b>¥${cost}</b>${cost>budget?'，<span style="color:#b42318">已超预算 ¥'+(cost-budget)+'</span>':cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。<br>一或二等奖精确覆盖约 <b>${(top2*100).toFixed(2)}%</b>；若命中一/二等奖，按当前追加占比计算的平均奖金倍率约 <b>${mult.toFixed(2)}×</b>；奖金权重 <b>${weight.toFixed(1)}</b> 基本等效注。${extra}`;
     } else {
       const strategy=$('strategy').value==='custom'?'balanced':$('strategy').value;
       const opt=optimizeSSQAllocation(budget,strategy), n=opt.lines, cost=opt.cost;
@@ -1093,7 +1093,7 @@
       let extra='';
       if(strategy==='balanced') extra=`<br>超级均衡推演：覆盖端点 <b>${opt.cover.lines}</b> 组；奖金端点平均 <b>${opt.prize.avgMultiplier.toFixed(2)}×</b>；当前 Nash 点：覆盖标准化 <b>${(opt.covNorm*100).toFixed(1)}%</b> / 奖金标准化 <b>${(opt.prizeNorm*100).toFixed(1)}%</b>。`;
       const parts=[];for(let m=1;m<=3;m++)if(opt.counts[m-1])parts.push(`<b>${m}倍 ${opt.counts[m-1]}注</b>`);
-      $('budgetNote').innerHTML=`当前智能分配：${parts.join(' + ')}，共 <b>${n}</b> 组唯一号码；费用 <b>¥${cost}</b>${cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。<br>一或二等奖精确覆盖约 <b>${(top2*100).toFixed(6)}%</b>；若某个唯一号码命中奖级，按当前分配的平均奖金倍率约 <b>${opt.avgMultiplier.toFixed(2)}×</b>；奖金权重 <b>${opt.prizeWeight}</b> 基本等效注。${extra}`;
+      $('budgetNote').innerHTML=`当前智能分配：${parts.join(' + ')}，共 <b>${n}</b> 组唯一号码；费用 <b>¥${cost}</b>${cost<budget?'，剩余 ¥'+(budget-cost):'，刚好用完预算'}。<br>一或二等奖精确覆盖约 <b>${(top2*100).toFixed(2)}%</b>；若某个唯一号码命中奖级，按当前分配的平均奖金倍率约 <b>${opt.avgMultiplier.toFixed(2)}×</b>；奖金权重 <b>${opt.prizeWeight}</b> 基本等效注。${extra}`;
     }
   }
 
@@ -1165,7 +1165,7 @@
     if(denom>=1000)return `约 1 / ${denom}`;
     if(p>=.999995)return `${(p*100).toFixed(2)}%`;
     if(p>=.01)return `${(p*100).toFixed(2)}%`;
-    return `${(p*100).toFixed(5)}%`;
+    return `${(p*100).toFixed(2)}%`;
   }
 
   function probabilityConditions(g){
@@ -1346,10 +1346,10 @@
         const cond=probabilityConditions(g);
         const subs=['statFirstSub','statSecondSub','statThirdSub','statFourthSub','statFifthSub','statSixthSub','statSeventhSub'];
         for(let i=0;i<subs.length;i++){
-          if(i<p.length)$(subs[i]).textContent=`${cond[i]} · 精确情形 ${data.counts[i]} / ${data.total} · ${(p[i]*100).toFixed(p[i]<.001?6:4)}%`;
+          if(i<p.length)$(subs[i]).textContent=`${cond[i]} · 精确情形 ${data.counts[i]} / ${data.total} · ${(p[i]*100).toFixed(2)}%`;
           else $(subs[i]).textContent=cond[i];
         }
-        $('statTop2Sub').textContent=`一或二等奖 · 精确情形 ${data.top2Count} / ${data.total} · ${(top2*100).toFixed(top2<.001?6:4)}%`;
+        $('statTop2Sub').textContent=`一或二等奖 · 精确情形 ${data.top2Count} / ${data.total} · ${(top2*100).toFixed(2)}%`;
         $('probStatus').textContent=`已完成精确枚举：以上概率均指内部 ${rows.length} 个唯一子注在一次开奖中“至少有 1 组命中对应奖级”的概率；不同奖级可由不同投注同时命中，所以各奖级概率不能相加。浅绿色表示当前彩种该项概率高于另一彩种。追加投注/双色球倍投不改变号码中奖概率，只改变命中后的奖金。`;
         updateProbabilityHighlights();
         w.terminate();if(coverageWorker===w)coverageWorker=null;
