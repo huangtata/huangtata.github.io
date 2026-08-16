@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>商品图册与类目自动解析工具 V3.8</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--text:#181a1f;--muted:#737985;--line:#e6e8ec;--dark:#202227;--soft:#f0f2f5;--green:#17775f;--amber:#a86612;--red:#a23b32;--shadow:0 12px 32px rgba(21,25,32,.06);--r:17px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,"PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+button,input,select{font:inherit}.app{min-height:100vh}.top{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--line);background:rgba(245,246,248,.94);backdrop-filter:blur(14px)}
+.topin{max-width:1880px;margin:auto;padding:16px 24px;display:flex;gap:16px;align-items:center}.brand{display:flex;align-items:center;gap:11px;min-width:320px}.logo{width:43px;height:43px;border-radius:13px;background:var(--dark);color:#fff;display:grid;place-items:center;font-size:15px;font-weight:800}.brand h1{font-size:18px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:11px}
+.actions{margin-left:auto;display:flex;gap:9px;flex-wrap:wrap}.btn{border:1px solid var(--line);border-radius:11px;padding:9px 13px;background:#fff;color:var(--text);font-weight:650;cursor:pointer}.btn:hover{border-color:#c5c9d0}.btn.dark{background:var(--dark);color:#fff;border-color:var(--dark)}.btn.soft{background:var(--soft);box-shadow:none}.btn:disabled{opacity:.45;cursor:not-allowed}
+.wrap{max-width:1880px;margin:auto;padding:22px 24px 50px}.hero{display:grid;grid-template-columns:1.4fr .6fr;gap:14px;margin-bottom:15px}.drop{min-height:144px;background:#fff;border:1px dashed #c8ccd3;border-radius:18px;padding:22px;display:flex;gap:17px;align-items:center;box-shadow:var(--shadow);transition:.18s}.drop.drag{border-color:#5e6570;background:#fbfbfc}.dropicon{width:58px;height:58px;border-radius:17px;background:#eef0f3;display:grid;place-items:center;font-size:25px}.droptitle{font-size:17px;font-weight:780}.dropsub{font-size:12px;line-height:1.65;color:var(--muted);margin-top:6px}.rulescard{background:#202227;color:#fff;border-radius:18px;padding:20px 21px;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:center}.rulescard small{color:#adb2bb}.rulebig{font-size:25px;font-weight:820;margin:7px 0 4px}.ruleline{font-size:12px;color:#d4d7dd;line-height:1.7}
+.status{display:flex;align-items:center;gap:8px;margin:10px 2px 19px;font-size:12px;color:var(--muted)}.dot{width:7px;height:7px;background:var(--green);border-radius:50%}
+.tabs{display:flex;gap:7px;margin-bottom:13px;overflow:auto}.tab{border:0;background:transparent;border-radius:10px;padding:9px 13px;color:#676d77;font-weight:650;white-space:nowrap;cursor:pointer}.tab.active{background:#202227;color:#fff}
+.filters{display:grid;grid-template-columns:minmax(230px,1.45fr) repeat(3,minmax(150px,.8fr)) minmax(130px,.7fr) minmax(130px,.7fr) auto;gap:9px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:13px;box-shadow:0 8px 22px rgba(20,24,32,.035);margin-bottom:14px}
+.field label{display:block;font-size:10.5px;color:var(--muted);margin:0 0 5px 2px}.control{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:#fafbfc;padding:0 10px;outline:none}.control:focus{border-color:#9ca2ab;background:#fff}.reset{align-self:end;height:40px}
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:11px;margin-bottom:14px}.kpi{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px 16px;box-shadow:0 7px 20px rgba(20,24,32,.03)}.kl{font-size:11px;color:var(--muted)}.kv{font-size:24px;font-weight:820;margin-top:5px}.ks{font-size:10.5px;color:#969ba4;margin-top:3px}
+.grid2{display:grid;grid-template-columns:minmax(500px,1.08fr) minmax(410px,.92fr);gap:14px}.panel{background:#fff;border:1px solid var(--line);border-radius:17px;box-shadow:var(--shadow);overflow:hidden}.ph{padding:17px 19px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.pt{font-weight:760}.pn{font-size:11px;color:var(--muted);margin-top:4px}.chartbody{display:grid;grid-template-columns:315px 1fr;gap:16px;align-items:center;padding:18px}.chart{height:290px;position:relative}.chart canvas{width:100%;height:100%}.segs{display:flex;gap:6px;flex-wrap:wrap}.seg{border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 9px;font-size:11px;cursor:pointer}.seg.active{background:#202227;color:#fff;border-color:#202227}.legend{max-height:310px;overflow:auto}.lr{display:grid;grid-template-columns:10px minmax(90px,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #f0f1f3;font-size:11.5px}.ld{width:9px;height:9px;border-radius:3px}.lv{color:#555b65;font-variant-numeric:tabular-nums}
+.insights{padding:8px 18px 18px}.ins{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid #f0f1f3}.rank{width:27px;height:27px;border-radius:8px;background:#f0f2f4;display:grid;place-items:center;font-size:11px;font-weight:750}.iname{font-size:12.5px;font-weight:690}.bar{height:5px;background:#eef0f2;border-radius:99px;margin-top:7px;overflow:hidden}.bar i{display:block;height:100%;background:#2d3035}.inum{font-size:11px;color:var(--muted);text-align:right}
+.empty{padding:52px 20px;text-align:center;color:var(--muted)}.empty b{display:block;color:#3c414a;margin-bottom:7px}.hidden{display:none!important}
+.tw{max-height:690px;overflow:auto}table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px}th,td{padding:10px 12px;border-bottom:1px solid #eef0f2;text-align:left;white-space:nowrap;vertical-align:middle}th{position:sticky;top:0;z-index:2;background:#f8f9fa;color:#676d77;font-size:11px}.num{text-align:right;font-variant-numeric:tabular-nums}.pill{display:inline-flex;padding:4px 7px;border-radius:999px;font-size:10px;background:#eef0f3}.pill.dark{background:#25282d;color:#fff}.conf-high{color:var(--green)}.conf-mid{color:var(--amber)}.conf-low{color:var(--red)}
+.galleryhead{padding:17px 19px;display:flex;align-items:center;justify-content:space-between}.gallery{padding:0 18px 18px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:13px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0;transition:.18s}.card:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(20,24,32,.08)}.thumb{aspect-ratio:1;background:#f0f2f4;display:grid;place-items:center;overflow:hidden;cursor:zoom-in}.thumb img{width:100%;height:100%;object-fit:cover}.fallback{font-size:34px;color:#b4b9c1}.cb{padding:11px}.ct{height:39px;overflow:hidden;line-height:1.5;font-size:12.5px;font-weight:680}.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}.chip{font-size:9.5px;border-radius:999px;padding:3px 6px;background:#f1f2f4;color:#5b616a}.cm{display:flex;align-items:flex-end;justify-content:space-between;margin-top:9px}.price{font-weight:790;font-size:15px}.sales{font-size:10.5px;color:var(--muted)}a.link{color:#25282d;font-size:10.5px;text-decoration:none;border-bottom:1px solid #aeb2b8}
+.pager{display:flex;justify-content:center;align-items:center;gap:10px;padding:13px;border-top:1px solid var(--line)}.pg{min-width:120px;text-align:center;color:var(--muted);font-size:11px}.pimg{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#f0f1f3}.name{max-width:460px;white-space:normal;line-height:1.45}
+.rulefilters{display:flex;gap:8px;flex-wrap:wrap}.small{height:33px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:0 9px}.tree{padding:14px 18px 22px}.l1box{border:1px solid var(--line);border-radius:13px;margin-bottom:10px;overflow:hidden}.l1head{padding:11px 13px;background:#f8f9fa;display:flex;justify-content:space-between;align-items:center;font-weight:720}.l2group{padding:6px 12px}.l2row{padding:9px 0;border-bottom:1px solid #f0f1f3}.l2row:last-child{border:0}.l2name{font-size:11px;color:#6c727b;margin-bottom:7px}.leafs{display:flex;gap:6px;flex-wrap:wrap}.leaf{padding:5px 7px;border-radius:8px;background:#f2f3f5;font-size:10.5px}.help{padding:22px;max-width:1000px}.help h3{margin:3px 0 7px}.help p,.help li{font-size:13px;color:#5f6570;line-height:1.75}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:14px 0}.step{background:#fafbfc;border:1px solid var(--line);border-radius:13px;padding:14px}.step b{display:block;margin-bottom:5px}
+.toast{position:fixed;right:22px;bottom:22px;z-index:90;background:#22252a;color:#fff;padding:11px 15px;border-radius:11px;font-size:12px;opacity:0;transform:translateY(7px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}.lightbox{position:fixed;inset:0;z-index:100;background:rgba(10,11,13,.82);display:none;align-items:center;justify-content:center;padding:28px}.lightbox.show{display:flex}.lightbox img{max-width:92vw;max-height:88vh;border-radius:12px}.lightbox button{position:absolute;right:23px;top:20px;border:0;border-radius:50%;width:38px;height:38px;font-size:20px;background:#fff}
+@media(max-width:1250px){.filters{grid-template-columns:repeat(4,1fr)}.kpis{grid-template-columns:repeat(4,1fr)}.gallery{grid-template-columns:repeat(4,1fr)}.hero{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+@media(max-width:800px){.topin,.wrap{padding-left:13px;padding-right:13px}.brand{min-width:0}.brand p{display:none}.actions .btn:not(.dark){display:none}.filters{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr 1fr}.gallery{grid-template-columns:repeat(2,1fr)}.chartbody{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+
+.searchbar{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 12px;margin:0 0 13px;box-shadow:0 8px 22px rgba(20,24,32,.035)}
+.searchicon{width:34px;height:34px;border-radius:10px;background:#f0f2f4;display:grid;place-items:center;color:#5f6570;font-size:17px;flex:0 0 auto}
+.searchinput{border:0;outline:0;background:transparent;height:38px;flex:1;font-size:14px;min-width:0}
+.searchhint{font-size:10.5px;color:#9499a2;white-space:nowrap}
+.method{display:inline-flex;padding:4px 7px;border-radius:999px;background:#f0f2f4;font-size:10px;color:#555b65}
+.method.dynamic{background:#fff3df;color:#8b5a12}
+.coreword{display:inline-flex;padding:4px 7px;border-radius:8px;background:#f7f8fa;font-size:10px;color:#4f555e;max-width:180px;white-space:normal;line-height:1.35}
+.filters{grid-template-columns:repeat(5,minmax(150px,1fr)) auto}
+@media(max-width:1250px){.filters{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:800px){.searchhint{display:none}.filters{grid-template-columns:1fr 1fr}}
+
+
+select.control,select.small{
+  overscroll-behavior:contain;
+}
+
+/* V3.2: category filters use a normal scroll container instead of browser-native select popup.
+   This prevents wheel scrolling from mutating the selected value or rebuilding the option list. */
+.catselect{position:relative;width:100%}
+.catbtn{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:#fafbfc;padding:0 10px;outline:none;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;color:var(--text)}
+.catbtn:hover,.catselect.open .catbtn{border-color:#9ca2ab;background:#fff}
+.catbtn span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.catbtn i{font-style:normal;color:#8a9099;transition:.15s}
+.catselect.open .catbtn i{transform:rotate(180deg)}
+.catmenu{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:85;max-height:330px;overflow:hidden;overscroll-behavior:contain;background:#fff;border:1px solid #dfe2e6;border-radius:11px;padding:5px;box-shadow:0 16px 38px rgba(20,24,32,.16)}
+.catselect.open .catmenu{display:flex;flex-direction:column}
+.catsearchbox{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:4px 4px 7px;border-bottom:1px solid #eef0f2;background:#fff}
+.catsearchbox span{color:#8b919a;font-size:14px;padding-left:3px}
+.catsearchinput{min-width:0;flex:1;height:32px;border:1px solid #e3e6ea;border-radius:8px;background:#f8f9fa;padding:0 9px;outline:none;font-size:12px}
+.catsearchinput:focus{background:#fff;border-color:#9ca2ab}
+.catsearchclear{width:28px;height:28px;border:0;border-radius:7px;background:#f0f2f4;color:#737985;cursor:pointer;font-size:16px;line-height:1}
+.catsearchclear:hover{background:#e5e8ec;color:#222}
+.catoptions{min-height:0;max-height:278px;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-top:4px}
+.catopt{display:block;width:100%;border:0;background:transparent;border-radius:8px;padding:8px 9px;text-align:left;cursor:pointer;font-size:12px;line-height:1.35;color:#3e444d}
+.catopt:hover{background:#f2f4f6}
+.catopt.selected{background:#202227;color:#fff}
+.catopt[hidden]{display:none!important}
+.catempty{padding:12px 9px;color:#9298a1;font-size:11px}
+.catnoresult{display:none;padding:14px 9px;color:#9298a1;font-size:11px;text-align:center}
+
+/* V3.3: category labels in statistics are clickable drill-through controls. */
+.statcat{display:inline-flex;align-items:center;max-width:220px;border:1px solid #e2e5e9;border-radius:999px;background:#f5f6f8;color:#454b54;padding:4px 8px;font:inherit;font-size:11px;line-height:1.2;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:.15s}
+.statcat:hover{background:#202227;color:#fff;border-color:#202227;transform:translateY(-1px)}
+.statcat.l1{background:#25282d;color:#fff;border-color:#25282d;font-weight:700}
+.statcat.l1:hover{background:#000;border-color:#000}
+.statcat.l2{background:#eef0f3}
+.statcat.l3{background:#f8f9fa}
+
+/* V3.5: multi-file / folder import and store switch */
+.shopbar{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 12px;margin:0 0 13px;box-shadow:0 8px 22px rgba(20,24,32,.035)}
+.shoplabel{display:flex;align-items:center;gap:9px;min-width:180px}.shoplabel b{display:block;font-size:12px}.shoplabel small{display:block;color:var(--muted);font-size:10.5px;margin-top:2px}.shopicon{width:34px;height:34px;border-radius:10px;background:#202227;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800}.shopselect{max-width:360px;background:#fafbfc}.shopbar.hidden{display:none!important}
+.importprogress{font-variant-numeric:tabular-nums}
+@media(max-width:800px){.shopbar{align-items:stretch;flex-direction:column}.shopselect{max-width:none}.shoplabel{min-width:0}}
+
+/* V3.6: product-ID ordering + wide fixed detail table */
+#tab-detail{width:min(1960px,calc(100vw - 16px));margin-left:50%;transform:translateX(-50%)}
+#tab-detail .tw{max-height:800px;overflow-y:auto;overflow-x:hidden}
+#tab-detail table{width:100%;table-layout:fixed;font-size:10.8px}
+#tab-detail th,#tab-detail td{padding:8px 5px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.35}
+#tab-detail th{font-size:10.5px;vertical-align:middle}
+#tab-detail td.num,#tab-detail th.num{white-space:nowrap}
+#tab-detail .name{max-width:none;line-height:1.4}
+#tab-detail .pimg{width:42px;height:42px;border-radius:7px}
+#tab-detail .coreword{max-width:none;padding:3px 5px;font-size:9.5px}
+#tab-detail .method{font-size:9px;padding:3px 5px;white-space:normal}
+#tab-detail a.link{font-size:9.5px;white-space:nowrap}
+#tab-detail .idcell{font-variant-numeric:tabular-nums;font-size:10px;color:#363c44;word-break:break-all}
+#tab-detail .sourcecell{font-size:9.5px;color:#686e77}
+#tab-detail th.sortable{cursor:pointer;user-select:none;transition:.15s}
+#tab-detail th.sortable:hover{background:#eceff2;color:#202227}
+#tab-detail th.sortable .sortmark{display:inline-block;margin-left:3px;color:#9aa0a8;font-size:9px}
+#tab-detail th.sortable.sort-asc,#tab-detail th.sortable.sort-desc{background:#e9ecef;color:#202227;font-weight:800}
+#tab-detail th.sortable.sort-asc .sortmark,#tab-detail th.sortable.sort-desc .sortmark{color:#202227}
+#tab-detail th.sortable.sort-asc .sortmark::before{content:"↑"}#tab-detail th.sortable.sort-desc .sortmark::before{content:"↓"}
+#tab-detail th.sortable:not(.sort-asc):not(.sort-desc) .sortmark::before{content:"↕"}
+@media(max-width:1100px){#tab-detail table{font-size:9.7px}#tab-detail th{font-size:9.5px}#tab-detail th,#tab-detail td{padding:7px 3px}}
+
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div class="topin">
+  <div class="brand"><div class="logo">CAT</div><div><h1>商品图册与类目自动解析工具 V3.8</h1><p>多表 / 文件夹 / 多店铺 · 商品ID优先去重 · 新品排序 · 明细表头双向排序</p></div></div>
+  <div class="actions">
+    <button class="btn soft" id="reclass">重新智能分类</button>
+    <button class="btn" id="exportStats">导出统计 CSV</button>
+    <button class="btn" id="exportXlsx">导出分类 Excel</button>
+    <button class="btn" id="pickFolder">导入文件夹</button>
+    <button class="btn dark" id="pick">导入表格</button>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv" multiple hidden>
+    <input type="file" id="folder" accept=".xlsx,.xls,.csv" webkitdirectory directory multiple hidden>
+  </div>
+</div></div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="drop" id="drop">
+      <div class="dropicon">↥</div><div><div class="droptitle">导入单个 / 多个表格，或直接选择商品库文件夹</div>
+      <div class="dropsub">支持 XLSX / XLS / CSV。多表格会自动合并；文件夹导入会递归读取其中所有表格。如果根目录下存在子文件夹，则一级子文件夹名称自动作为店铺名，并可在页面中切换“全部店铺 / 单个店铺”。同一店铺内优先按商品ID自动去重；无商品ID时才按完整链接兜底。</div></div>
+    </div>
+    <div class="rulescard"><small>多店铺商品词库 + 智能拆词引擎</small><div class="rulebig" id="rulebig">- / - / -</div>
+      <div class="ruleline">一级 / 二级 / 三级规则节点<br>标题优先、SKU 辅助；规则未命中时继续做核心词与商品族推断。</div>
+    </div>
+  </div>
+  <div class="status"><span class="dot"></span><span id="status">当前无商品数据，请导入表格或商品库文件夹。</span></div>
+  <div class="shopbar hidden" id="shopBar">
+    <div class="shoplabel"><span class="shopicon">店</span><div><b>店铺视图</b><small id="shopNote">全部店铺</small></div></div>
+    <select class="control shopselect" id="shopFilter"><option value="">全部店铺</option></select>
+  </div>
+  <div class="searchbar">
+    <div class="searchicon">⌕</div>
+    <input class="searchinput" id="q" placeholder="搜索商品：输入商品名称、商品ID、核心词、SKU 或类目，例如：垃圾桶 / 123456789 / 红酒杯">
+    <span class="searchhint">多个关键词可用空格分隔</span>
+    <button class="btn soft" id="clearQ">清除</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">数据总览</button>
+    <button class="tab" data-tab="stats">类目统计</button>
+    <button class="tab" data-tab="gallery">商品图册</button>
+    <button class="tab" data-tab="detail">商品明细</button>
+    <button class="tab" data-tab="rules">类目规则库</button>
+    <button class="tab" data-tab="help">使用说明</button>
+  </div>
+
+  <div class="filters" id="filterBox">
+    
+    <div class="field"><label>一级类目</label><div class="catselect"><input type="hidden" id="f1" value=""><button type="button" class="catbtn" data-catbtn="f1"><span>全部一级类目</span><i>⌄</i></button><div class="catmenu" data-catmenu="f1"></div></div></div>
+    <div class="field"><label>二级类目</label><div class="catselect"><input type="hidden" id="f2" value=""><button type="button" class="catbtn" data-catbtn="f2"><span>全部二级类目</span><i>⌄</i></button><div class="catmenu" data-catmenu="f2"></div></div></div>
+    <div class="field"><label>三级类目</label><div class="catselect"><input type="hidden" id="f3" value=""><button type="button" class="catbtn" data-catbtn="f3"><span>全部三级类目</span><i>⌄</i></button><div class="catmenu" data-catmenu="f3"></div></div></div>
+    <div class="field"><label>分类置信度</label><select class="control" id="fc"><option value="">全部置信度</option><option value="高">高</option><option value="中">中</option><option value="低">低/待核查</option></select></div>
+    <div class="field"><label>图片状态</label><select class="control" id="fi"><option value="">全部商品</option><option value="yes">仅有图片</option><option value="no">仅无图片</option></select></div>
+    <button class="btn reset" id="reset">清空筛选</button>
+  </div>
+
+  <section id="tab-overview">
+    <div class="kpis">
+      <div class="kpi"><div class="kl">商品总数</div><div class="kv" id="kp">0</div><div class="ks">当前筛选范围</div></div>
+      <div class="kpi"><div class="kl">销量合计</div><div class="kv" id="ks">0</div><div class="ks">销量字段加总</div></div>
+      <div class="kpi"><div class="kl">一级类目</div><div class="kv" id="k1">0</div><div class="ks">已出现类目</div></div>
+      <div class="kpi"><div class="kl">二级类目</div><div class="kv" id="k2">0</div><div class="ks">已出现类目</div></div>
+      <div class="kpi"><div class="kl">三级类目</div><div class="kv" id="k3">0</div><div class="ks">已出现类目</div></div>
+      <div class="kpi"><div class="kl">有图商品</div><div class="kv" id="ki">0</div><div class="ks">图册可显示</div></div>
+      <div class="kpi"><div class="kl">低置信度</div><div class="kv" id="klow">0</div><div class="ks">建议人工核查</div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="ph"><div><div class="pt">类目占比</div><div class="pn">按当前筛选范围联动</div></div><div class="segs">
+        <button class="seg active" data-level="l1">一级</button><button class="seg" data-level="l2">二级</button><button class="seg" data-level="l3">三级</button>
+        <button class="seg active" data-metric="count">商品</button><button class="seg" data-metric="sales">销量</button>
+      </div></div><div class="chartbody"><div class="chart"><canvas id="donut"></canvas></div><div class="legend" id="legend"></div></div></div>
+      <div class="panel"><div class="ph"><div><div class="pt">一级类目重点分布</div><div class="pn">按商品数排序</div></div></div><div class="insights" id="insights"><div class="empty"><b>暂无数据</b>导入表格后自动生成。</div></div></div>
+    </div>
+  </section>
+
+  <section id="tab-stats" class="hidden"><div class="panel">
+    <div class="ph"><div><div class="pt">三级类目统计</div><div class="pn">一级类目 / 二级类目 / 三级类目 / 商品数 / 商品占比 / 销量合计 / 销量占比</div></div>
+      <select class="small" id="statsSort"><option value="count">商品数 ↓</option><option value="sales">销量 ↓</option><option value="cat">类目顺序</option></select></div>
+    <div class="tw"><table><thead><tr><th>一级类目</th><th>二级类目</th><th>三级类目</th><th class="num">商品数</th><th class="num">商品占比</th><th class="num">销量合计</th><th class="num">销量占比</th></tr></thead><tbody id="statsBody"></tbody></table></div>
+  </div></section>
+
+  <section id="tab-gallery" class="hidden"><div class="panel">
+    <div class="galleryhead"><div><div class="pt">商品图册库</div><div class="pn" id="galleryNote">暂无商品</div></div><select class="small" id="gallerySort">
+        <option value="sales">销量高到低</option>
+        <option value="newest">新品 → 旧品（商品ID ↓）</option>
+        <option value="oldest">旧品 → 新品（商品ID ↑）</option>
+        <option value="name">商品名称</option>
+        <option value="category">类目</option>
+      </select></div>
+    <div class="gallery" id="gallery"><div class="empty" style="grid-column:1/-1"><b>暂无商品图册</b>导入表格后，图片链接会自动解析显示。</div></div>
+    <div class="pager"><button class="btn" id="prev">上一页</button><div class="pg" id="page">0 / 0</div><button class="btn" id="next">下一页</button></div>
+  </div></section>
+
+  <section id="tab-detail" class="hidden"><div class="panel">
+    <div class="ph"><div><div class="pt">商品分类明细</div><div class="pn">商品ID / 一级类目 / 二级类目 / 三级类目 / 销量支持点击表头正反向排序；列表采用宽屏固定布局，无需左右滚动</div></div></div>
+    <div class="tw"><table id="detailTable">
+      <colgroup>
+        <col style="width:3.5%"><col style="width:18%"><col style="width:8%"><col style="width:5%"><col style="width:7%">
+        <col style="width:6%"><col style="width:7%"><col style="width:8%"><col style="width:4.5%"><col style="width:4.5%">
+        <col style="width:4.5%"><col style="width:6%"><col style="width:7%"><col style="width:6%"><col style="width:4.5%">
+      </colgroup>
+      <thead id="detailHead"><tr>
+        <th>图片</th><th>商品信息</th>
+        <th class="sortable" data-sort="productId" title="点击按商品ID排序；再次点击反向">商品ID <span class="sortmark"></span></th>
+        <th>店铺</th><th>来源文件</th>
+        <th class="sortable" data-sort="l1" title="点击排序；再次点击反向">一级类目 <span class="sortmark"></span></th>
+        <th class="sortable" data-sort="l2" title="点击排序；再次点击反向">二级类目 <span class="sortmark"></span></th>
+        <th class="sortable" data-sort="l3" title="点击排序；再次点击反向">三级类目 <span class="sortmark"></span></th>
+        <th class="num">价格</th>
+        <th class="num sortable" data-sort="sales" title="点击按销量排序；再次点击反向">销量 <span class="sortmark"></span></th>
+        <th>置信度</th><th>核心词</th><th>命中词</th><th>分类方式</th><th>商品</th>
+      </tr></thead><tbody id="detailBody"></tbody></table></div>
+    <div class="pager"><button class="btn" id="dprev">上一页</button><div class="pg" id="dpage">0 / 0</div><button class="btn" id="dnext">下一页</button></div>
+  </div></section>
+
+  <section id="tab-rules" class="hidden"><div class="panel">
+    <div class="ph"><div><div class="pt">内置类目规则库</div><div class="pn">规则词库 + 核心词推断；只保存分类知识，不内置商品数据</div></div>
+      <div class="rulefilters"><select class="small" id="ruleL1"><option value="">全部一级类目</option></select><input class="small" id="ruleQ" placeholder="搜索类目 / 关键词"></div></div>
+    <div class="tree" id="ruleTree"></div>
+  </div></section>
+
+  <section id="tab-help" class="hidden"><div class="panel help">
+    <h3>V3.8 商品ID优先去重</h3><p>多表格合并时，同一店铺内优先以表格 <b>商品ID / ID</b> 列作为唯一去重键；没有独立ID列时才从链接参数 <b>id=数字</b> 提取商品ID；只要商品ID相同，就视为同一个商品，不再受域名、活动参数、追踪参数或链接形式差异影响。没有商品ID时才使用规范化后的完整链接兜底；既没有商品ID也没有链接时不自动去重，避免误删。文件夹多店铺模式按“店铺 + 商品ID”隔离，不会把不同店铺的数据互相去掉。</p><h3>商品ID与排序</h3><p>网页会优先读取表格中的 <b>商品ID / ID</b> 列；没有独立ID列时，再从商品链接参数 <b>id=数字</b> 中自动提取商品ID。按当前商品库规律，ID 数值越大越接近新品，因此商品图册新增“新品 → 旧品 / 旧品 → 新品”排序；商品明细中的商品ID、一级类目、二级类目、三级类目、销量表头都可以点击正反向排序。没有可提取商品ID的特殊链接始终排在最后。</p><h3>V3.5 导入方式</h3>
+    <div class="steps"><div class="step"><b>1. 单表 / 多表导入</b>点击“导入表格”，可一次选择 1 个或多个 XLSX / XLS / CSV，自动合并后分类去重。</div><div class="step"><b>2. 文件夹 / 多店铺导入</b>点击“导入文件夹”，递归读取所有表格；根目录下一级子文件夹名自动识别为店铺名。</div><div class="step"><b>3. 店铺切换与导出</b>在“店铺视图”切换全部店铺或单店，统计、图册、明细和导出结果全部联动。</div></div>
+    <h3>推荐表头</h3><p>最适配：<b>商品信息、图片链接、商品价格、销量、SKU、分期免息、链接</b>。同时完整兼容淘宝商品导出格式：<b>主图链接、ID、标题、商品价格、付款人数、收藏数、店铺、商品链接</b>；其中主图链接作为商品图片、ID 作为商品ID、付款人数作为销量，普通单/多表导入时也会读取“店铺”列。也兼容常见别名，例如商品名称、标题、主图、售价、销售量、商品链接。</p>
+    <h3>分类逻辑 V3.4</h3><p>V3.4 延续“标题先判定、SKU 后辅助”。先清洗品牌词和营销修饰词，再拆解标题中的核心商品词、功能词、场景词和材质词；SKU 不再参与主评分，避免规格里出现“坐垫、面碗”等词时把主商品带偏。标题规则未命中时先做商品族推断，最后才使用 SKU 作为低置信度辅助。</p>
+    <h3>类目统计快捷跳转</h3><p>在“类目统计”中点击一级、二级或三级类目标签，可自动同步对应类目筛选并切换到商品图册查看结果。一级标签筛选一级类目，二级标签锁定一级+二级，三级标签锁定完整三级路径。</p><h3>自动去重</h3><p>V3.8 改为“商品ID优先、完整链接兜底”。同一店铺内，优先使用“商品ID / ID”列判断重复；无独立ID列时，链接参数 id= 后的商品ID相同即合并，不再要求链接域名或其他参数完全一致；没有商品ID时才按规范化完整链接去重；无ID且无链接的记录不会自动合并。重复记录销量取较高值，并补齐空字段与来源文件。状态栏会分别显示按商品ID合并和按链接兜底合并的数量。</p><h3>类目筛选与搜索</h3><p>一级、二级、三级类目继续使用页面内独立滚动菜单，避免滚轮异常跳回顶部。二级和三级类目的下拉菜单顶部新增搜索框，可直接输入类目关键词即时缩小结果，搜索不会改变当前已选类目。</p><h3>Excel 解析</h3><p>CSV 可直接在浏览器中解析；XLSX/XLS 会按需加载浏览器版 Excel 解析组件，因此第一次使用 Excel 导入时建议保持联网。商品内容本身只在当前页面内处理。</p>
+  </div></section>
+</div></div>
+<div class="toast" id="toast"></div>
+<div class="lightbox" id="lightbox"><button id="close">×</button><img id="bigimg" alt=""></div>
+
+<script>
+const RULES=[{"l1":"家用电器","l2":"厨房小家电","l3":"多士炉/烤面包机","keywords":["多士炉","烤面包机","吐司机"]},{"l1":"家用电器","l2":"厨房小家电","l3":"电热水壶/手冲壶","keywords":["电热水壶","电水壶","电热泡茶壶","手冲壶"]},{"l1":"家用电器","l2":"厨房小家电","l3":"封口机","keywords":["封口机","密封机"]},{"l1":"家用电器","l2":"生活小电器","l3":"计时器/定时器","keywords":["计时器","定时器"]},{"l1":"餐厨用品","l2":"酒具","l3":"醒酒器/醒酒壶","keywords":["醒酒器","醒酒壶"]},{"l1":"餐厨用品","l2":"酒具","l3":"分酒器/酒壶","keywords":["分酒器","酒壶","酒瓶"]},{"l1":"餐厨用品","l2":"酒具","l3":"酒杯架/酒架","keywords":["红酒杯架","高脚杯挂架","杯架倒挂","酒架"]},{"l1":"餐厨用品","l2":"酒具","l3":"红酒杯","keywords":["红酒杯","葡萄酒杯","勃艮第杯","波尔多杯"]},{"l1":"餐厨用品","l2":"酒具","l3":"香槟杯","keywords":["香槟杯"]},{"l1":"餐厨用品","l2":"酒具","l3":"威士忌杯/洋酒杯","keywords":["威士忌杯","洋酒杯","烈酒杯"]},{"l1":"餐厨用品","l2":"酒具","l3":"白酒杯/清酒杯","keywords":["白酒杯","清酒杯","烧酒杯","一口杯","一两杯"]},{"l1":"餐厨用品","l2":"酒具","l3":"啤酒杯/精酿杯","keywords":["啤酒杯","精酿杯","扎啤杯"]},{"l1":"餐厨用品","l2":"酒具","l3":"鸡尾酒杯/调酒杯","keywords":["鸡尾酒杯","马天尼杯","调酒杯","莫吉托酒杯"]},{"l1":"餐厨用品","l2":"酒具","l3":"酒具套装","keywords":["酒具套装","酒具"]},{"l1":"餐厨用品","l2":"杯具","l3":"马克杯","keywords":["马克杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"咖啡杯/杯碟","keywords":["咖啡杯碟","咖啡杯","拿铁杯","拉花杯","浓缩杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"玻璃水杯","keywords":["玻璃水杯","玻璃杯","喝水杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"陶瓷水杯","keywords":["陶瓷水杯","陶瓷杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"冷饮/果汁杯","keywords":["果汁杯","冷饮杯","冷萃杯","气泡杯","奶茶杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"早餐/牛奶杯","keywords":["早餐杯","牛奶杯","燕麦杯","麦片杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"吸管杯/带盖杯","keywords":["吸管杯","带盖水杯","带盖杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"量杯/刻度杯","keywords":["量杯","带刻度"]},{"l1":"餐厨用品","l2":"杯具","l3":"保温杯/随行杯","keywords":["保温杯","随行杯","焖烧杯"]},{"l1":"餐厨用品","l2":"杯具","l3":"通用杯具","keywords":["杯具","杯子","水杯"]},{"l1":"餐厨用品","l2":"茶具","l3":"茶具套装","keywords":["茶具套装","功夫茶具","茶具礼盒"]},{"l1":"餐厨用品","l2":"茶具","l3":"茶壶/泡茶壶","keywords":["泡茶壶","玻璃茶壶","茶壶","煮茶壶","手抓壶"]},{"l1":"餐厨用品","l2":"茶具","l3":"盖碗","keywords":["盖碗"]},{"l1":"餐厨用品","l2":"茶具","l3":"茶杯/品茗杯","keywords":["品茗杯","茶杯","主人杯"]},{"l1":"餐厨用品","l2":"茶具","l3":"茶水分离杯/壶","keywords":["茶水分离"]},{"l1":"餐厨用品","l2":"茶具","l3":"茶叶罐","keywords":["茶叶罐","存茶罐"]},{"l1":"餐厨用品","l2":"咖啡器具","l3":"手冲咖啡器具","keywords":["咖啡滤杯","滤杯","手冲咖啡","咖啡分享壶","咖啡壶"]},{"l1":"餐厨用品","l2":"咖啡器具","l3":"咖啡压粉/量具","keywords":["压粉器","布粉器","咖啡量杯","咖啡秤"]},{"l1":"餐厨用品","l2":"餐具","l3":"餐具套装","keywords":["餐具套装","碗碟套装","碗盘套装"]},{"l1":"餐厨用品","l2":"餐具","l3":"饭碗/餐碗","keywords":["饭碗","米饭碗","餐碗"]},{"l1":"餐厨用品","l2":"餐具","l3":"汤碗/面碗/泡面碗","keywords":["泡面碗","面碗","汤碗","大碗"]},{"l1":"餐厨用品","l2":"餐具","l3":"甜品碗/小碗","keywords":["甜品碗","酸奶碗","燕窝碗","小碗","炖盅"]},{"l1":"餐厨用品","l2":"餐具","l3":"餐盘/菜盘","keywords":["牛排盘","西餐盘","餐盘","菜盘","饭盘"]},{"l1":"餐厨用品","l2":"餐具","l3":"甜品盘/点心盘","keywords":["甜品盘","蛋糕盘","点心盘","茶点盘"]},{"l1":"餐厨用品","l2":"餐具","l3":"蘸料碟/小碟","keywords":["蘸料碟","蘸酱碟","调味碟","小碟","菜碟"]},{"l1":"餐厨用品","l2":"餐具","l3":"盘碟通用","keywords":["盘子","盘家用","碟子"]},{"l1":"餐厨用品","l2":"餐具","l3":"筷子","keywords":["筷子","一人一筷","专人筷"]},{"l1":"餐厨用品","l2":"餐具","l3":"勺子/汤勺","keywords":["汤勺","勺子","餐勺","甜品勺"]},{"l1":"餐厨用品","l2":"餐具","l3":"叉子/水果叉","keywords":["水果叉","水果签","餐叉","叉子"]},{"l1":"餐厨用品","l2":"餐具","l3":"刀叉勺/西餐具","keywords":["刀叉勺","刀叉","西餐具","牛排刀"]},{"l1":"餐厨用品","l2":"餐具","l3":"便携餐具","keywords":["便携餐具","餐具盒","旅行餐具"]},{"l1":"餐厨用品","l2":"餐具","l3":"儿童/宝宝餐具","keywords":["宝宝辅食","辅食勺","训练勺","儿童餐具"]},{"l1":"餐厨用品","l2":"餐具","l3":"筷托/餐具托","keywords":["筷托","筷子架","餐具托"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"果盘/水果盘","keywords":["高脚果盘","果盘","水果盘"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"托盘/茶盘","keywords":["茶盘","托盘","收纳盘"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"餐垫/杯垫/隔热垫","keywords":["餐垫","杯垫","锅垫","隔热垫","碗垫"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"面包篮/餐篮","keywords":["面包篮","餐篮","水果篮"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"牙签筒/牙签盒","keywords":["牙签筒","牙签盒","牙线盒"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"砧板/菜板","keywords":["砧板","切菜板","菜板","案板"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"水果刀/削皮器","keywords":["水果刀","削皮器","削皮刀","去皮神器"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"开瓶器/起子","keywords":["开瓶器","啤酒起子"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"防烫夹/取碗夹","keywords":["防烫夹","取碗夹","提碗夹"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"封口夹/食品夹","keywords":["封口夹","食品密封夹"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"烹饪铲勺/夹","keywords":["锅铲","漏勺","食品夹","厨房夹"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"围裙/烘焙防护","keywords":["围裙","罩衣","烘焙围裙"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"隔热手套","keywords":["隔热手套","防烫手套","烤箱手套"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"沥水篮/洗菜篮","keywords":["沥水篮","洗菜篮","水果篮子"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"制冰格/冰模","keywords":["冰格","制冰盒","冰球模具","冰块模具"]},{"l1":"餐厨用品","l2":"厨房收纳","l3":"刀架/砧板架","keywords":["刀架","刀具架","砧板架"]},{"l1":"餐厨用品","l2":"厨房收纳","l3":"锅具/锅盖收纳","keywords":["锅具收纳架","锅盖架","放锅架"]},{"l1":"餐厨用品","l2":"厨房收纳","l3":"杯架/沥水杯架","keywords":["杯架","水杯架","沥水杯架","玻璃杯架"]},{"l1":"餐厨用品","l2":"厨房收纳","l3":"抹布/水槽收纳架","keywords":["抹布置物架","洗碗布放置架","水槽置物架"]},{"l1":"餐厨用品","l2":"厨房收纳","l3":"厨房置物架","keywords":["厨房置物架","厨房收纳架","筷子笼"]},{"l1":"餐厨用品","l2":"食品储存","l3":"密封罐/储物罐","keywords":["密封罐","储物罐","储存罐","五谷杂粮收纳"]},{"l1":"餐厨用品","l2":"食品储存","l3":"保鲜盒/保鲜用品","keywords":["保鲜盒","保鲜盖","保鲜膜","保鲜袋"]},{"l1":"餐厨用品","l2":"食品储存","l3":"米桶/粮食收纳","keywords":["米桶","粮食桶","杂粮桶"]},{"l1":"餐厨用品","l2":"调味器具","l3":"调料罐/调味罐","keywords":["调料罐","调味料罐","调味罐","盐罐"]},{"l1":"餐厨用品","l2":"调味器具","l3":"研磨器/研磨瓶","keywords":["研磨器","研磨瓶","胡椒研磨"]},{"l1":"餐厨用品","l2":"调味器具","l3":"油壶/醋壶","keywords":["油壶","醋壶"]},{"l1":"餐厨用品","l2":"水壶冷水壶","l3":"冷水壶/凉水壶","keywords":["冷水壶","凉水壶","扎壶"]},{"l1":"收纳整理","l2":"衣物收纳","l3":"脏衣篮/洗衣篮","keywords":["脏衣篮","脏衣篓","洗衣篮","洗衣篓"]},{"l1":"收纳整理","l2":"衣物收纳","l3":"内衣/袜子收纳","keywords":["内衣收纳","内裤收纳","袜子收纳","分格收纳"]},{"l1":"收纳整理","l2":"衣物收纳","l3":"衣帽架/挂衣架","keywords":["衣帽架","挂衣架","挂衣","衣架"]},{"l1":"收纳整理","l2":"收纳篮筐","l3":"收纳篮/收纳筐","keywords":["收纳篮","收纳筐","整理篮","整理筐","藤编篮","编织篮"]},{"l1":"收纳整理","l2":"收纳盒","l3":"抽屉式收纳盒","keywords":["抽屉式收纳","抽屉收纳"]},{"l1":"收纳整理","l2":"收纳盒","l3":"桌面收纳盒","keywords":["桌面收纳盒","桌面整理盒"]},{"l1":"收纳整理","l2":"收纳盒","l3":"通用收纳盒","keywords":["收纳盒","整理盒"]},{"l1":"收纳整理","l2":"桌面收纳","l3":"笔筒/收纳筒","keywords":["笔筒","收纳筒","化妆刷筒"]},{"l1":"收纳整理","l2":"桌面收纳","l3":"钥匙/玄关收纳","keywords":["钥匙收纳","玄关收纳","钥匙置物","玄关钥匙","玄关置物"]},{"l1":"收纳整理","l2":"桌面收纳","l3":"首饰/珠宝收纳","keywords":["首饰盒","珠宝盒","首饰收纳","饰品收纳"]},{"l1":"收纳整理","l2":"桌面收纳","l3":"药箱/药盒","keywords":["药箱","药盒","药品收纳"]},{"l1":"收纳整理","l2":"桌面收纳","l3":"纸巾盒/抽纸盒","keywords":["纸巾盒","抽纸盒","纸抽盒"]},{"l1":"收纳整理","l2":"置物架","l3":"桌面置物架","keywords":["桌面置物架","洞洞板","书桌置物架"]},{"l1":"收纳整理","l2":"置物架","l3":"移动小推车","keywords":["小推车","移动推车"]},{"l1":"收纳整理","l2":"置物架","l3":"通用置物架","keywords":["置物架","收纳架"]},{"l1":"家居装饰","l2":"花器绿植","l3":"花瓶/花器","keywords":["花瓶","插花器","花器","陶罐"]},{"l1":"家居装饰","l2":"花器绿植","l3":"仿真花/仿真绿植","keywords":["仿真花","假花","仿真枝","仿真绿植","永生花","干花","插花配材"]},{"l1":"家居装饰","l2":"装饰摆件","l3":"招财摆件","keywords":["招财猫","招财摆件","马上有钱","发财摆件"]},{"l1":"家居装饰","l2":"装饰摆件","l3":"动物/卡通摆件","keywords":["动物摆件","兔子摆件","猫咪摆件","熊猫摆件","小熊摆件"]},{"l1":"家居装饰","l2":"装饰摆件","l3":"桌面/玄关摆件","keywords":["桌面摆件","玄关摆件","电视柜摆件","客厅摆件","家居摆件","装饰摆件"]},{"l1":"家居装饰","l2":"装饰摆件","l3":"八音盒/音乐摆件","keywords":["八音盒","音乐盒"]},{"l1":"家居装饰","l2":"装饰摆件","l3":"储蓄罐/存钱罐","keywords":["储蓄罐","存钱罐"]},{"l1":"家居装饰","l2":"钟表日历","l3":"挂钟/墙钟","keywords":["挂钟","墙钟"]},{"l1":"家居装饰","l2":"钟表日历","l3":"座钟/闹钟","keywords":["座钟","闹钟","翻页时钟","桌面时钟"]},{"l1":"家居装饰","l2":"钟表日历","l3":"万年历/台历","keywords":["万年历","台历"]},{"l1":"家居装饰","l2":"香薰香具","l3":"线香/香插/香炉","keywords":["线香","香插","香座","香炉","香托"]},{"l1":"家居装饰","l2":"香薰香具","l3":"香薰/扩香","keywords":["香薰","扩香","香氛"]},{"l1":"家居装饰","l2":"烛台蜡烛","l3":"烛台/蜡烛托","keywords":["烛台","蜡烛托","蜡烛台"]},{"l1":"家居装饰","l2":"灯饰","l3":"小夜灯/氛围灯","keywords":["小夜灯","氛围灯","伴睡灯","拍拍灯"]},{"l1":"家居装饰","l2":"灯饰","l3":"台灯/装饰灯","keywords":["台灯","装饰灯"]},{"l1":"家居装饰","l2":"相框画饰","l3":"相框/照片框","keywords":["相框","照片框","相架","照片墙"]},{"l1":"家居装饰","l2":"相框画饰","l3":"装饰画/挂画","keywords":["装饰画","挂画"]},{"l1":"家居装饰","l2":"烟具","l3":"烟灰缸","keywords":["烟灰缸","烟缸"]},{"l1":"家居装饰","l2":"节庆装饰","l3":"门贴/对联/福字","keywords":["门贴","对联","福字","新年装饰"]},{"l1":"卫浴用品","l2":"洗漱用品","l3":"漱口杯/刷牙杯","keywords":["漱口杯","刷牙杯","洗漱杯","牙缸"]},{"l1":"卫浴用品","l2":"洗漱用品","l3":"牙刷架/牙刷收纳","keywords":["牙刷架","牙刷收纳","牙膏架"]},{"l1":"卫浴用品","l2":"洗漱用品","l3":"挤牙膏器","keywords":["挤牙膏器","牙膏夹"]},{"l1":"卫浴用品","l2":"皂具","l3":"肥皂盒/香皂盒","keywords":["肥皂盒","香皂盒","皂托","香皂碟","肥皂碟"]},{"l1":"卫浴用品","l2":"沐浴用品","l3":"沐浴球/浴花","keywords":["沐浴球","浴花","洗澡球","起泡球"]},{"l1":"卫浴用品","l2":"沐浴用品","l3":"搓澡/洗浴工具","keywords":["搓澡","沐浴刷","洗澡刷"]},{"l1":"卫浴用品","l2":"盆桶","l3":"洗脸盆/洗澡盆","keywords":["洗脸盆","洗澡盆","洗脚盆","脸盆"]},{"l1":"卫浴用品","l2":"浴室收纳","l3":"浴室置物架","keywords":["浴室置物架","卫生间置物架","浴室收纳"]},{"l1":"卫浴用品","l2":"马桶周边","l3":"马桶刷/马桶垫","keywords":["马桶刷","马桶垫"]},{"l1":"清洁日用","l2":"擦拭清洁","l3":"抹布/洗碗布","keywords":["抹布","洗碗布","百洁布"]},{"l1":"清洁日用","l2":"擦拭清洁","l3":"清洁刷/洗碗刷","keywords":["清洁刷","洗碗刷","刷锅"]},{"l1":"清洁日用","l2":"洗衣护理","l3":"洗衣袋/护洗袋","keywords":["洗衣袋","护洗袋"]},{"l1":"清洁日用","l2":"晾晒用品","l3":"晾衣架/袜夹","keywords":["晾衣架","晒衣架","袜子晾衣架","多夹子"]},{"l1":"清洁日用","l2":"晾晒用品","l3":"晾晒篮/晾衣网","keywords":["晒衣篮","晾衣网","晾晒篮"]},{"l1":"清洁日用","l2":"家务防护","l3":"防撞护角/防护","keywords":["防撞护角","防碰撞","护角"]},{"l1":"清洁日用","l2":"家务防护","l3":"挡水/防溅","keywords":["挡水板","防溅板","挡水条"]},{"l1":"家纺布艺","l2":"毛巾浴巾","l3":"浴巾","keywords":["浴巾"]},{"l1":"家纺布艺","l2":"毛巾浴巾","l3":"毛巾/擦手巾","keywords":["擦手巾","手巾","毛巾","小方巾"]},{"l1":"家纺布艺","l2":"地毯地垫","l3":"浴室/吸水地垫","keywords":["硅藻泥地垫","浴室地垫","吸水地垫","卫生间地垫"]},{"l1":"家纺布艺","l2":"地毯地垫","l3":"家居地毯/地垫","keywords":["地毯","地垫","门垫"]},{"l1":"家纺布艺","l2":"抱枕靠垫","l3":"抱枕/靠枕","keywords":["抱枕","靠枕","靠垫","腰枕","护腰靠枕","靠背垫"]},{"l1":"家纺布艺","l2":"保暖用品","l3":"热水袋/暖水袋","keywords":["热水袋","暖水袋","暖宝宝"]},{"l1":"个护美妆","l2":"美妆收纳","l3":"化妆包/洗漱包","keywords":["化妆包","洗漱包","化妆品收纳包"]},{"l1":"个护美妆","l2":"美妆收纳","l3":"美妆工具收纳","keywords":["粉扑收纳","美妆蛋收纳","化妆刷收纳","化妆品整理盒"]},{"l1":"个护美妆","l2":"美妆工具","l3":"粉扑/美妆蛋","keywords":["粉扑","美妆蛋"]},{"l1":"个护美妆","l2":"美妆工具","l3":"化妆刷","keywords":["化妆刷"]},{"l1":"个护美妆","l2":"镜梳工具","l3":"化妆镜/梳妆镜","keywords":["化妆镜","梳妆镜"]},{"l1":"个护美妆","l2":"镜梳工具","l3":"梳子/按摩梳","keywords":["气垫梳","按摩梳","梳子","头皮按摩"]},{"l1":"个护美妆","l2":"发饰","l3":"发箍/发带","keywords":["发箍","发带","洗脸束发带","头巾"]},{"l1":"个护美妆","l2":"发饰","l3":"发夹/头饰","keywords":["发夹","头饰"]},{"l1":"户外出行","l2":"雨具防晒","l3":"遮阳伞/太阳伞","keywords":["遮阳伞","太阳伞","防晒伞","黑胶伞"]},{"l1":"户外出行","l2":"雨具防晒","l3":"雨伞/晴雨伞","keywords":["晴雨伞","晴雨两用","雨伞","折叠伞"]},{"l1":"户外出行","l2":"扇具","l3":"折扇/竹扇","keywords":["折叠扇","折扇","竹扇","扇子","草编扇"]},{"l1":"户外出行","l2":"帽饰","l3":"草帽/遮阳帽","keywords":["草帽","遮阳帽","防晒帽"]},{"l1":"户外出行","l2":"便携餐饮","l3":"便当包/保温包","keywords":["便当包","保温包","保温袋","饭盒袋","餐包"]},{"l1":"户外出行","l2":"鞋履","l3":"家居拖鞋","keywords":["拖鞋","凉拖","家居鞋"]},{"l1":"户外出行","l2":"野餐用品","l3":"野餐篮/手提篮","keywords":["野餐篮","手提篮","户外野餐"]},{"l1":"户外出行","l2":"随身配饰","l3":"钥匙扣/包挂","keywords":["钥匙扣","包包挂件","随身挂件","挂饰"]},{"l1":"家具","l2":"凳椅","l3":"凳子/矮凳","keywords":["凳子","矮凳","板凳","脚踏"]},{"l1":"家具","l2":"桌几","l3":"小桌/边几","keywords":["边几","茶几","小桌"]},{"l1":"宠物用品","l2":"宠物餐饮","l3":"宠物碗/食盆","keywords":["宠物碗","猫食碗","猫碗","狗碗","食盆"]},{"l1":"宠物用品","l2":"宠物餐饮","l3":"宠物粮储存","keywords":["猫粮储存","狗粮储存","宠物零食收纳"]},{"l1":"宠物用品","l2":"宠物居住","l3":"猫窝/狗窝/宠物垫","keywords":["猫窝","狗窝","宠物窝","宠物垫","猫床"]},{"l1":"宠物用品","l2":"宠物玩具","l3":"猫抓板/猫玩具","keywords":["猫抓板","猫抓柱","猫爬架","猫玩具","宠物玩具"]},{"l1":"餐厨用品","l2":"酒具","l3":"红酒杯/酒具套装","keywords":["红酒套装","高脚杯高颜值"]},{"l1":"卫浴用品","l2":"洗漱用品","l3":"洗手液瓶/分装瓶","keywords":["乳液瓶","洗手液瓶","分装瓶","沐浴露分装"]},{"l1":"餐厨用品","l2":"调味器具","l3":"猪油罐/油罐","keywords":["猪油罐","荤油罐"]},{"l1":"家用电器","l2":"厨房小家电","l3":"电热水壶/热水壶","keywords":["热水壶"]},{"l1":"家居装饰","l2":"装饰摆件","l3":"通用装饰摆件","keywords":["摆件"]},{"l1":"餐厨用品","l2":"餐具","l3":"吐骨碟/骨碟","keywords":["吐骨碟","骨碟","渣盘"]},{"l1":"餐厨用品","l2":"调味器具","l3":"油瓶/调料瓶","keywords":["油瓶","调料瓶","调味瓶"]},{"l1":"餐厨用品","l2":"饮品制作","l3":"雪克杯/摇壶","keywords":["雪克杯","手摇壶"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"擀面杖","keywords":["擀面杖","擀面棍","走锤"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"小锅/淋油锅","keywords":["泼油小锅","淋油","热油锅","小锅"]},{"l1":"餐厨用品","l2":"餐具","l3":"便携筷勺套装","keywords":["盒装木质","筷勺套装"]},{"l1":"家纺布艺","l2":"毛巾浴巾","l3":"干发帽/浴帽","keywords":["干发帽","浴帽","包头发"]},{"l1":"餐厨用品","l2":"厨房耗材配件","l3":"杯盖/防尘盖","keywords":["杯盖","防尘盖"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"面包刀/烘焙刀","keywords":["吐司刀","面包刀","锯齿刀"]},{"l1":"餐厨用品","l2":"厨房小工具","l3":"料理机/绞肉机","keywords":["料理机","绞肉机","捣蒜器"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"食物罩/菜罩","keywords":["食物罩","菜罩","保鲜菜罩","盖菜罩"]},{"l1":"餐厨用品","l2":"饮品配件","l3":"玻璃吸管/吸管","keywords":["玻璃吸管","吸管"]},{"l1":"家纺布艺","l2":"浴袍睡袍","l3":"浴袍/睡袍","keywords":["浴袍","睡袍","浴衣"]},{"l1":"家纺布艺","l2":"坐垫靠垫","l3":"坐垫","keywords":["坐垫","屁垫"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"挖球器/冰淇淋勺","keywords":["挖球器","挖球勺","冰淇淋勺"]},{"l1":"餐厨用品","l2":"餐具","l3":"咖啡勺/搅拌勺","keywords":["咖啡搅拌勺","咖啡勺","搅拌勺"]},{"l1":"收纳整理","l2":"桌面收纳","l3":"置物盘/收纳盘","keywords":["收纳置物盘","置物盘"]},{"l1":"餐厨用品","l2":"餐具","l3":"碗碟餐具套装","keywords":["碗碟餐具"]},{"l1":"园艺用品","l2":"园艺工具","l3":"园艺剪/修枝剪","keywords":["园艺剪","修枝剪","花剪","枝剪"]},{"l1":"园艺用品","l2":"浇灌工具","l3":"浇水壶/洒水壶","keywords":["浇水壶","洒水壶","浇花壶"]},{"l1":"园艺用品","l2":"浇灌工具","l3":"喷壶/喷雾瓶","keywords":["喷壶","喷雾瓶","喷水壶"]},{"l1":"家居五金","l2":"挂钩壁挂","l3":"免钉挂钩","keywords":["挂钩","壁挂","承重钩"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"木铲/厨具套装","keywords":["厨具套装","木铲","铲子"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"食物夹/硅胶夹","keywords":["食物夹","辅食夹","硅胶夹"]},{"l1":"餐厨用品","l2":"食品储存","l3":"糖果罐/糖缸","keywords":["糖缸","糖果罐","收纳罐"]},{"l1":"卫浴用品","l2":"马桶周边","l3":"马桶提盖器","keywords":["马桶提盖器","掀盖器"]},{"l1":"餐厨用品","l2":"餐具","l3":"黄油刀/涂抹刀","keywords":["黄油刀","涂抹刀","果酱刀"]},{"l1":"家用电器","l2":"厨房小家电","l3":"养生壶","keywords":["养生壶"]},{"l1":"餐厨用品","l2":"餐具","l3":"饭勺/盛饭勺","keywords":["饭勺","盛饭"]},{"l1":"宠物用品","l2":"外出用品","l3":"宠物包/猫包","keywords":["宠物收纳袋","猫包","宠物包","太空舱"]},{"l1":"卫浴用品","l2":"盆桶","l3":"水桶/储水桶","keywords":["水桶","储水桶"]},{"l1":"收纳整理","l2":"纸品收纳","l3":"纸巾架","keywords":["纸巾架"]},{"l1":"家纺布艺","l2":"家电防尘","l3":"空调挡风帘/防尘罩","keywords":["空调挡风帘","空调挡风","挂机罩"]},{"l1":"餐厨用品","l2":"茶具","l3":"公道杯/茶海","keywords":["公道杯","茶海"]},{"l1":"户外出行","l2":"便携电器","l3":"挂脖风扇/便携风扇","keywords":["挂脖风扇","无叶风扇","便携风扇"]},{"l1":"家居装饰","l2":"节庆礼赠","l3":"婚庆/乔迁装饰","keywords":["婚庆用品","乔迁之喜","新居布置","入宅装饰"]},{"l1":"家居装饰","l2":"磁贴装饰","l3":"冰箱贴/磁贴","keywords":["冰箱贴","磁性装饰"]},{"l1":"收纳整理","l2":"收纳箱","l3":"收纳箱","keywords":["收纳箱"]},{"l1":"其他","l2":"服务/补差价","l3":"补邮费/万能拍","keywords":["万能拍","补邮费","拍链接"]},{"l1":"餐厨用品","l2":"调味器具","l3":"调味罐套装","keywords":["调料味罐","调味罐套装"]},{"l1":"餐厨用品","l2":"餐具","l3":"碗碟餐具","keywords":["餐具碗碟","碗碟餐具"]},{"l1":"餐厨用品","l2":"餐具","l3":"勺叉组合","keywords":["勺叉","叉勺"]},{"l1":"餐厨用品","l2":"餐具","l3":"沙拉碗/深碗","keywords":["沙拉碗","深碗","双耳碗"]},{"l1":"餐厨用品","l2":"餐具","l3":"鱼盘/蒸鱼盘","keywords":["蒸鱼盘","鱼碟","鱼盘"]},{"l1":"餐厨用品","l2":"餐具","l3":"烤盘/双耳盘","keywords":["烤盘","双耳盘"]},{"l1":"餐厨用品","l2":"餐具","l3":"餐具组合","keywords":["餐具套","陶瓷餐具"]},{"l1":"家纺布艺","l2":"毯类","l3":"披肩毯/午睡毯","keywords":["披肩毯","盖腿毯","可穿披风"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"抹茶工具/茶筅立","keywords":["抹茶工具","抹茶套装","抹茶碗","茶筅立","茶筅座","茶筅托"]},{"l1":"家纺布艺","l2":"地毯地垫","l3":"浴室防滑脚垫","keywords":["淋浴房门口脚垫","厕所脚垫","防滑脚垫"]},{"l1":"餐厨用品","l2":"酒具","l3":"量酒器/吧勺","keywords":["量酒器","吧勺","酒吧匙","搅拌棒"]},{"l1":"文娱用品","l2":"棋牌桌游","l3":"麻将","keywords":["麻将牌","麻将"]},{"l1":"餐厨用品","l2":"厨房防护","l3":"锅盖帽/锅把套","keywords":["锅盖帽","锅帽","锅把套","防烫盖帽"]},{"l1":"户外出行","l2":"收纳包袋","l3":"沙滩包/游泳包","keywords":["沙滩包","游泳包","洗澡包","网纱沙滩包"]},{"l1":"家具","l2":"家具配件","l3":"桌椅脚垫/保护套","keywords":["椅子脚垫","桌椅脚","桌脚保护套","椅脚保护套"]},{"l1":"其他","l2":"服务/会员","l3":"入会/会员服务","keywords":["入会专用","会员专用"]},{"l1":"餐厨用品","l2":"调味器具","l3":"调料盒/佐料盒","keywords":["调料盒","佐料罐","佐料盒"]},{"l1":"清洁日用","l2":"垃圾收纳","l3":"垃圾桶/纸篓","keywords":["垃圾桶","纸篓","垃圾篓","垃圾收纳桶"]},{"l1":"个护美妆","l2":"睡眠护理","l3":"睡眠眼罩/冰敷眼罩","keywords":["睡眠眼罩","遮光眼罩","冰敷眼罩","护眼罩","眼罩"]},{"l1":"数码办公","l2":"电脑配件","l3":"电脑包/内胆包","keywords":["电脑包","笔记本电脑包","平板电脑包","内胆包"]},{"l1":"家具","l2":"储物家具","l3":"边柜/储物柜","keywords":["储物边柜","边柜","收纳柜","床头柜","柜子"]},{"l1":"餐厨用品","l2":"餐具","l3":"吐骨碟/骨碟","keywords":["吐骨头盘","吐骨碟","骨碟","餐桌垃圾盘"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶漏/茶隔","keywords":["茶漏","茶隔","过滤茶漏"]},{"l1":"餐厨用品","l2":"厨房容器","l3":"料理盆/调理盆","keywords":["料理盆","调理盆"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶席/茶桌旗","keywords":["茶席","茶桌旗","茶艺桌旗"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶巾","keywords":["茶巾"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶洗/茶渣缸/水盂","keywords":["茶洗","茶渣缸","茶水缸","水盂","建水"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"厨房剪刀/鸡骨剪","keywords":["厨房剪刀","鸡骨剪"]},{"l1":"餐厨用品","l2":"烘焙工具","l3":"硅胶刮刀/刮铲","keywords":["硅胶刮刀","烘焙刮刀"]},{"l1":"餐厨用品","l2":"烧烤工具","l3":"烤肉夹/烧烤夹","keywords":["烤肉夹","烧烤夹"]},{"l1":"餐厨用品","l2":"烘焙工具","l3":"油刷/烧烤刷","keywords":["硅胶油刷","烧烤刷","烘焙刷"]},{"l1":"数码办公","l2":"电脑配件","l3":"鼠标垫/桌垫","keywords":["鼠标垫","键盘垫"]},{"l1":"数码办公","l2":"手机配件","l3":"手机/平板支架","keywords":["手机支架","手机架","平板支架"]},{"l1":"清洁日用","l2":"垃圾收纳","l3":"垃圾袋","keywords":["垃圾袋","抽绳垃圾袋"]},{"l1":"家居装饰","l2":"灯饰","l3":"磁吸拍拍夜灯","keywords":["磁吸夜灯","拍拍夜灯"]},{"l1":"园艺用品","l2":"花艺工具","l3":"去刺钳/打刺钳","keywords":["去刺钳","打刺钳","去刺器"]},{"l1":"家居五金","l2":"梯具","l3":"家用梯/人字梯","keywords":["家用梯子","人字梯","三步梯","梯子"]},{"l1":"餐厨用品","l2":"酒具","l3":"雪克壶/调酒器","keywords":["调酒器","雪克壶","摇酒"]},{"l1":"户外出行","l2":"鞋履","l3":"雨鞋/雨靴","keywords":["雨鞋","雨靴","胶鞋"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"坚果开壳器","keywords":["开壳器","核桃夹","榛子神器"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"榨汁器/柠檬夹","keywords":["榨汁器","柠檬夹","挤汁"]},{"l1":"家纺布艺","l2":"毯类","l3":"沙发毯/盖毯/毛毯","keywords":["沙发毯","盖毯","毛毯","空调毯","午睡毛毯","床尾巾"]},{"l1":"餐厨用品","l2":"咖啡器具","l3":"拉花缸/打奶杯","keywords":["拉花缸","打奶杯"]},{"l1":"服饰内衣","l2":"男士内衣","l3":"男士内裤","keywords":["男士内裤","平角裤"]},{"l1":"餐厨用品","l2":"酒具","l3":"冰铲/冰勺","keywords":["冰铲","冰勺"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶道六君子","keywords":["茶道六君子","六君子"]},{"l1":"卫浴用品","l2":"地漏周边","l3":"地漏盖/防臭盖","keywords":["地漏盖","防反味","防臭神器"]},{"l1":"收纳整理","l2":"随身收纳","l3":"眼镜袋/眼镜盒","keywords":["眼镜袋","眼镜盒","太阳镜收纳"]},{"l1":"个护美妆","l2":"洁面工具","l3":"洗面奶打泡器","keywords":["洗面奶打泡器","打泡器","发泡神器"]},{"l1":"清洁日用","l2":"擦拭清洁","l3":"杯刷/瓶刷","keywords":["杯刷","瓶刷","破壁机专用刷"]},{"l1":"餐厨用品","l2":"酒具","l3":"碎冰锤/捣汁棒","keywords":["碎冰锤","捣碎棒","捣汁棒"]},{"l1":"家居工具","l2":"剪切工具","l3":"家用剪刀","keywords":["家用剪刀","学生剪子","手账剪刀"]},{"l1":"户外出行","l2":"旅行箱包","l3":"行李箱/拉杆箱","keywords":["行李箱","拉杆箱"]},{"l1":"个护美妆","l2":"发饰","l3":"边夹/发夹","keywords":["边夹","发夹"]},{"l1":"家具","l2":"凳椅","l3":"换鞋凳","keywords":["换鞋凳","穿鞋凳"]},{"l1":"户外出行","l2":"露营装备","l3":"天幕/帐篷","keywords":["天幕帐篷","露营帐篷","天幕"]},{"l1":"玩具礼品","l2":"毛绒玩具","l3":"毛绒玩偶/公仔","keywords":["毛绒玩偶","毛绒公仔","毛绒"]},{"l1":"收纳整理","l2":"儿童收纳","l3":"娃娃收纳桶","keywords":["娃娃收纳桶","玩具收纳桶"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"壶承/茶承","keywords":["壶承","茶承","养壶"]},{"l1":"餐厨用品","l2":"咖啡器具","l3":"咖啡机手柄","keywords":["咖啡手柄","咖啡机手柄","无底咖啡手柄"]},{"l1":"餐厨用品","l2":"锅具","l3":"汤锅/铸铁锅","keywords":["铸铁汤锅","汤锅","铸铁锅"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"切丝器/刨丝器","keywords":["切丝器","刨丝器","切菜神器"]},{"l1":"汽车用品","l2":"车内用品","l3":"安全带护肩套","keywords":["安全带护肩","护肩套"]},{"l1":"收纳整理","l2":"饰品收纳","l3":"发饰盒","keywords":["发饰盒","头饰盒"]},{"l1":"收纳整理","l2":"大件收纳","l3":"棉被/衣物收纳包","keywords":["棉被收纳","超大容量收纳包"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶夹/养壶笔","keywords":["养壶笔","茶夹"]},{"l1":"个护美妆","l2":"女性护理收纳","l3":"月事包/卫生巾收纳","keywords":["月事包","卫生巾收纳","卫生棉"]},{"l1":"汽车用品","l2":"车内收纳","l3":"车载垃圾桶","keywords":["车载垃圾桶","汽车垃圾桶"]},{"l1":"家纺布艺","l2":"沙发罩布","l3":"沙发巾/沙发盖布","keywords":["沙发巾","沙发盖布","沙发垫"]},{"l1":"餐厨用品","l2":"烘焙工具","l3":"烤箱隔热手套","keywords":["烤箱棉手套","微波炉烘焙","隔烫"]},{"l1":"家纺布艺","l2":"隔热垫","l3":"布艺隔热垫","keywords":["棉质家居隔热","家居隔热垫"]},{"l1":"餐厨用品","l2":"餐具","l3":"彩色玻璃汤匙","keywords":["玻璃长柄咖啡","玻璃汤匙"]},{"l1":"餐厨用品","l2":"食品储存","l3":"玻璃密封罐","keywords":["按压小圆罐","玻璃罐","玻璃瓶"]},{"l1":"家居装饰","l2":"茶宠摆件","l3":"茶宠/貔貅","keywords":["茶宠","貔貅"]},{"l1":"餐厨用品","l2":"餐具","l3":"汤盘/沙拉盘","keywords":["汤盘","沙拉盘"]},{"l1":"户外出行","l2":"雨具防晒","l3":"长柄伞","keywords":["长柄伞","16骨"]},{"l1":"卫浴用品","l2":"沥水用品","l3":"硅藻泥沥水垫","keywords":["台面沥水垫","硅藻泥"]},{"l1":"清洁日用","l2":"擦拭清洁","l3":"长柄清洁刷/洗锅刷","keywords":["长柄刷","洗锅刷","锅刷"]},{"l1":"餐厨用品","l2":"餐具","l3":"餐盘/平盘/浅盘","keywords":["平盘","浅盘","陶瓷盘","分格盘","零食盘","波点盘","寿司盘"]},{"l1":"餐厨用品","l2":"餐具","l3":"勺子/调羹","keywords":["调羹","长柄勺","喝汤勺"]},{"l1":"餐厨用品","l2":"茶具","l3":"茶叶罐/茶饼罐","keywords":["茶饼罐","储茶罐","存茶罐"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"烤箱隔热手套","keywords":["烤箱手套","烘焙手套","防滑手套"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"食物罩/菜罩","keywords":["菜盖罩","苍蝇菜盖","餐桌防尘罩"]},{"l1":"收纳整理","l2":"大件收纳","l3":"棉被/衣物收纳包","keywords":["棉被收纳包","幼儿园收纳包","被子收纳包"]},{"l1":"餐厨用品","l2":"酒具","l3":"高脚酒杯","keywords":["高脚杯","高脚酒杯"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"饭团/寿司模具","keywords":["饭团摇摇乐","饭团模具","寿司模具","饭团神器"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"松肉锤/嫩肉锤","keywords":["松肉锤","嫩肉锤","敲肉锤"]},{"l1":"餐厨用品","l2":"厨房收纳","l3":"碗碟沥水架","keywords":["碗碟沥水架","碗碟架","水槽沥水架"]},{"l1":"餐厨用品","l2":"酒具","l3":"冰酒石/冰粒","keywords":["冰酒石","冰粒冰酒石","威士忌冰石"]},{"l1":"卫浴用品","l2":"洗漱用品","l3":"起泡瓶/泡沫瓶","keywords":["起泡瓶","泡沫瓶","按压起泡瓶"]},{"l1":"餐厨用品","l2":"便当饭盒","l3":"饭盒/便当盒","keywords":["饭盒","便当盒","午餐盒"]},{"l1":"餐厨用品","l2":"锅具","l3":"瓦罐/炖罐","keywords":["瓦罐","炖罐","煨汤坛子","煲汤罐"]},{"l1":"家纺布艺","l2":"毛巾浴巾","l3":"浴巾/裹巾","keywords":["裹巾","洗澡裹巾"]},{"l1":"家居装饰","l2":"烟具","l3":"烟灰缸/烟盅","keywords":["烟盅"]}];
+
+// V3.2 新商品库增量规则：来自 2026-08-12 全店商品库中的未覆盖/易误分词。
+RULES.push(...[{"l1":"餐厨用品","l2":"酒具","l3":"通用酒杯","keywords":["酒杯","小酒杯"]},{"l1":"餐厨用品","l2":"餐具","l3":"碗类通用","keywords":["陶瓷碗","玻璃碗","斗笠碗","家用碗"]},{"l1":"家居装饰","l2":"节庆礼赠","l3":"花篮/喜篮","keywords":["花篮","喜篮","撒花篮","花童篮"]},{"l1":"玩具礼品","l2":"益智解压玩具","l3":"魔尺","keywords":["魔尺","百变魔尺"]},{"l1":"园艺用品","l2":"花盆花器","l3":"花盆/种植盆","keywords":["花盆","种植盆","蓄水盆"]},{"l1":"玩具礼品","l2":"贺卡礼赠","l3":"贺卡/祝福卡","keywords":["贺卡","祝福卡片","纸雕卡片"]},{"l1":"户外出行","l2":"收纳包袋","l3":"购物袋/帆布包","keywords":["购物袋","帆布包","手提购物袋"]},{"l1":"户外出行","l2":"游泳用品","l3":"游泳圈/坐圈","keywords":["游泳圈","游泳坐圈","充气坐圈"]},{"l1":"餐厨用品","l2":"饮品容器","l3":"奶茶桶/咖啡桶/饮料桶","keywords":["奶茶桶","咖啡桶","饮料桶"]},{"l1":"卫浴用品","l2":"马桶周边","l3":"儿童坐便器/马桶圈","keywords":["儿童坐便器","坐便器","马桶圈"]},{"l1":"餐厨用品","l2":"酒具","l3":"冰桶/冰块桶","keywords":["冰桶","冰块桶"]},{"l1":"家纺布艺","l2":"桌布桌旗","l3":"桌布/桌巾/桌旗","keywords":["桌布","桌巾","桌旗","盖巾"]},{"l1":"汽车用品","l2":"车载香氛","l3":"车载香薰/香片","keywords":["车载香薰","车载香氛","车载香片","香片车载"]},{"l1":"餐厨用品","l2":"茶具","l3":"鸡缸杯/品茗杯","keywords":["鸡缸杯"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"厨房剪刀/食物剪","keywords":["厨房剪刀","食物剪","食物剪刀","陶瓷小剪刀"]},{"l1":"餐厨用品","l2":"酒具","l3":"滤冰器/调酒过滤器","keywords":["滤冰器","滤酒器","调酒过滤器","三角过滤器"]},{"l1":"餐厨用品","l2":"餐具","l3":"筷托/筷架","keywords":["筷架","筷托"]},{"l1":"户外出行","l2":"出行工具","l3":"折叠推车/手拉车","keywords":["折叠推车","手拉车","行李车"]},{"l1":"户外出行","l2":"扇具","l3":"团扇","keywords":["团扇","篦扇"]},{"l1":"家用电器","l2":"生活小电器","l3":"桌面吸尘器/吸粉机","keywords":["桌面吸尘器","吸粉机","咖啡粉吸尘器"]},{"l1":"卫浴用品","l2":"盆桶","l3":"水瓢/水勺","keywords":["水瓢","水勺","舀水勺"]},{"l1":"园艺用品","l2":"花架置物","l3":"花架/植物架","keywords":["花架","植物架"]},{"l1":"家用电器","l2":"生活小电器","l3":"加湿器","keywords":["加湿器"]},{"l1":"个护美妆","l2":"美甲工具","l3":"指甲钳/指甲刀","keywords":["指甲钳","指甲刀"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶宠","keywords":["茶宠","茶玩"]},{"l1":"玩具礼品","l2":"益智解压玩具","l3":"木鱼/解压木鱼","keywords":["木鱼","解压木鱼"]},{"l1":"收纳整理","l2":"纸品收纳","l3":"卷纸盒/卷纸筒","keywords":["卷纸盒","卷纸筒","卷纸纸巾盒"]},{"l1":"园艺用品","l2":"浇灌工具","l3":"浇水壶/洒水壶","keywords":["浇花水壶"]},{"l1":"收纳整理","l2":"鞋类收纳","l3":"鞋架/鞋托","keywords":["鞋架","鞋托"]},{"l1":"餐厨用品","l2":"水槽工具","l3":"水槽过滤网/沥水网","keywords":["水槽过滤网","沥水网","洗菜盆过滤网"]},{"l1":"清洁日用","l2":"地面清洁","l3":"扫把/簸箕套装","keywords":["扫把","扫地套装","簸箕"]},{"l1":"家居五金","l2":"家具五金","l3":"柜门/抽屉拉手","keywords":["柜门拉手","抽屉拉手","衣柜拉手","皮拉手"]},{"l1":"家居装饰","l2":"烛台蜡烛","l3":"蜡烛杯/烛杯","keywords":["蜡烛杯","烛杯"]},{"l1":"服饰内衣","l2":"袜子","l3":"袜子/堆堆袜","keywords":["堆堆袜","袜子"]},{"l1":"个护美妆","l2":"发饰","l3":"头绳/发圈","keywords":["头绳","发圈"]},{"l1":"餐厨用品","l2":"锅具","l3":"砂锅/煲仔锅","keywords":["砂锅","煲仔饭锅"]},{"l1":"玩具礼品","l2":"益智玩具","l3":"形状配对/套柱玩具","keywords":["形状套柱","套柱嵌板","嵌板玩具"]},{"l1":"餐厨用品","l2":"锅具","l3":"油炸锅","keywords":["油炸锅"]},{"l1":"卫浴用品","l2":"洗漱用品","l3":"按压瓶/洗发水瓶","keywords":["洗发水瓶","按压空瓶","按压瓶"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶刀/茶针","keywords":["茶刀","茶针"]},{"l1":"清洁日用","l2":"家务防护","l3":"抽屉垫纸/防潮垫","keywords":["抽屉垫纸","防潮垫","防霉垫"]},{"l1":"汽车用品","l2":"车内舒适","l3":"汽车护颈枕/头枕","keywords":["汽车护颈枕","车用护颈枕","汽车头枕"]},{"l1":"卫浴用品","l2":"浴室收纳","l3":"浴室放衣篮/衣框","keywords":["浴室放衣","放衣框","放衣篮"]},{"l1":"卫浴用品","l2":"浴室收纳","l3":"洗浴篮/浴篮","keywords":["洗浴篮","浴篮","洗澡篮"]},{"l1":"汽车用品","l2":"车内用品","l3":"停车号码牌/挪车牌","keywords":["停车号码牌","挪车号码牌","停车牌","挪车牌"]},{"l1":"餐厨用品","l2":"茶具配件","l3":"茶滤/茶叶过滤器","keywords":["茶滤","茶叶过滤网"]},{"l1":"家具","l2":"凳椅","l3":"沙发椅/休闲椅","keywords":["沙发椅","休闲椅"]}]);
+RULES.push({"l1":"家纺布艺","l2":"枕类","l3":"护颈枕/头枕","keywords":["护颈枕","记忆棉头枕","睡眠头枕"]});
+RULES.push(...[{"l1":"餐厨用品","l2":"餐具","l3":"黄油刀/涂抹刀","keywords":["抹刀","芝士抹刀"]},{"l1":"餐厨用品","l2":"餐具","l3":"叉子/水果叉","keywords":["果叉"]},{"l1":"餐厨用品","l2":"餐桌用品","l3":"果篮/水果篮","keywords":["果篮","水果篮"]},{"l1":"餐厨用品","l2":"餐具","l3":"刀叉勺/西餐具","keywords":["西餐套装"]},{"l1":"餐厨用品","l2":"厨房工具","l3":"开瓶器/起子","keywords":["开盖器","啤酒起瓶","起瓶器"]},{"l1":"玩具礼品","l2":"毛绒玩具","l3":"毛绒玩偶/公仔","keywords":["公仔","安抚玩偶"]}]);
+const COMBO_RULES=[
+ {l1:"收纳整理",l2:"大件收纳",l3:"棉被/衣物收纳包",all:["收纳包"],any:["棉被","被子","衣物","幼儿园"]},
+ {l1:"餐厨用品",l2:"厨房工具",l3:"烤箱隔热手套",all:["手套"],any:["烤箱","烘焙","隔热","防烫"]},
+ {l1:"餐厨用品",l2:"酒具",l3:"量酒器/吧勺",all:["长柄"],any:["吧勺","吧匙","搅拌棒","鸡尾酒"]},
+ {l1:"汽车用品",l2:"车内收纳",l3:"车载垃圾桶",all:["垃圾桶"],any:["车载","汽车","车用"]},
+ {l1:"数码办公",l2:"电脑配件",l3:"电脑包/内胆包",all:["包"],any:["笔记本","电脑","平板"]},
+ {l1:"户外出行",l2:"收纳包袋",l3:"沙滩包/游泳包",all:["包"],any:["沙滩","游泳","泳衣","健身"]},
+ {l1:"个护美妆",l2:"女性护理收纳",l3:"月事包/卫生巾收纳",all:["包"],any:["月事","卫生巾","卫生棉"]},
+ {l1:"家纺布艺",l2:"毯类",l3:"沙发毯/盖毯/毛毯",all:["毯"],any:["沙发","午睡","空调","盖腿","毛毯"]},
+ {l1:"家纺布艺",l2:"沙发罩布",l3:"沙发巾/沙发盖布",all:["沙发"],any:["沙发巾","盖布","防滑","全盖"]},
+ {l1:"餐厨用品",l2:"茶具配件",l3:"抹茶工具/茶筅立",all:["抹茶"],any:["茶筅","茶碗","点茶","百本"]},
+ {l1:"餐厨用品",l2:"餐具",l3:"餐盘/平盘/浅盘",all:["盘"],any:["陶瓷","平盘","浅盘","分格","寿司","零食"]},
+ {l1:"餐厨用品",l2:"餐具",l3:"勺子/调羹",all:["勺"],any:["汤","调羹","长柄","咖啡"]},
+ {l1:"清洁日用",l2:"擦拭清洁",l3:"长柄清洁刷/洗锅刷",all:["刷"],any:["清洁","洗锅","洗碗","长柄"]},
+ {l1:"收纳整理",l2:"饰品收纳",l3:"发饰盒",all:["盒"],any:["发饰","头饰","发夹"]},
+ {l1:"家具",l2:"储物家具",l3:"边柜/储物柜",all:["柜"],any:["储物","收纳","床头","边柜"]}
+];
+
+COMBO_RULES.push({l1:"餐厨用品",l2:"茶具",l3:"茶叶罐/茶饼罐",all:["罐"],any:["茶叶","茶饼","储茶","存茶"]});
+const CORE_TERMS=["车载垃圾桶","垃圾桶","垃圾袋","纸篓","电脑包","内胆包","沙滩包","游泳包","收纳包","月事包","行李箱","拉杆箱","帐篷","天幕","披肩毯","沙发毯","毛毯","盖毯","空调毯","沙发巾","沙发垫","浴巾","毛巾","地垫","脚垫","鼠标垫","餐垫","隔热垫","抹茶工具","抹茶碗","茶筅立","茶漏","茶隔","茶席","茶巾","茶洗","茶渣缸","水盂","壶承","茶承","茶宠","茶道六君子","养壶笔","茶夹","红酒杯","香槟杯","威士忌杯","高脚杯","酒杯","醒酒器","量酒器","雪克壶","调酒器","吧勺","冰铲","碎冰锤","咖啡杯","马克杯","水杯","茶杯","保温杯","随行杯","杯具","冷水壶","茶壶","水壶","餐盘","平盘","浅盘","分格盘","盘子","碟子","吐骨碟","骨碟","饭碗","汤碗","沙拉碗","碗","筷子","勺子","调羹","叉子","餐具","砧板","菜板","锅盖帽","锅把套","厨房剪刀","剪刀","硅胶刮刀","烤肉夹","烧烤夹","油刷","榨汁器","开壳器","切丝器","刨丝器","料理盆","密封罐","储物罐","茶叶罐","调料盒","调味罐","保鲜盒","米桶","果盘","托盘","食物罩","菜罩","吸管","花瓶","花器","仿真花","摆件","挂钟","闹钟","香薰","烛台","夜灯","台灯","相框","装饰画","烟灰缸","收纳盒","收纳箱","收纳篮","收纳筐","脏衣篮","衣帽架","置物架","小推车","纸巾盒","纸巾架","首饰盒","发饰盒","眼镜袋","漱口杯","牙刷架","肥皂盒","浴室置物架","马桶刷","地漏盖","脸盆","水桶","眼罩","化妆包","化妆镜","梳子","发箍","发带","发夹","打泡器","内裤","雨伞","长柄伞","遮阳伞","雨鞋","雨靴","拖鞋","草帽","便当包","边柜","储物柜","床头柜","柜子","换鞋凳","凳子","桌子","椅子","梯子","人字梯","桌脚保护套","手机支架","平板支架","安全带护肩","麻将","毛绒玩偶","公仔","去刺钳","打刺钳","园艺剪","喷壶","浇水壶","宠物碗","猫窝","狗窝","猫抓板","猫包","宠物包","风扇","热水壶","养生壶","多士炉"].sort((a,b)=>b.length-a.length);
+
+
+CORE_TERMS.push(...["魔尺","花盆","贺卡","祝福卡","帆布包","购物袋","游泳圈","坐便器","马桶圈","冰桶","桌巾","桌布","团扇","水瓢","水勺","花架","植物架","加湿器","指甲钳","指甲刀","木鱼","卷纸盒","卷纸筒","鞋架","鞋托","扫把","簸箕","柜门拉手","抽屉拉手","蜡烛杯","袜子","头绳","发圈","砂锅","油炸锅","洗发水瓶","茶刀","茶针","护颈枕","停车号码牌","挪车牌","游泳坐圈","洗浴篮","浴篮","水槽过滤网","滤冰器","花篮","喜篮","吸粉机"]);CORE_TERMS.sort((a,b)=>b.length-a.length);
+const CONTEXT_WORDS=["厨房","餐桌","烘焙","烧烤","咖啡","茶道","泡茶","抹茶","红酒","鸡尾酒","调酒","卫生间","浴室","洗澡","洗漱","客厅","卧室","沙发","床头","办公室","桌面","玄关","衣物","户外","露营","旅行","沙滩","游泳","汽车","车载","宠物","猫","狗","园艺","花店","电脑","笔记本","手机","平板","睡眠","护眼","收纳","垃圾","儿童","男士","女士"];
+const MODIFIER_WORDS=["家用","高颜值","创意","简约","北欧","欧式","中式","日式","韩式","ins","网红","高级感","轻奢","复古","可爱","大容量","食品级","耐高温","透明","加厚","新款","便携","多功能","专用","神器","高档","精致","时尚","原创","现代","通用","防滑","防水","防油","纯棉","全棉","不锈钢","玻璃","陶瓷","硅胶","木质","实木","毛绒","彩色","白色","黑色"];
+
+const FAMILY_RULES=[
+ {l1:"餐厨用品",l2:"其他餐厨器具",anchors:["厨房","餐具","杯","壶","碗","盘","碟","筷","勺","叉","锅","罐","砧板","茶","咖啡","酒","烘焙","调味","吸管","果盘","料理"]},
+ {l1:"家纺布艺",l2:"其他家纺",anchors:["毯","被","巾","地垫","脚垫","靠垫","抱枕","沙发巾","床尾","桌旗","布艺"]},
+ {l1:"收纳整理",l2:"其他收纳",anchors:["收纳","整理","置物","储物","篮","筐","盒","箱","衣架","纸巾","首饰"]},
+ {l1:"清洁日用",l2:"其他清洁日用",anchors:["垃圾","清洁","洗碗","刷锅","抹布","晾晒","垃圾袋","垃圾桶"]},
+ {l1:"卫浴用品",l2:"其他卫浴",anchors:["浴室","卫生间","厕所","洗漱","牙刷","肥皂","马桶","地漏","洗澡","脸盆"]},
+ {l1:"家居装饰",l2:"其他家居装饰",anchors:["摆件","花瓶","花器","挂钟","时钟","香薰","烛台","夜灯","台灯","相框","装饰画"]},
+ {l1:"户外出行",l2:"其他户外出行",anchors:["户外","露营","旅行","沙滩","游泳","雨伞","遮阳","雨鞋","行李箱","帐篷","拖鞋","帽"]},
+ {l1:"个护美妆",l2:"其他个护",anchors:["化妆","美妆","眼罩","发饰","发夹","发带","梳子","洁面","卫生巾","月事"]},
+ {l1:"数码办公",l2:"数码办公配件",anchors:["电脑","笔记本","平板","手机","鼠标","键盘","办公"]},
+ {l1:"家具",l2:"其他家具",anchors:["柜","凳","椅","桌","边几","床头柜","换鞋凳"]},
+ {l1:"园艺用品",l2:"其他园艺",anchors:["园艺","浇花","喷壶","花剪","修枝","去刺","打刺","花店"]},
+ {l1:"汽车用品",l2:"车内用品",anchors:["汽车","车载","车用","安全带"]},
+ {l1:"宠物用品",l2:"其他宠物用品",anchors:["宠物","猫窝","狗窝","猫抓","猫包","宠物碗"]},
+ {l1:"文娱用品",l2:"棋牌文娱",anchors:["麻将","棋牌","桌游","扑克"]},
+ {l1:"玩具礼品",l2:"玩具礼品",anchors:["玩偶","公仔","毛绒玩具","娃娃"]},
+ {l1:"服饰内衣",l2:"服饰内衣",anchors:["内裤","内衣","睡袍","浴袍"]},
+ {l1:"家居工具",l2:"家用工具",anchors:["梯子","剪刀","工具","钳","锤"]},
+ {l1:"家用电器",l2:"其他小家电",anchors:["电器","电热","风扇","热水壶","养生壶","多士炉","封口机"]}
+];
+
+const SUFFIX_MAP=[["杯","餐厨用品","其他杯具"],["壶","餐厨用品","壶具"],["碗","餐厨用品","餐具"],["盘","餐厨用品","餐具"],["碟","餐厨用品","餐具"],["勺","餐厨用品","餐具"],["叉","餐厨用品","餐具"],["锅","餐厨用品","锅具"],["罐","餐厨用品","储存器具"],["瓶","餐厨用品","瓶罐器具"],["毯","家纺布艺","毯类"],["巾","家纺布艺","巾类"],["垫","家纺布艺","垫类"],["帘","家纺布艺","帘罩"],["柜","家具","储物家具"],["凳","家具","凳椅"],["椅","家具","凳椅"],["桌","家具","桌几"],["灯","家居装饰","灯饰"],["钟","家居装饰","钟表日历"],["镜","个护美妆","镜梳工具"],["梳","个护美妆","镜梳工具"],["伞","户外出行","雨具防晒"],["鞋","户外出行","鞋履"],["帽","户外出行","帽饰"],["箱","收纳整理","收纳箱"],["刷","清洁日用","清洁工具"],["剪","家居工具","剪切工具"],["钳","家居工具","夹钳工具"],["锤","家居工具","敲击工具"],["包","收纳整理","包袋收纳"],["袋","收纳整理","袋类收纳"],["盒","收纳整理","收纳盒"],["篮","收纳整理","篮筐收纳"],["桶","收纳整理","桶类收纳"],["架","收纳整理","置物架"],["罩","家居日用","罩类用品"],["套","家居日用","套类用品"]];
+
+function nt(s){return String(s??"").toLowerCase().normalize("NFKC").replace(/[\s·•丨|｜,，。.!！?？;；:：'"“”‘’（）()【】\[\]{}<>《》_\-—+]/g,"")}
+function titleClean(s){let x=String(s??"").normalize("NFKC");x=x.replace(/JOJO'?S?\s*L\.?\s*PD\.?/ig," ").replace(/[A-Za-z][A-Za-z0-9_.-]{2,}/g," ");x=x.split(/[|｜丨]/)[0];MODIFIER_WORDS.forEach(w=>{x=x.split(w).join(" ")});return x.replace(/[0-9A-Za-z]+/g," ").replace(/[^\u4e00-\u9fff]+/g," ").replace(/\s+/g," ").trim()}
+function tokenizeTitle(title,sku=""){const t=nt(title),s=nt(sku),found=[];CORE_TERMS.forEach(w=>{const n=nt(w);if((n&&t.includes(n))||(n.length>=3&&s.includes(n)))found.push(w)});CONTEXT_WORDS.forEach(w=>{const n=nt(w);if(t.includes(n))found.push(w)});return[...new Set(found)].sort((a,b)=>b.length-a.length)}
+function comboMatch(rule,t){return(rule.all||[]).every(x=>t.includes(nt(x)))&&(!(rule.any||[]).length||(rule.any||[]).some(x=>t.includes(nt(x))))}
+function findAutoCore(title,tokens){const product=tokens.filter(x=>CORE_TERMS.includes(x));if(product.length)return product[0];const c=titleClean(title).replace(/\s+/g,""),suffixes=["杯","壶","碗","盘","碟","勺","叉","锅","罐","瓶","盒","篮","筐","桶","袋","包","毯","垫","巾","罩","帘","套","架","柜","凳","椅","桌","灯","钟","伞","鞋","帽","镜","梳","箱","刷","剪","钳","锤","器","机"];let best="";suffixes.forEach(sf=>{const re=new RegExp(`[\\u4e00-\\u9fff]{1,5}${sf}`,"g"),ms=c.match(re)||[];ms.forEach(v=>{if(v.length>best.length)best=v})});return best||c.slice(-6)||"新品类"}
+function familyInfer(title,sku,tokens){const t=nt(title),both=t+nt(sku);let best=null;FAMILY_RULES.forEach((f,i)=>{const ms=f.anchors.filter(a=>both.includes(nt(a)));if(!ms.length)return;let score=ms.reduce((s,a)=>s+Math.min(8,nt(a).length*2),0);if(t.includes("车载")&&f.l1==="汽车用品")score+=18;if(t.includes("宠物")&&f.l1==="宠物用品")score+=18;if((t.includes("茶")||t.includes("咖啡")||t.includes("酒"))&&f.l1==="餐厨用品")score+=8;if(!best||score>best.score)best={...f,score,ms,i}});if(best){const core=findAutoCore(title,tokens);return{l1:best.l1,l2:best.l2,l3:core,confidence:"中",hits:best.ms.slice(0,5).join("、"),core,method:"核心词推断"}}const core=findAutoCore(title,tokens);for(const[sf,l1,l2]of SUFFIX_MAP){if(core.endsWith(sf))return{l1,l2,l3:core,confidence:"低",hits:`词尾：${sf}`,core,method:"新品类兜底"}}return{l1:"其他商品",l2:"自动新类目",l3:core,confidence:"低",hits:"核心词兜底",core,method:"新品类兜底"}}
+function classify(title,sku=""){
+ const t=nt(title),s=nt(sku),tokens=tokenizeTitle(title,"");let best=null;
+ // 1) 标题规则是主判据。SKU 不再直接参与主评分，避免“沙发椅”被 SKU 里的“坐垫”等规格词带偏。
+ RULES.forEach((r,i)=>{
+   const tm=r.keywords.filter(k=>t.includes(nt(k)));if(!tm.length)return;
+   const tmax=Math.max(...tm.map(k=>nt(k).length));
+   let score=tmax*120+tm.length*26-i*.00001;
+   if(tm.some(k=>nt(k).length>=4))score+=35;
+   if(!best||score>best.score)best={score,l1:r.l1,l2:r.l2,l3:r.l3,tm,tmax};
+ });
+ for(const r of COMBO_RULES){
+   if(comboMatch(r,t)&&(!best||best.tmax<2)){
+     const hits=[...(r.all||[]),...(r.any||[]).filter(x=>t.includes(nt(x)))],score=650+hits.join("").length*8;
+     if(!best||score>best.score)best={score,l1:r.l1,l2:r.l2,l3:r.l3,tm:hits,tmax:Math.max(...hits.map(x=>nt(x).length),2),combo:true};
+   }
+ }
+ if(best){
+   const core=findAutoCore(title,tokens);
+   let confidence=best.combo?"高":(best.tmax>=3?"高":best.tmax===2?"中":"低");
+   if(best.l1==="其他")confidence="低";
+   return{l1:best.l1,l2:best.l2,l3:best.l3,confidence,hits:best.tm.slice(0,6).join("、"),core,method:best.combo?"拆词组合":"标题规则"};
+ }
+ // 2) 标题未命中时，先按标题核心词/场景推断商品族。
+ const inferred=familyInfer(title,"",tokens);
+ if(!(inferred.l1==="其他商品"&&inferred.method==="新品类兜底"))return inferred;
+ // 3) 只有标题实在无法判断时，SKU 才作为最后一层弱辅助；且只接受 >=3 字的强词。
+ let sb=null;
+ RULES.forEach((r,i)=>{
+   const sm=r.keywords.filter(k=>nt(k).length>=3&&s.includes(nt(k)));if(!sm.length)return;
+   const smax=Math.max(...sm.map(k=>nt(k).length)),score=smax*20+sm.length*2-i*.00001;
+   if(!sb||score>sb.score)sb={score,l1:r.l1,l2:r.l2,l3:r.l3,sm};
+ });
+ if(sb){
+   return{l1:sb.l1,l2:sb.l2,l3:sb.l3,confidence:"低",hits:sb.sm.slice(0,3).join("、"),core:inferred.core,method:"SKU辅助待核查"};
+ }
+ return inferred;
+}
+
+const SYN={
+ name:["商品信息","商品名称","商品标题","标题","商品","名称","宝贝标题"],
+ image:["图片链接","主图链接","商品图片","主图","图片","图片地址","image","imageurl","image_url"],
+ price:["商品价格","价格","售价","销售价","price"],
+ sales:["销量","付款人数","累计销量","成交量","销售量","sales"],
+ sku:["SKU","sku","规格","商品规格"],
+ link:["链接","商品链接","宝贝链接","URL","url","商品URL"],
+ productId:["商品ID","ID","id","宝贝ID","商品编号"],
+ shop:["店铺","店铺名称","店名","shop","shopname"]
+};
+let rawRows=[],data=[],filtered=[],tab="overview",gp=1,dp=1,chartLevel="l1",chartMetric="count",detailSortKey="",detailSortDir="asc";
+let importMeta={mode:"",label:"",files:0,original:0,removed:0,groups:0,idRemoved:0,linkRemoved:0};
+const GSIZE=30,DSIZE=100,$=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+const norm=s=>String(s??"").trim(), ch=s=>norm(s).toLowerCase().replace(/[\s_\-（）()【】[\]\/]/g,"");
+const num=v=>{if(typeof v==="number")return Number.isFinite(v)?v:0;const m=String(v??"").replace(/,/g,"").match(/-?\d+(\.\d+)?/);return m?Number(m[0]):0};
+const fmt=n=>new Intl.NumberFormat("zh-CN",{maximumFractionDigits:0}).format(n||0), pct=n=>`${((n||0)*100).toFixed(2)}%`;
+const pf=v=>{const n=num(v);return n?`¥${new Intl.NumberFormat("zh-CN",{maximumFractionDigits:2}).format(n)}`:(norm(v)||"-")};
+function toast(s){const e=$("#toast");e.textContent=s;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2500)}
+function pick(row,keys){const a=Object.entries(row||{});for(const k of keys){const t=ch(k),h=a.find(([x])=>ch(x)===t);if(h&&norm(h[1])!=="")return h[1]}return""}
+function imgurl(v){let s=norm(v),f=s.match(/=IMAGE\s*\(\s*["']([^"']+)/i);if(f)s=f[1];const m=s.match(/https?:\/\/[^\s,;|]+/i);if(m)return m[0];if(s.startsWith("//"))return"https:"+s;return/^https?:\/\//i.test(s)?s:""}
+
+function productIdFromLink(v){
+ const s=norm(v);if(!s)return"";
+ const m=s.match(/[?&]id=(\d+)(?=&|#|$)/i);
+ return m?m[1]:"";
+}
+function productIdFromRow(row){
+ // 优先读取独立“商品ID / ID”列；没有时再从商品链接 id= 参数提取。
+ const direct=norm(pick(row,SYN.productId));
+ if(direct){
+   const clean=direct.replace(/\.0+$/,"").trim();
+   if(/^\d+$/.test(clean))return clean;
+   const m=clean.match(/\d{5,}/);if(m)return m[0];
+ }
+ return productIdFromLink(pick(row,SYN.link));
+}
+function shopFromRow(row){
+ // 文件夹导入时保留文件夹店铺规则；普通单/多表导入则可直接读取“店铺”列。
+ return norm(row?.__shop||pick(row,SYN.shop));
+}
+function compareProductIdValues(a,b,dir="asc"){
+ const x=norm(a),y=norm(b);if(!x&&!y)return 0;if(!x)return 1;if(!y)return-1;
+ let c=x.length-y.length;if(c===0)c=x===y?0:(x<y?-1:1);
+ return dir==="desc"?-c:c;
+}
+function productLinkKey(v){
+ // 仅用于“无商品ID”时的保守兜底：保留完整链接语义，只做最小规范化。
+ const s=norm(v);if(!s)return"";
+ return s.replace(/#.*$/,'').replace(/\/$/,'').toLowerCase();
+}
+function dedupeKeyForRow(row){
+ const shop=shopFromRow(row);
+ const link=pick(row,SYN.link),productId=productIdFromRow(row);
+ if(productId)return{key:`${shop}::pid:${productId}`,type:"id",productId};
+ const linkKey=productLinkKey(link);
+ if(linkKey)return{key:`${shop}::url:${linkKey}`,type:"link",productId:""};
+ return{key:"",type:"none",productId:""};
+}
+function mergeDuplicateRow(base,row){
+ const out={...base};
+ // 重复抓取里销量偶尔会不同，取较高值；其他字段优先补空值，不把完整标题/SKU覆盖掉。
+ const salesKey=Object.keys(row||{}).find(k=>SYN.sales.some(s=>ch(k)===ch(s)));
+ const baseSalesKey=Object.keys(out||{}).find(k=>SYN.sales.some(s=>ch(k)===ch(s)));
+ if(salesKey){
+   const current=baseSalesKey?num(out[baseSalesKey]):0,next=num(row[salesKey]);
+   if(!baseSalesKey)out[salesKey]=row[salesKey];
+   else if(next>current)out[baseSalesKey]=row[salesKey];
+ }
+ Object.entries(row||{}).forEach(([k,v])=>{if(norm(out[k])===""&&norm(v)!=="")out[k]=v});
+ if(norm(row.__sourceFile)){const files=[...new Set((norm(out.__sourceFile)?norm(out.__sourceFile).split("；"):[]).concat(norm(row.__sourceFile)).filter(Boolean))];out.__sourceFile=files.join("；")}
+ return out;
+}
+function dedupeRows(rows){
+ const out=[],seen=new Map(),counts=new Map();let removed=0,groups=0,idRemoved=0,linkRemoved=0;
+ rows.forEach(r=>{
+   const info=dedupeKeyForRow(r),key=info.key;
+   if(!key){out.push({...r});return}
+   counts.set(key,(counts.get(key)||0)+1);
+   if(!seen.has(key)){seen.set(key,out.length);out.push({...r});return}
+   const idx=seen.get(key);out[idx]=mergeDuplicateRow(out[idx],r);removed++;
+   if(info.type==="id")idRemoved++;else if(info.type==="link")linkRemoved++;
+ });
+ counts.forEach(n=>{if(n>1)groups++});
+ return{rows:out,removed,groups,idRemoved,linkRemoved,original:rows.length};
+}
+
+function normalize(rows){return rows.map((r,i)=>{const name=pick(r,SYN.name),sku=pick(r,SYN.sku),c=classify(name,sku);return{
+ id:i+1,name:norm(name)||`未命名商品 ${i+1}`,image:imgurl(pick(r,SYN.image)),price:pick(r,SYN.price),sales:num(pick(r,SYN.sales)),sku:norm(sku),link:norm(pick(r,SYN.link)),productId:productIdFromRow(r),
+ shop:shopFromRow(r),sourceFile:norm(r.__sourceFile||""),
+ l1:c.l1,l2:c.l2,l3:c.l3,confidence:c.confidence,hits:c.hits,core:c.core||"",method:c.method||"规则匹配"
+}})}
+const uniq=a=>[...new Set(a.filter(Boolean))].sort((a,b)=>a.localeCompare(b,"zh-CN"));
+function resetSel(el,ph,arr,keep=""){el.innerHTML=`<option value="">${ph}</option>`+arr.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");if(arr.includes(keep))el.value=keep}
+const CAT_PH={f1:"全部一级类目",f2:"全部二级类目",f3:"全部三级类目"};
+const CAT_SEARCH_PH={f2:"搜索二级类目",f3:"搜索三级类目"};
+function catOptionsHtml(id,arr,val){
+ const all=`<button type="button" class="catopt ${val===""?"selected":""}" data-value="">${CAT_PH[id]}</button>`;
+ const items=arr.length?arr.map(v=>`<button type="button" class="catopt ${v===val?"selected":""}" data-value="${esc(v)}">${esc(v)}</button>`).join(""):`<div class="catempty">暂无可选类目</div>`;
+ return all+items+`<div class="catnoresult">没有匹配的类目</div>`;
+}
+function setCatOptions(id,arr,keep=""){
+ const input=$("#"+id),box=input.closest(".catselect"),menu=box.querySelector(".catmenu"),btn=box.querySelector(".catbtn span");
+ const val=arr.includes(keep)?keep:"";input.value=val;btn.textContent=val||CAT_PH[id];
+ const searchable=id==="f2"||id==="f3";
+ menu.innerHTML=(searchable?`<div class="catsearchbox"><span>⌕</span><input type="text" class="catsearchinput" data-catsearch="${id}" placeholder="${CAT_SEARCH_PH[id]}" autocomplete="off"><button type="button" class="catsearchclear" title="清除搜索">×</button></div>`:"")+`<div class="catoptions">${catOptionsHtml(id,arr,val)}</div>`;
+}
+function filterCatMenu(menu,q){
+ const keyword=norm(q).toLowerCase(),opts=[...menu.querySelectorAll('.catopt[data-value]')];let visible=0;
+ opts.forEach(opt=>{const isAll=(opt.dataset.value||"")==="";const hit=isAll||!keyword||opt.textContent.toLowerCase().includes(keyword);opt.hidden=!hit;if(hit&&!isAll)visible++});
+ const no=menu.querySelector('.catnoresult');if(no)no.style.display=keyword&&visible===0?'block':'none';
+}
+function clearCatSearch(menu,focus=false){const input=menu.querySelector('.catsearchinput');if(!input)return;input.value="";filterCatMenu(menu,"");if(focus)input.focus()}
+function shopScopedData(){const shop=$("#shopFilter")?.value||"";return shop?data.filter(x=>x.shop===shop):data}
+function updateShopUI(){
+ const shops=uniq(data.map(x=>x.shop)),bar=$("#shopBar"),sel=$("#shopFilter");if(!bar||!sel)return;
+ const keep=sel.value;sel.innerHTML=`<option value="">全部店铺（${shops.length}）</option>`+shops.map(v=>{const n=data.filter(x=>x.shop===v).length;return `<option value="${esc(v)}">${esc(v)}（${fmt(n)}）</option>`}).join("");
+ if(shops.includes(keep))sel.value=keep;else sel.value="";bar.classList.toggle("hidden",shops.length<=1&&!(importMeta.mode==="folder"&&shops.length===1));
+ const current=sel.value,shown=current?data.filter(x=>x.shop===current).length:data.length;$("#shopNote").textContent=current?`${current} · ${fmt(shown)} 个商品`:`全部 ${fmt(shops.length)} 个店铺 · ${fmt(shown)} 个商品`;
+}
+function populate(){
+ const a=$("#f1").value,b=$("#f2").value,c=$("#f3").value,base=shopScopedData();
+ setCatOptions("f1",uniq(base.map(x=>x.l1)),a);
+ const p1=a?base.filter(x=>x.l1===a):base;
+ setCatOptions("f2",uniq(p1.map(x=>x.l2)),b);
+ const b2=$("#f2").value;
+ const p2=b2?p1.filter(x=>x.l2===b2):p1;
+ setCatOptions("f3",uniq(p2.map(x=>x.l3)),c);
+}
+function closeCatMenus(except=null){$$(".catselect.open").forEach(x=>{if(x!==except)x.classList.remove("open")})}
+function catChanged(id){
+ if(id==="f1"){$("#f2").value="";$("#f3").value="";populate();}
+ else if(id==="f2"){$("#f3").value="";populate();}
+ apply();
+}
+function initCatMenus(){
+ $$(".catselect").forEach(box=>{
+   const btn=box.querySelector(".catbtn"),menu=box.querySelector(".catmenu");
+   btn.onclick=e=>{e.stopPropagation();const opening=!box.classList.contains("open");closeCatMenus(box);box.classList.toggle("open",opening);if(opening){requestAnimationFrame(()=>{const search=menu.querySelector('.catsearchinput');if(search){clearCatSearch(menu,true)}else{const s=menu.querySelector(".selected");if(s)s.scrollIntoView({block:"nearest"})}})}};
+   menu.onclick=e=>{
+     e.stopPropagation();
+     if(e.target.closest('.catsearchclear')){clearCatSearch(menu,true);return}
+     const opt=e.target.closest(".catopt");if(!opt)return;
+     const id=menu.dataset.catmenu,val=opt.dataset.value||"";$("#"+id).value=val;box.querySelector(".catbtn span").textContent=val||CAT_PH[id];box.classList.remove("open");catChanged(id)
+   };
+   menu.oninput=e=>{const input=e.target.closest('.catsearchinput');if(input)filterCatMenu(menu,input.value)};
+   menu.onkeydown=e=>{if(e.key==='Enter'&&e.target.matches('.catsearchinput')){const matches=[...menu.querySelectorAll('.catopt[data-value]:not([hidden])')].filter(x=>(x.dataset.value||'')!=='');if(matches.length===1)matches[0].click()}};
+   // 正常 div 滚动；二/三级搜索框独立固定在菜单顶部。
+   menu.addEventListener("wheel",e=>e.stopPropagation(),{passive:true});
+ });
+ document.addEventListener("click",()=>closeCatMenus());
+ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCatMenus()});
+}
+function apply(){const qs=norm($("#q").value).toLowerCase().split(/[\s,，]+/).filter(Boolean),shop=$("#shopFilter")?.value||"",a=$("#f1").value,b=$("#f2").value,c=$("#f3").value,cf=$("#fc").value,im=$("#fi").value;
+ filtered=data.filter(x=>{if(shop&&x.shop!==shop)return false;if(a&&x.l1!==a)return false;if(b&&x.l2!==b)return false;if(c&&x.l3!==c)return false;if(cf&&(cf==="低"?x.confidence!=="低":x.confidence!==cf))return false;if(im&&(im==="yes"?!x.image:!!x.image))return false;const hay=`${x.name} ${x.productId} ${x.sku} ${x.l1} ${x.l2} ${x.l3} ${x.core} ${x.hits} ${x.method}`.toLowerCase();return!qs.length||qs.every(q=>hay.includes(q))});gp=1;dp=1;render()}
+function group(list,key){const m=new Map();list.forEach(x=>{const k=x[key]||"未分类";if(!m.has(k))m.set(k,{name:k,count:0,sales:0});const o=m.get(k);o.count++;o.sales+=x.sales});return[...m.values()]}
+function stats(){const n=filtered.length,s=filtered.reduce((a,x)=>a+x.sales,0),m=new Map();filtered.forEach(x=>{const k=[x.l1,x.l2,x.l3].join("|");if(!m.has(k))m.set(k,{l1:x.l1,l2:x.l2,l3:x.l3,count:0,sales:0});const o=m.get(k);o.count++;o.sales+=x.sales});return[...m.values()].map(x=>({...x,cp:n?x.count/n:0,sp:s?x.sales/s:0}))}
+function kpis(){$("#kp").textContent=fmt(filtered.length);$("#ks").textContent=fmt(filtered.reduce((a,x)=>a+x.sales,0));$("#k1").textContent=uniq(filtered.map(x=>x.l1)).length;$("#k2").textContent=uniq(filtered.map(x=>x.l2)).length;$("#k3").textContent=uniq(filtered.map(x=>x.l3)).length;$("#ki").textContent=fmt(filtered.filter(x=>x.image).length);$("#klow").textContent=fmt(filtered.filter(x=>x.confidence==="低").length)}
+const colors=["#22252a","#59606a","#7d848e","#9ea4ad","#b9bec5","#d1d5da","#61737e","#81736a","#6e7a6a","#897783","#68798a"];
+function donut(){let rows=group(filtered,chartLevel).sort((a,b)=>(chartMetric==="count"?b.count-a.count:b.sales-a.sales)),total=rows.reduce((s,x)=>s+(chartMetric==="count"?x.count:x.sales),0);if(rows.length>10){const r=rows.slice(10).reduce((o,x)=>({name:"其他",count:o.count+x.count,sales:o.sales+x.sales}),{name:"其他",count:0,sales:0});rows=rows.slice(0,10).concat(r)}
+ const cv=$("#donut"),rect=cv.getBoundingClientRect(),dpr=devicePixelRatio||1,w=Math.max(290,rect.width),h=Math.max(260,rect.height);cv.width=w*dpr;cv.height=h*dpr;const g=cv.getContext("2d");g.scale(dpr,dpr);g.clearRect(0,0,w,h);const cx=w/2,cy=h/2,r=Math.min(w,h)*.37,inn=r*.64;
+ if(!total){g.fillStyle="#dfe2e6";g.beginPath();g.arc(cx,cy,r,0,Math.PI*2);g.fill();g.beginPath();g.arc(cx,cy,inn,0,Math.PI*2);g.fillStyle="#fff";g.fill();g.fillStyle="#8b919a";g.font="12px system-ui";g.textAlign="center";g.fillText("等待导入数据",cx,cy+4);$("#legend").innerHTML='<div class="empty"><b>暂无占比</b>导入后显示 Top 10 类目。</div>';return}
+ let a=-Math.PI/2;rows.forEach((x,i)=>{const v=chartMetric==="count"?x.count:x.sales,da=v/total*Math.PI*2;g.beginPath();g.moveTo(cx,cy);g.arc(cx,cy,r,a,a+da);g.closePath();g.fillStyle=colors[i%colors.length];g.fill();a+=da});g.beginPath();g.arc(cx,cy,inn,0,Math.PI*2);g.fillStyle="#fff";g.fill();g.fillStyle="#777d86";g.font="12px system-ui";g.textAlign="center";g.fillText(chartMetric==="count"?"商品总数":"销量合计",cx,cy-6);g.fillStyle="#202227";g.font="700 24px system-ui";g.fillText(fmt(total),cx,cy+23);
+ $("#legend").innerHTML=rows.map((x,i)=>{const v=chartMetric==="count"?x.count:x.sales;return`<div class="lr"><i class="ld" style="background:${colors[i%colors.length]}"></i><span>${esc(x.name)}</span><span class="lv">${fmt(v)} · ${pct(v/total)}</span></div>`}).join("")}
+function insights(){const r=group(filtered,"l1").sort((a,b)=>b.count-a.count).slice(0,9),mx=r[0]?.count||1,n=filtered.length||1;$("#insights").innerHTML=r.length?r.map((x,i)=>`<div class="ins"><div class="rank">${i+1}</div><div><div class="iname">${esc(x.name)}</div><div class="bar"><i style="width:${x.count/mx*100}%"></i></div></div><div class="inum"><b>${fmt(x.count)}</b><br>${pct(x.count/n)}</div></div>`).join(""):'<div class="empty"><b>暂无数据</b>导入表格后自动生成。</div>'}
+function statTable(){let r=stats(),s=$("#statsSort").value;if(s==="count")r.sort((a,b)=>b.count-a.count||b.sales-a.sales);else if(s==="sales")r.sort((a,b)=>b.sales-a.sales);else r.sort((a,b)=>(a.l1+a.l2+a.l3).localeCompare(b.l1+b.l2+b.l3,"zh-CN"));$("#statsBody").innerHTML=r.length?r.map(x=>`<tr><td><button type="button" class="statcat l1" title="查看该一级类目的商品图册" data-level="1" data-l1="${esc(x.l1)}">${esc(x.l1)}</button></td><td><button type="button" class="statcat l2" title="查看该二级类目的商品图册" data-level="2" data-l1="${esc(x.l1)}" data-l2="${esc(x.l2)}">${esc(x.l2)}</button></td><td><button type="button" class="statcat l3" title="查看该三级类目的商品图册" data-level="3" data-l1="${esc(x.l1)}" data-l2="${esc(x.l2)}" data-l3="${esc(x.l3)}">${esc(x.l3)}</button></td><td class="num"><b>${fmt(x.count)}</b></td><td class="num">${pct(x.cp)}</td><td class="num">${fmt(x.sales)}</td><td class="num">${pct(x.sp)}</td></tr>`).join(""):'<tr><td colspan="7"><div class="empty"><b>暂无类目统计</b>导入表格后自动生成。</div></td></tr>'}
+function activateTab(target){$$('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===target));tab=target;["overview","stats","gallery","detail","rules","help"].forEach(t=>$("#tab-"+t).classList.toggle("hidden",t!==target));if(target==="overview")setTimeout(donut,20)}
+function jumpStatsToGallery(btn){
+ const level=Number(btn.dataset.level||0),l1=btn.dataset.l1||"",l2=btn.dataset.l2||"",l3=btn.dataset.l3||"";
+ $("#f1").value=l1;$("#f2").value=level>=2?l2:"";$("#f3").value=level>=3?l3:"";
+ populate();apply();activateTab("gallery");closeCatMenus();
+ requestAnimationFrame(()=>$("#tab-gallery").scrollIntoView({behavior:"smooth",block:"start"}));
+ toast(level===1?`已打开一级类目：${l1}`:level===2?`已打开二级类目：${l2}`:`已打开三级类目：${l3}`);
+}
+function card(x){const im=x.image?`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(x.image)}" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="fallback" style="display:none">▧</span>`:'<span class="fallback">▧</span>';const lk=x.link?`<a class="link" target="_blank" rel="noreferrer" href="${esc(x.link)}">查看商品 ↗</a>`:"";return`<article class="card"><div class="thumb" data-img="${esc(x.image)}">${im}</div><div class="cb"><div class="ct" title="${esc(x.name)}">${esc(x.name)}</div><div class="chips">${x.shop?`<span class="chip">店铺 · ${esc(x.shop)}</span>`:""}<span class="chip">${esc(x.l1)}</span><span class="chip">${esc(x.l2)}</span><span class="chip">${esc(x.l3)}</span></div><div class="cm"><div><div class="price">${pf(x.price)}</div><div class="sales">${x.productId?`ID ${esc(x.productId)} · `:""}销量 ${fmt(x.sales)} · ${x.confidence}置信度</div></div>${lk}</div></div></article>`}
+function gallery(){let a=[...filtered],s=$("#gallerySort").value;
+ if(s==="sales")a.sort((x,y)=>y.sales-x.sales);
+ else if(s==="newest")a.sort((x,y)=>compareProductIdValues(x.productId,y.productId,"desc")||y.sales-x.sales);
+ else if(s==="oldest")a.sort((x,y)=>compareProductIdValues(x.productId,y.productId,"asc")||y.sales-x.sales);
+ else if(s==="name")a.sort((x,y)=>x.name.localeCompare(y.name,"zh-CN"));
+ else a.sort((x,y)=>(x.l1+x.l2+x.l3).localeCompare(y.l1+y.l2+y.l3,"zh-CN"));
+ const pages=a.length?Math.ceil(a.length/GSIZE):0;gp=Math.max(1,Math.min(gp,pages||1));const sl=a.slice((gp-1)*GSIZE,gp*GSIZE);$("#gallery").innerHTML=sl.length?sl.map(card).join(""):'<div class="empty" style="grid-column:1/-1"><b>暂无商品图册</b>导入表格后，图片链接会自动解析显示。</div>';$("#galleryNote").textContent=a.length?`当前筛选 ${fmt(a.length)} 个商品，本页 ${sl.length} 个`:"暂无商品";$("#page").textContent=pages?`${gp} / ${pages}`:"0 / 0";$("#prev").disabled=!pages||gp<=1;$("#next").disabled=!pages||gp>=pages;$$(".thumb[data-img]").forEach(e=>e.onclick=()=>{if(e.dataset.img){$("#bigimg").src=e.dataset.img;$("#lightbox").classList.add("show")}})}
+function compareDetailRows(x,y){
+ if(!detailSortKey)return 0;
+ let c=0;
+ if(detailSortKey==="productId")return compareProductIdValues(x.productId,y.productId,detailSortDir);
+ if(detailSortKey==="sales")c=(x.sales||0)-(y.sales||0);
+ else c=String(x[detailSortKey]||"").localeCompare(String(y[detailSortKey]||""),"zh-CN");
+ return detailSortDir==="desc"?-c:c;
+}
+function updateDetailSortHeads(){
+ $$("#detailHead th[data-sort]").forEach(th=>{const active=th.dataset.sort===detailSortKey;th.classList.toggle("sort-asc",active&&detailSortDir==="asc");th.classList.toggle("sort-desc",active&&detailSortDir==="desc");th.setAttribute("aria-sort",active?(detailSortDir==="asc"?"ascending":"descending"):"none")});
+}
+function setDetailSort(key){
+ if(detailSortKey===key)detailSortDir=detailSortDir==="asc"?"desc":"asc";
+ else{detailSortKey=key;detailSortDir=(key==="productId"||key==="sales")?"desc":"asc"}
+ dp=1;details();
+}
+function details(){let a=[...filtered];if(detailSortKey)a.sort(compareDetailRows);const pages=a.length?Math.ceil(a.length/DSIZE):0;dp=Math.max(1,Math.min(dp,pages||1));const sl=a.slice((dp-1)*DSIZE,dp*DSIZE);$("#detailBody").innerHTML=sl.length?sl.map(x=>{const im=x.image?`<img class="pimg" loading="lazy" referrerpolicy="no-referrer" src="${esc(x.image)}" onerror="this.style.visibility='hidden'">`:'<div class="pimg"></div>',cl=x.confidence==="高"?"conf-high":x.confidence==="中"?"conf-mid":"conf-low",lk=x.link?`<a class="link" target="_blank" rel="noreferrer" href="${esc(x.link)}">打开 ↗</a>`:"-",mc=x.method==="新品类兜底"?"method dynamic":"method";return`<tr><td>${im}</td><td class="name">${esc(x.name)}</td><td class="idcell">${esc(x.productId||"-")}</td><td>${esc(x.shop||"-")}</td><td class="sourcecell">${esc(x.sourceFile||"-")}</td><td>${esc(x.l1)}</td><td>${esc(x.l2)}</td><td>${esc(x.l3)}</td><td class="num">${pf(x.price)}</td><td class="num">${fmt(x.sales)}</td><td class="${cl}">${x.confidence}</td><td><span class="coreword">${esc(x.core||"-")}</span></td><td>${esc(x.hits)}</td><td><span class="${mc}">${esc(x.method)}</span></td><td>${lk}</td></tr>`}).join(""):'<tr><td colspan="15"><div class="empty"><b>暂无商品明细</b>导入表格后自动生成。</div></td></tr>';$("#dpage").textContent=pages?`${dp} / ${pages}`:"0 / 0";$("#dprev").disabled=!pages||dp<=1;$("#dnext").disabled=!pages||dp>=pages;updateDetailSortHeads()}
+
+function render(){kpis();donut();insights();statTable();gallery();details()}
+function setImportedData(rows,meta={}){
+ const d=dedupeRows(rows);rawRows=d.rows;data=normalize(d.rows);filtered=[...data];detailSortKey="";detailSortDir="asc";
+ importMeta={mode:meta.mode||"files",label:meta.label||"",files:meta.files||1,original:d.original,removed:d.removed,groups:d.groups,idRemoved:d.idRemoved||0,linkRemoved:d.linkRemoved||0};
+ $("#q").value="";$("#fc").value="";$("#fi").value="";$("#shopFilter").value="";$("#f1").value="";$("#f2").value="";$("#f3").value="";
+ updateShopUI();populate();apply();updateImportStatus();
+ const shops=uniq(data.map(x=>x.shop));toast(d.removed?`导入成功：${fmt(data.length)} 个唯一商品 · ID合并 ${fmt(d.idRemoved||0)} · 链接兜底 ${fmt(d.linkRemoved||0)}`:`导入成功：${fmt(data.length)} 个商品${shops.length>1?` · ${shops.length} 个店铺`:""}`);
+}
+function updateImportStatus(){
+ if(!data.length){$("#status").textContent="当前无商品数据，请导入表格或商品库文件夹。";return}
+ const view=$("#shopFilter")?.value||"",scope=view?data.filter(x=>x.shop===view):data,shops=uniq(data.map(x=>x.shop)),low=scope.filter(x=>x.confidence==="低").length,dyn=scope.filter(x=>x.method==="核心词推断"||x.method==="新品类兜底").length;
+ const dup=importMeta.removed?` · 原始 ${fmt(importMeta.original)} → 去重 ${fmt(data.length)}（商品ID合并 ${fmt(importMeta.idRemoved)} · 链接兜底 ${fmt(importMeta.linkRemoved)}）`:"";
+ const source=importMeta.mode==="folder"?`文件夹导入 · ${fmt(importMeta.files)} 个表格 · ${fmt(shops.length)} 个店铺`:`${fmt(importMeta.files)} 个表格`;
+ const viewText=view?` · 当前店铺：${view}（${fmt(scope.length)} 个商品）`:shops.length>1?` · 当前：全部店铺`:"";
+ $("#status").textContent=`已解析 ${fmt(data.length)} 个商品${dup} · ${source}${viewText} · 一级 ${uniq(scope.map(x=>x.l1)).length} · 二级 ${uniq(scope.map(x=>x.l2)).length} · 三级 ${uniq(scope.map(x=>x.l3)).length} · 智能推断 ${fmt(dyn)} · 低置信度 ${fmt(low)}`;
+ updateShopUI();
+}
+
+async function xlsxLib(){if(window.XLSX)return;for(const u of["https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js","https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"]){try{await new Promise((ok,no)=>{const s=document.createElement("script");s.src=u;s.onload=ok;s.onerror=no;document.head.appendChild(s)});if(window.XLSX)return}catch(e){}}throw Error("Excel 解析组件加载失败。请联网重试，或另存为 CSV 后导入。")}
+function csv(t){const out=[];let r=[],c="",q=false;for(let i=0;i<t.length;i++){const x=t[i],n=t[i+1];if(x=='"'&&q&&n=='"'){c+='"';i++}else if(x=='"')q=!q;else if(x==","&&!q){r.push(c);c=""}else if((x=="\n"||x=="\r")&&!q){if(x=="\r"&&n=="\n")i++;r.push(c);if(r.some(v=>v!==""))out.push(r);r=[];c=""}else c+=x}r.push(c);if(r.some(v=>v!==""))out.push(r);if(!out.length)return[];const h=out[0].map(x=>x.trim());return out.slice(1).map(row=>Object.fromEntries(h.map((k,i)=>[k,row[i]??""])))}
+function isTableFile(f){return /\.(xlsx|xls|csv)$/i.test(f?.name||"")&&!/^~\$/.test(f?.name||"")}
+function fileBaseName(name){return String(name||"").replace(/\.(xlsx|xls|csv)$/i,"")}
+async function rowsFromFile(f){
+ let rows=[];if(/\.csv$/i.test(f.name))rows=csv(await f.text());else{await xlsxLib();const b=await f.arrayBuffer(),w=XLSX.read(b,{type:"array"});let best=[];for(const sn of w.SheetNames){const rr=XLSX.utils.sheet_to_json(w.Sheets[sn],{defval:"",raw:true});const hh=Object.keys(rr[0]||{}).map(ch),bonus=SYN.name.some(s=>hh.includes(ch(s)))?1000000:0;if(rr.length+bonus>best.length+(best._bonus||0)){best=rr;best._bonus=bonus}}delete best._bonus;rows=best}
+ return rows;
+}
+async function importFiles(fileList){
+ const files=[...fileList].filter(isTableFile);if(!files.length){toast("没有找到可读取的 XLSX / XLS / CSV");return}
+ try{const all=[];for(let i=0;i<files.length;i++){const f=files[i];$("#status").innerHTML=`<span class="importprogress">正在读取表格 ${i+1} / ${files.length}：${esc(f.name)}</span>`;const rows=await rowsFromFile(f);rows.forEach(r=>all.push({...r,__shop:"",__sourceFile:f.name}))}
+ if(!all.length)throw Error("所选表格中没有读取到商品数据。");setImportedData(all,{mode:"files",files:files.length,label:files.length===1?files[0].name:`批量导入 ${files.length} 个表格`});
+ }catch(e){console.error(e);toast(e.message||"文件解析失败");updateImportStatus()}
+}
+function folderShopMap(files){
+ const paths=files.map(f=>(f.webkitRelativePath||f.name).split("/").filter(Boolean));const root=paths.find(p=>p.length)?.[0]||"文件夹";const hasSub=paths.some(p=>p.length>=3);
+ return files.map((f,i)=>{const p=paths[i],shop=hasSub?(p.length>=3?p[1]:`${root}（根目录）`):root;return{file:f,shop,relative:p.join("/")}});
+}
+async function importFolder(fileList){
+ const valid=[...fileList].filter(isTableFile);if(!valid.length){toast("这个文件夹里没有找到 XLSX / XLS / CSV");return}
+ try{const mapped=folderShopMap(valid),all=[];for(let i=0;i<mapped.length;i++){const {file:f,shop,relative}=mapped[i];$("#status").innerHTML=`<span class="importprogress">正在读取文件夹 ${i+1} / ${mapped.length}：${esc(shop)} / ${esc(f.name)}</span>`;const rows=await rowsFromFile(f);rows.forEach(r=>all.push({...r,__shop:shop,__sourceFile:relative||f.name}))}
+ if(!all.length)throw Error("文件夹里的表格没有读取到商品数据。");const shops=uniq(all.map(r=>r.__shop));setImportedData(all,{mode:"folder",files:mapped.length,label:`${shops.length} 个店铺`});
+ }catch(e){console.error(e);toast(e.message||"文件夹解析失败");updateImportStatus()}
+}
+
+async function exportX(){if(!filtered.length){toast("暂无数据可导出");return}try{await xlsxLib();const a=filtered.map(x=>({"店铺":x.shop,"来源文件":x.sourceFile,"商品ID":x.productId,"商品信息":x.name,"图片链接":x.image,"商品价格":x.price,"销量":x.sales,"SKU":x.sku,"链接":x.link,"一级类目":x.l1,"二级类目":x.l2,"三级类目":x.l3,"分类置信度":x.confidence,"核心词":x.core,"命中关键词":x.hits,"分类方式":x.method}));const b=stats().sort((x,y)=>y.count-x.count).map(x=>({"一级类目":x.l1,"二级类目":x.l2,"三级类目":x.l3,"商品数":x.count,"商品占比":x.cp,"销量合计":x.sales,"销量占比":x.sp}));const w=XLSX.utils.book_new();XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(a),"分类明细");XLSX.utils.book_append_sheet(w,XLSX.utils.json_to_sheet(b),"类目统计");XLSX.writeFile(w,"商品类目解析结果_V3.8.xlsx");toast("已导出分类 Excel")}catch(e){toast(e.message||"导出失败")}}
+function exportCsv(){if(!filtered.length){toast("暂无数据可导出");return}const h=["一级类目","二级类目","三级类目","商品数","商品占比","销量合计","销量占比"],rr=stats().sort((a,b)=>b.count-a.count),s=[h,...rr.map(x=>[x.l1,x.l2,x.l3,x.count,(x.cp*100).toFixed(2)+"%",x.sales,(x.sp*100).toFixed(2)+"%"])].map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n"),bl=new Blob(["\ufeff"+s],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(bl);a.download="商品类目统计_V3.8.csv";a.click();URL.revokeObjectURL(a.href)}
+function ruleTree(){const q=norm($("#ruleQ").value).toLowerCase(),f=$("#ruleL1").value,m=new Map();RULES.filter(r=>r.l1!=="其他").forEach(r=>{const txt=`${r.l1} ${r.l2} ${r.l3} ${r.keywords.join(" ")}`.toLowerCase();if((f&&r.l1!==f)||(q&&!txt.includes(q)))return;if(!m.has(r.l1))m.set(r.l1,new Map());const m2=m.get(r.l1);if(!m2.has(r.l2))m2.set(r.l2,[]);m2.get(r.l2).push(r)});$("#ruleTree").innerHTML=[...m].map(([l1,m2])=>`<div class="l1box"><div class="l1head"><span>${esc(l1)}</span><small>${[...m2.values()].reduce((a,x)=>a+x.length,0)} 个三级规则</small></div><div class="l2group">${[...m2].map(([l2,rs])=>`<div class="l2row"><div class="l2name">${esc(l2)}</div><div class="leafs">${rs.map(r=>`<span class="leaf" title="关键词：${esc(r.keywords.join("、"))}">${esc(r.l3)}</span>`).join("")}</div></div>`).join("")}</div></div>`).join("")||'<div class="empty"><b>没有匹配的规则</b>换一个关键词试试。</div>'}
+
+function initRules(){const rr=RULES.filter(r=>r.l1!=="其他"),l=uniq(rr.map(r=>r.l1)),l2=uniq(rr.map(r=>r.l1+"｜"+r.l2));$("#rulebig").textContent=`${l.length} / ${l2.length} / ${rr.length}`;resetSel($("#ruleL1"),"全部一级类目",l);ruleTree()}
+$$(".tab").forEach(b=>b.onclick=()=>activateTab(b.dataset.tab));
+$("#pick").onclick=()=>$("#file").click();$("#pickFolder").onclick=()=>$("#folder").click();
+$("#file").onchange=e=>{importFiles(e.target.files);e.target.value=""};$("#folder").onchange=e=>{importFolder(e.target.files);e.target.value=""};
+$("#exportXlsx").onclick=exportX;$("#exportStats").onclick=exportCsv;$("#reclass").onclick=()=>{if(!rawRows.length){toast("请先导入商品表");return}data=normalize(rawRows);updateShopUI();populate();apply();updateImportStatus();toast("已按新版规则重新分类")};
+$("#clearQ").onclick=()=>{$("#q").value="";apply();$("#q").focus()};
+$("#reset").onclick=()=>{$("#q").value="";$("#f1").value="";$("#f2").value="";$("#f3").value="";$("#fc").value="";$("#fi").value="";populate();apply()};$("#q").oninput=apply;$("#fc").onchange=apply;$("#fi").onchange=apply;
+$("#shopFilter").onchange=()=>{$("#f1").value="";$("#f2").value="";$("#f3").value="";populate();apply();updateImportStatus()};
+$("#statsSort").onchange=statTable;$("#statsBody").onclick=e=>{const b=e.target.closest(".statcat");if(b)jumpStatsToGallery(b)};$("#gallerySort").onchange=()=>{gp=1;gallery()};$("#detailHead").onclick=e=>{const th=e.target.closest("th[data-sort]");if(th)setDetailSort(th.dataset.sort)};
+$("#prev").onclick=()=>{gp--;gallery()};$("#next").onclick=()=>{gp++;gallery()};$("#dprev").onclick=()=>{dp--;details()};$("#dnext").onclick=()=>{dp++;details()};
+$$("[data-level]").forEach(b=>b.onclick=()=>{$$("[data-level]").forEach(x=>x.classList.remove("active"));b.classList.add("active");chartLevel=b.dataset.level;donut()});$$("[data-metric]").forEach(b=>b.onclick=()=>{$$("[data-metric]").forEach(x=>x.classList.remove("active"));b.classList.add("active");chartMetric=b.dataset.metric;donut()});
+$("#ruleL1").onchange=ruleTree;$("#ruleQ").oninput=ruleTree;$("#close").onclick=()=>$("#lightbox").classList.remove("show");$("#lightbox").onclick=e=>{if(e.target.id==="lightbox")$("#lightbox").classList.remove("show")};
+const dz=$("#drop");["dragenter","dragover"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add("drag")}));["dragleave","drop"].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove("drag")}));dz.addEventListener("drop",e=>importFiles(e.dataTransfer.files));window.onresize=()=>{if(tab==="overview")donut()};
+initCatMenus();initRules();updateShopUI();populate();render();
+</script>
+</body></html>
