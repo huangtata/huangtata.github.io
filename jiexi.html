@@ -27,7 +27,7 @@ button,input,select{font:inherit}.app{min-height:100vh}.top{position:sticky;top:
 @media(max-width:1000px){.ruleeditorgrid{grid-template-columns:1fr 1fr}.customruleitem{grid-template-columns:1fr}.customrulebuttons{justify-content:flex-start}}@media(max-width:650px){.ruleeditorgrid{grid-template-columns:1fr}}
 .toast{position:fixed;right:22px;bottom:22px;z-index:90;background:#22252a;color:#fff;padding:11px 15px;border-radius:11px;font-size:12px;opacity:0;transform:translateY(7px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:none}.lightbox{position:fixed;inset:0;z-index:100;background:rgba(10,11,13,.82);display:none;align-items:center;justify-content:center;padding:28px}.lightbox.show{display:flex}.lightbox img{max-width:92vw;max-height:88vh;border-radius:12px}.lightbox button{position:absolute;right:23px;top:20px;border:0;border-radius:50%;width:38px;height:38px;font-size:20px;background:#fff}
 @media(max-width:1250px){.filters{grid-template-columns:repeat(4,1fr)}.kpis{grid-template-columns:repeat(4,1fr)}.gallery{grid-template-columns:repeat(4,1fr)}.hero{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
-@media(max-width:800px){.topin,.wrap{padding-left:13px;padding-right:13px}.topin{flex-wrap:wrap}.brand{min-width:0}.brand p{display:none}.actions{width:100%;margin-left:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions .btn:not(.dark):not(#pickFolder){display:none}.actions #pickFolder,.actions #pick{width:100%;white-space:nowrap}.filters{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr 1fr}.gallery{grid-template-columns:repeat(2,1fr)}.chartbody{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+@media(max-width:800px){.topin,.wrap{padding-left:13px;padding-right:13px}.topin{align-items:flex-start;flex-wrap:wrap;gap:10px;padding-top:12px;padding-bottom:12px}.brand{min-width:0;width:100%}.brand p{display:none}.actions{width:100%;margin-left:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions .btn{min-width:0;padding:10px 8px;touch-action:manipulation}.actions #reclass,.actions #exportStats,.actions #exportXlsx{display:none}.filters{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr 1fr}.gallery{grid-template-columns:repeat(2,1fr)}.chartbody{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
 
 .searchbar{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:15px;padding:10px 12px;margin:0 0 13px;box-shadow:0 8px 22px rgba(20,24,32,.035)}
 .searchicon{width:34px;height:34px;border-radius:10px;background:#f0f2f4;display:grid;place-items:center;color:#5f6570;font-size:17px;flex:0 0 auto}
@@ -116,8 +116,8 @@ select.control,select.small{
     <button class="btn soft" id="reclass">重新智能分类</button>
     <button class="btn" id="exportStats">导出统计 CSV</button>
     <button class="btn" id="exportXlsx">导出分类 Excel</button>
-    <button class="btn" id="pickFolder">导入文件夹</button>
-    <button class="btn dark" id="pick">导入表格</button>
+    <button type="button" class="btn" id="pickFolder">导入文件夹</button>
+    <button type="button" class="btn dark" id="pick">导入表格</button>
     <input type="file" id="file" accept=".xlsx,.xls,.csv" multiple hidden>
     <input type="file" id="folder" accept=".xlsx,.xls,.csv" webkitdirectory directory multiple hidden>
   </div>
@@ -781,7 +781,8 @@ function ruleTree(){const q=norm($("#ruleQ").value).toLowerCase(),f=$("#ruleL1")
 
 function initRules(){const keep=$("#ruleL1").value,rr=combinedTitleRules().filter(r=>r.l1!=="其他"),l=uniq(rr.map(r=>r.l1)),l2=uniq(rr.map(r=>r.l1+"｜"+r.l2));$("#rulebig").textContent=`${l.length} / ${l2.length} / ${rr.length}`;resetSel($("#ruleL1"),"全部一级类目",l,keep);ruleTree()}
 $$(".tab").forEach(b=>b.onclick=()=>activateTab(b.dataset.tab));
-$("#pick").onclick=()=>$("#file").click();$("#pickFolder").onclick=()=>$("#folder").click();
+const folderInput=$("#folder"),pickFolderButton=$("#pickFolder"),supportsFolderPicker="webkitdirectory" in folderInput;
+$("#pick").onclick=()=>$("#file").click();pickFolderButton.onclick=()=>{if(supportsFolderPicker)folderInput.click();else{toast("当前浏览器不支持直接选择文件夹，请在文件选择器中多选表格");$("#file").click()}};
 $("#file").onchange=e=>{importFiles(e.target.files);e.target.value=""};$("#folder").onchange=e=>{importFolder(e.target.files);e.target.value=""};
 $("#exportXlsx").onclick=exportX;$("#exportStats").onclick=exportCsv;$("#reclass").onclick=()=>{if(!rawRows.length){toast("请先导入商品表");return}data=normalizeAndMergeThirdLevels(rawRows);updateShopUI();populate();apply();updateImportStatus();toast("已按新版规则重新分类")};
 $("#clearQ").onclick=()=>{$("#q").value="";apply();$("#q").focus()};
