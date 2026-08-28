@@ -442,8 +442,8 @@
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
         var departText=isFlight?"起飞":isTrain?"发车":"计划到达";
         var roadText=isDrive?"开车路程所需时间":isFlight?"打车到机场，高德地图所显示预估时间":"打车到高铁站，高德地图所显示预估时间";
-        var advance=isFlight?(checkedBag?93:70):isTrain?60:0;
-        var minimum=isFlight?(checkedBag?83:65):isTrain?45:0;
+        var advance=isFlight?(checkedBag?93:70):isTrain?55:0;
+        var minimum=isFlight?(checkedBag?83:65):isTrain?40:0;
         var wait=isDrive?0:waitInput;
         $("extraInputWrap").style.display=extraEnabled?"block":"none";
         $("extraTimeRow").style.display=extraEnabled?"flex":"none";
@@ -523,8 +523,8 @@
         }else if(isTrain){
           details.push(makeDetail("train-security","🛂","到达高铁站进行安检",processAt,processAt+10,10,"10 分钟（一般）"));
           processAt+=10;
-          details.push(makeDetail("train-gate","🔎","前往高铁进站口",processAt,processAt+15,15));
-          processAt+=15;
+          details.push(makeDetail("train-gate","🔎","前往检票口",processAt,processAt+10,10));
+          processAt+=10;
           details.push(makeDetail("train-wait","🚄","候车准备发车",processAt,departure,departure-processAt));
         }
         if(isFlight)details.push(makeDetail("flight-departure","✈","航班起飞",departure,null,0,"行程开始"));
