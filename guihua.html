@@ -19,7 +19,11 @@
     .brand-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--green);color:var(--lime);font-size:21px}
     .eyebrow{margin:0 0 2px;color:#527066;font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase}
     h1{margin:0;font-size:20px;letter-spacing:-.02em}
+    .header-actions{display:flex;align-items:center;gap:9px}
     .privacy{padding:9px 14px;border-radius:999px;background:#e9ecdf;color:#527066;font-size:12px;font-weight:650}
+    .export-btn{height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--green);color:var(--lime);font-size:12px;font-weight:850;box-shadow:0 6px 16px rgba(23,54,45,.14);transition:.18s}
+    .export-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(23,54,45,.2)}
+    .export-btn:disabled{cursor:wait;opacity:.68;transform:none}
     .layout{display:grid;grid-template-columns:minmax(360px,.84fr) minmax(510px,1.16fr)}
     .controls{padding:26px 30px;border-right:1px solid var(--line)}
     .field{margin-bottom:22px}
@@ -127,10 +131,22 @@
     .locate-btn:hover,.locate-btn.active{border-color:var(--green);background:var(--green);color:var(--lime)}
     .live-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#dff0b5;color:#48651d;font-size:8px;font-weight:850;vertical-align:1px}
     .empty-plan{padding:34px 18px;color:#6b7e76;text-align:center;font-size:12px;line-height:1.7}
+    .export-toast{position:fixed;left:50%;bottom:24px;z-index:60;max-width:calc(100% - 32px);padding:11px 16px;border-radius:999px;background:#10231d;color:white;box-shadow:0 12px 35px rgba(16,35,29,.25);font-size:12px;font-weight:750;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transform:translate(-50%,12px);transition:.22s}
+    .export-toast.show{opacity:1;transform:translate(-50%,0)}
+    .image-preview{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(7,20,16,.82);backdrop-filter:blur(8px)}
+    .image-preview.show{display:flex}
+    .preview-card{display:flex;flex-direction:column;width:min(640px,100%);max-height:94vh;padding:14px;border-radius:20px;background:white;box-shadow:0 25px 80px rgba(0,0,0,.32)}
+    .preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .preview-copy strong{display:block;color:var(--green);font-size:14px}
+    .preview-copy small{display:block;margin-top:3px;color:#71847c;font-size:10px}
+    .preview-close{flex:0 0 auto;width:32px;height:32px;padding:0;border:0;border-radius:10px;background:#e9ecdf;color:#62776f;font-size:20px;line-height:1}
+    .preview-image-wrap{overflow:auto;min-height:0;border:1px solid var(--line);border-radius:13px;background:var(--mist);text-align:center;-webkit-overflow-scrolling:touch}
+    .preview-image{display:block;width:100%;height:auto}
+    .preview-download{flex:0 0 auto;height:42px;margin-top:10px;border:0;border-radius:13px;background:var(--green);color:var(--lime);font-size:13px;font-weight:850}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
-    @media(max-width:540px){header{height:62px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn{padding:5px 7px}}
-    @media print{.shell{padding:0}.app{box-shadow:none}.reset{display:none}}
+    @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn{padding:5px 7px}}
+    @media print{.shell{padding:0}.app{box-shadow:none}.reset,.export-btn,.image-preview,.export-toast{display:none!important}}
   </style>
 </head>
 <body>
@@ -141,7 +157,10 @@
           <div class="brand-icon">◷</div>
           <div><p class="eyebrow">Ready to go</p><h1>出行时间规划</h1></div>
         </div>
-        <div class="privacy">✓ 所有计算仅在本机完成</div>
+        <div class="header-actions">
+          <div class="privacy">✓ 所有计算仅在本机完成</div>
+          <button class="export-btn" id="exportBtn" type="button">↓ 导出整页 JPG</button>
+        </div>
       </header>
       <div class="layout">
         <section class="controls">
@@ -233,6 +252,17 @@
       </div>
     </div>
     <footer>提示：机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。</footer>
+  </div>
+  <div class="export-toast" id="exportToast" role="status" aria-live="polite"></div>
+  <div class="image-preview" id="imagePreview" aria-hidden="true">
+    <div class="preview-card" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+      <div class="preview-head">
+        <div class="preview-copy"><strong id="previewTitle">整页长图已生成</strong><small>长按图片可存入相册，或点击下方下载 JPG</small></div>
+        <button class="preview-close" id="previewClose" type="button" aria-label="关闭图片预览">×</button>
+      </div>
+      <div class="preview-image-wrap"><img class="preview-image" id="previewImage" alt="出行时间规划整页长图"></div>
+      <button class="preview-download" id="previewDownload" type="button">下载 JPG 图片</button>
+    </div>
   </div>
   <script>
     (function(){
@@ -477,7 +507,7 @@
         var processAt=arrive;
         if(isFlight){
           if(checkedBag){
-            details.push(makeDetail("flight-bag-find","🔎","寻找行李托运点",processAt,processAt+3,3));
+            details.push(makeDetail("flight-bag-find","🔎","到达机场寻找托运点",processAt,processAt+3,3));
             processAt+=3;
             details.push(makeDetail("flight-bag","🧳","开始办理行李托运",processAt,processAt+30,30));
             processAt+=30;
@@ -490,7 +520,7 @@
           processAt+=15;
           details.push(makeDetail("flight-boarding","🛫","候机准备登机",processAt,departure,departure-processAt));
         }else if(isTrain){
-          details.push(makeDetail("train-security","🛂","开始进站安检",processAt,processAt+15,15,"15 分钟（一般）"));
+          details.push(makeDetail("train-security","🛂","到达高铁站进行安检",processAt,processAt+15,15,"15 分钟（一般）"));
           processAt+=15;
           details.push(makeDetail("train-gate","🔎","前往高铁进站口",processAt,processAt+15,15));
           processAt+=15;
@@ -501,6 +531,95 @@
         else details.push(makeDetail("drive-arrival","🏁","到达目的地",departure,null,0,"抵达"));
         currentDetails=details;currentDeparture=departure;currentTargetLabel=(isFlight?"原定起飞 ":isTrain?"原定发车 ":"计划到达 ")+format(departure);
         renderLive();
+      }
+      var exportToastTimer=null,lastExportUrl="",lastExportBlob=null,lastExportName="";
+      function showExportToast(message){
+        var toast=$("exportToast");
+        toast.textContent=message;toast.classList.add("show");
+        clearTimeout(exportToastTimer);exportToastTimer=setTimeout(function(){toast.classList.remove("show")},3200);
+      }
+      function exportFileName(){
+        var d=new Date(),pad=function(value){return String(value).padStart(2,"0")};
+        return "出行时间规划-"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"-"+pad(d.getHours())+pad(d.getMinutes())+".jpg";
+      }
+      function canShareImage(blob,name){
+        if(!navigator.share||!navigator.canShare||typeof File==="undefined")return false;
+        try{return navigator.canShare({files:[new File([blob],name,{type:"image/jpeg"})]})}catch(error){return false}
+      }
+      function downloadImage(blob,name){
+        var url=URL.createObjectURL(blob),link=document.createElement("a");
+        link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
+        setTimeout(function(){URL.revokeObjectURL(url)},3000);
+      }
+      function closeImagePreview(){
+        $("imagePreview").classList.remove("show");$("imagePreview").setAttribute("aria-hidden","true");
+        $("previewImage").removeAttribute("src");
+        if(lastExportUrl){URL.revokeObjectURL(lastExportUrl);lastExportUrl=""}
+      }
+      function openImagePreview(blob,name){
+        if(lastExportUrl)URL.revokeObjectURL(lastExportUrl);
+        lastExportBlob=blob;lastExportName=name;lastExportUrl=URL.createObjectURL(blob);
+        $("previewImage").src=lastExportUrl;
+        $("previewDownload").textContent=canShareImage(blob,name)?"保存到手机相册":"下载 JPG 图片";
+        $("imagePreview").classList.add("show");$("imagePreview").setAttribute("aria-hidden","false");
+      }
+      async function savePreviewImage(){
+        if(!lastExportBlob)return;
+        if(canShareImage(lastExportBlob,lastExportName)){
+          try{
+            var file=new File([lastExportBlob],lastExportName,{type:"image/jpeg"});
+            await navigator.share({files:[file],title:"出行时间规划"});
+            showExportToast("已打开系统菜单，请选择“存储图像”或“保存到照片”");
+            return;
+          }catch(error){if(error&&error.name==="AbortError")return}
+        }
+        downloadImage(lastExportBlob,lastExportName);showExportToast("JPG 已下载；也可以长按预览图保存到相册");
+      }
+      function createPageJpg(){
+        return new Promise(function(resolve,reject){
+          try{
+            var source=document.querySelector(".shell"),width=Math.ceil(source.scrollWidth),height=Math.ceil(source.scrollHeight);
+            if(!width||!height)throw new Error("页面尺寸无效");
+            var clone=source.cloneNode(true),sourceInputs=source.querySelectorAll("input"),cloneInputs=clone.querySelectorAll("input");
+            sourceInputs.forEach(function(input,index){if(cloneInputs[index])cloneInputs[index].setAttribute("value",input.value)});
+            var exportButton=clone.querySelector("#exportBtn");if(exportButton)exportButton.remove();
+            clone.setAttribute("xmlns","http://www.w3.org/1999/xhtml");clone.style.width=width+"px";clone.style.maxWidth="none";clone.style.margin="0";
+            var css=Array.from(document.querySelectorAll("style")).map(function(style){return style.textContent}).join("\n");
+            var serialized=new XMLSerializer().serializeToString(clone);
+            var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:'+width+'px;height:'+height+'px;background:#eef1e9;color:#10231d;overflow:hidden;font-family:&quot;PingFang SC&quot;,&quot;Microsoft YaHei&quot;,Arial,sans-serif;font-feature-settings:&quot;tnum&quot; 1"><style>'+css+'</style>'+serialized+'</div></foreignObject></svg>';
+            var svgUrl=URL.createObjectURL(new Blob([svg],{type:"image/svg+xml;charset=utf-8"})),image=new Image();
+            image.onload=function(){
+              try{
+                var maxPixels=15000000,maxSide=8192,preferred=Math.min(2,window.devicePixelRatio||1.5);
+                var scale=Math.min(preferred,maxSide/width,maxSide/height,Math.sqrt(maxPixels/(width*height)));
+                scale=Math.max(.2,scale);
+                var canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
+                var context=canvas.getContext("2d");context.fillStyle="#eef1e9";context.fillRect(0,0,canvas.width,canvas.height);
+                context.drawImage(image,0,0,canvas.width,canvas.height);URL.revokeObjectURL(svgUrl);
+                canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error("图片生成失败"))},"image/jpeg",.93);
+              }catch(error){URL.revokeObjectURL(svgUrl);reject(error)}
+            };
+            image.onerror=function(){URL.revokeObjectURL(svgUrl);reject(new Error("页面图像载入失败"))};image.src=svgUrl;
+          }catch(error){reject(error)}
+        });
+      }
+      async function exportFullPage(){
+        var button=$("exportBtn"),original=button.textContent;
+        button.disabled=true;button.textContent="正在生成长图…";showExportToast("正在生成整页 JPG，请稍候");
+        try{
+          var blob=await createPageJpg(),name=exportFileName();
+          if(canShareImage(blob,name)){
+            try{
+              var file=new File([blob],name,{type:"image/jpeg"});
+              await navigator.share({files:[file],title:"出行时间规划"});
+              showExportToast("请在系统菜单中选择“存储图像”或“保存到照片”");
+            }catch(error){openImagePreview(blob,name);if(!error||error.name!=="AbortError")showExportToast("请点击“保存到手机相册”，或长按图片保存")}
+          }else{
+            openImagePreview(blob,name);showExportToast("长图已生成，可下载或长按保存到相册");
+          }
+        }catch(error){
+          showExportToast("导出失败，请稍后重试");
+        }finally{button.disabled=false;button.textContent=original}
       }
       function setMode(next){
         mode=next;clearLive();
@@ -519,6 +638,10 @@
       $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
       $("liveTime").addEventListener("input",function(){liveClock=this.value;renderLive()});
       $("liveRemaining").addEventListener("input",function(){var value=Number(this.value);liveRemaining=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;renderLive()});
+      $("exportBtn").addEventListener("click",exportFullPage);
+      $("previewClose").addEventListener("click",closeImagePreview);
+      $("previewDownload").addEventListener("click",savePreviewImage);
+      $("imagePreview").addEventListener("click",function(event){if(event.target===this)closeImagePreview()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
       ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
