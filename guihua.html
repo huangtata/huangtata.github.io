@@ -42,6 +42,7 @@
     .bag-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:white;font-size:19px}
     .bag strong{display:block;font-size:14px}
     .bag small{display:block;margin-top:4px;color:#6b7e76;font-size:11px}
+    .extra-card{margin-top:-10px}
     .switch{position:relative;width:38px;height:22px;padding:0;border:0;border-radius:99px;background:#b9c3bd;transition:.2s}
     .switch:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:.2s}
     .switch.on{background:var(--green)}
@@ -80,7 +81,7 @@
     .step:first-child .dot{background:var(--lime);color:var(--green)}
     .step-title{font-size:13px;font-weight:750}
     .step-note{margin-top:3px;color:#91aaa1;font-size:10px}
-    .step-time{font-size:13px;font-weight:900;white-space:nowrap}
+    .step-time{font-size:12px;font-weight:900;white-space:nowrap}
     .warning{display:flex;gap:10px;margin-top:14px;padding:14px;border:1px solid rgba(255,191,105,.24);border-radius:16px;background:rgba(255,191,105,.1);color:#d8e2de;font-size:11px;line-height:1.7}
     .warning strong{color:var(--warn)}
     .breakdown{padding:30px 34px 34px;border-top:1px solid var(--line);background:#f3f5ed}
@@ -98,7 +99,7 @@
     .duration{color:var(--green);text-align:right;font-size:13px;font-weight:900}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
-    @media(max-width:540px){header{height:68px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:22px 17px}.intro h2{font-size:31px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.timeline{padding:17px}.step{gap:9px}.step-note{max-width:165px}.app{border-radius:22px}.breakdown{padding:23px 17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
+    @media(max-width:540px){header{height:68px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:22px 17px}.intro h2{font-size:31px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.timeline{padding:17px}.step{grid-template-columns:27px 1fr;gap:7px 9px}.step-note{max-width:190px}.step-time{grid-column:2;color:#d9ff78}.app{border-radius:22px}.breakdown{padding:23px 17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
     @media print{.shell{padding:0}.app{box-shadow:none}.reset{display:none}}
   </style>
 </head>
@@ -130,26 +131,31 @@
             <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后自动多预留 30 分钟</small></div></div>
             <button id="bagSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否需要办理托运"></button>
           </div>
+          <div class="bag extra-card">
+            <div class="bag-copy"><div class="bag-icon">✨</div><div><strong>增加额外事项</strong><small>勾选后可填写所需时间，并纳入倒推</small></div></div>
+            <button id="extraSwitch" class="switch" type="button" role="switch" aria-checked="false" aria-label="是否增加额外事项"></button>
+          </div>
           <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
           <div class="detail-box">
             <label class="detail-row">起床准备 <span class="mini"><input id="prep" type="number" min="0" max="600" value="45">分钟</span></label>
+            <label class="detail-row" id="extraTimeRow" style="display:none">额外事项时间 <span class="mini"><input id="extra" type="number" min="0" max="600" value="20">分钟</span></label>
             <label class="detail-row">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
             <label class="detail-row">路况余量 <span class="mini"><input id="traffic" type="number" min="0" max="600" value="15">分钟</span></label>
-            <div class="detail-row"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">120 分钟</span></div>
+            <div class="detail-row"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">100 分钟</span></div>
           </div>
         </section>
         <section class="result">
           <div class="result-inner">
             <div class="result-top">
-              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">05:02</span> 起床</h2></div>
+              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">05:22</span> 起床</h2></div>
               <div class="travel-icon" id="travelIcon">✈</div>
             </div>
             <div class="summary">
-              <div class="summary-card"><div class="summary-label">🚕 建议叫车</div><div class="summary-time" id="callSummary">05:47</div></div>
-              <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">07:00</div></div>
+              <div class="summary-card"><div class="summary-label">🚕 建议叫车</div><div class="summary-time" id="callSummary">06:07</div></div>
+              <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">07:20</div></div>
             </div>
             <div class="timeline">
-              <div class="timeline-head"><h3>完整时间轴</h3><span class="total" id="totalValue">共需预留 238 分钟</span></div>
+              <div class="timeline-head"><h3>完整时间轴</h3><span class="total" id="totalValue">共需预留 218 分钟</span></div>
               <ol class="steps" id="steps"></ol>
             </div>
             <div class="warning"><span>⚠</span><div><strong>风险临界线：</strong>最晚不要超过 <b id="criticalValue">06:40</b> 出门。该时间不含等车与路况余量，仅作紧急参考。</div></div>
@@ -159,7 +165,7 @@
       <section class="breakdown">
         <div class="breakdown-title">
           <div><h3>逐项耗时明细</h3><p>每个环节的开始、结束与预留时长；区间项目按较稳妥的上限倒推</p></div>
-          <span class="breakdown-total" id="breakdownTotal">合计 238 分钟</span>
+          <span class="breakdown-total" id="breakdownTotal">合计 218 分钟</span>
         </div>
         <div class="breakdown-table">
           <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时</span></div>
@@ -171,17 +177,18 @@
   </div>
   <script>
     (function(){
-      var mode="flight", checkedBag=true;
+      var mode="flight", checkedBag=true, extraEnabled=false;
       var $=function(id){return document.getElementById(id)};
-      var defaults={departure:"09:00",road:50,prep:45,wait:8,traffic:15};
+      var defaults={departure:"09:00",road:50,prep:45,extra:20,wait:8,traffic:15};
       function number(id){var v=parseInt($(id).value,10);return Number.isFinite(v)?Math.max(0,Math.min(600,v)):0}
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
       function format(total){var day=Math.floor(total/1440),n=((total%1440)+1440)%1440,h=Math.floor(n/60),m=n%60,t=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");return day<0?"前一天 "+t:day>0?"第二天 "+t:t}
       function render(){
-        var departure=toMinutes($("departure").value),road=number("road"),prep=number("prep"),wait=number("wait"),traffic=number("traffic");
+        var departure=toMinutes($("departure").value),road=number("road"),prep=number("prep"),extra=extraEnabled?number("extra"):0,wait=number("wait"),traffic=number("traffic");
         var isFlight=mode==="flight",terminal=isFlight?"机场":"高铁站",departText=isFlight?"起飞":"发车";
         var advance=isFlight?(checkedBag?100:70):45,minimum=isFlight?(checkedBag?90:65):30;
-        var arrive=departure-advance,leave=arrive-road-traffic,call=leave-wait,wake=call-prep,critical=departure-minimum-road,cutoff=departure-(isFlight?30:5);
+        var arrive=departure-advance,leave=arrive-road-traffic,call=leave-wait,wake=call-prep-extra,prepEnd=wake+prep,critical=departure-minimum-road,cutoff=departure-(isFlight?30:5);
+        $("extraTimeRow").style.display=extraEnabled?"flex":"none";
         $("departureLabel").textContent=departText+"时间";
         $("advanceLabel").textContent="建议提前到"+terminal;
         $("advanceValue").textContent=advance+" 分钟";
@@ -190,25 +197,29 @@
         $("callSummary").textContent=format(call);
         $("wakeHeadline").textContent=format(wake);
         $("criticalValue").textContent=format(critical);
-        $("totalValue").textContent="共需预留 "+(prep+wait+road+traffic+advance)+" 分钟";
-        $("breakdownTotal").textContent="合计 "+(prep+wait+road+traffic+advance)+" 分钟";
+        $("totalValue").textContent="共需预留 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
+        $("breakdownTotal").textContent="合计 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
         $("travelIcon").textContent=isFlight?"✈":"🚄";
-        var items=[
-          ["☕","起床、洗漱与准备",prep+" 分钟",wake],
-          ["🚕","最晚开始叫车","预计等车 "+wait+" 分钟",call],
-          ["📍","车辆出发","路程 "+road+" + 路况余量 "+traffic+" 分钟",leave],
-          ["✓","到达"+terminal,"提前 "+advance+" 分钟",arrive],
-          ["◷",isFlight?"登机截止参考":"检票截止参考","具体以承运方通知为准",cutoff],
-          [isFlight?"✈":"🚄",departText,isFlight&&checkedBag?"已包含托运时间":"行程开始",departure]
-        ];
-        $("steps").innerHTML=items.map(function(x){return '<li class="step"><span class="dot">'+x[0]+'</span><div><div class="step-title">'+x[1]+'</div><div class="step-note">'+x[2]+'</div></div><time class="step-time">'+format(x[3])+'</time></li>'}).join("");
+        var items=[["☕","起床、洗漱与准备",prep+" 分钟",wake,prepEnd]];
+        if(extraEnabled)items.push(["✨","额外事项",extra+" 分钟",prepEnd,call]);
+        items.push(
+          ["🚕","等待车辆","预计等车 "+wait+" 分钟",call,leave],
+          ["📍","打车前往"+terminal,"路程 "+road+" + 路况余量 "+traffic+" 分钟",leave,arrive],
+          ["✓",terminal+"流程","提前 "+advance+" 分钟",arrive,departure],
+          ["◷",isFlight?"登机截止参考":"检票截止参考","具体以承运方通知为准",cutoff,null],
+          [isFlight?"✈":"🚄",departText,isFlight&&checkedBag?"已包含托运时间":"行程开始",departure,null]
+        );
+        $("steps").innerHTML=items.map(function(x){var range=x[4]===null?format(x[3]):format(x[3])+" → "+format(x[4]);return '<li class="step"><span class="dot">'+x[0]+'</span><div><div class="step-title">'+x[1]+'</div><div class="step-note">'+x[2]+'</div></div><time class="step-time">'+range+'</time></li>'}).join("");
         var roadEnd=leave+road;
         var details=[
-          ["☕","起床准备",wake,call,prep],
+          ["☕","起床准备",wake,prepEnd,prep]
+        ];
+        if(extraEnabled)details.push(["✨","额外事项",prepEnd,call,extra]);
+        details.push(
           ["🚕","等待车辆",call,leave,wait],
           ["🛣","高德预计路程",leave,roadEnd,road],
           ["⏱","路况余量",roadEnd,arrive,traffic]
-        ];
+        );
         var processAt=arrive;
         if(isFlight){
           if(checkedBag){
@@ -237,10 +248,13 @@
       $("flightBtn").addEventListener("click",function(){setMode("flight")});
       $("trainBtn").addEventListener("click",function(){setMode("train")});
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
-      ["departure","road","prep","wait","traffic"].forEach(function(id){$(id).addEventListener("input",render)});
+      $("extraSwitch").addEventListener("click",function(){extraEnabled=!extraEnabled;this.classList.toggle("on",extraEnabled);this.setAttribute("aria-checked",String(extraEnabled));render()});
+      ["departure","road","prep","extra","wait","traffic"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
-        checkedBag=true;$("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");render();
+        checkedBag=true;extraEnabled=false;
+        $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
+        $("extraSwitch").classList.remove("on");$("extraSwitch").setAttribute("aria-checked","false");render();
       });
       render();
     })();
