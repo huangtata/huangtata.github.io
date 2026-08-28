@@ -263,24 +263,24 @@
         [-1,1].forEach(function(offset){var candidate=clock+(day+offset)*1440,gap=Math.abs(candidate-reference);if(gap<distance){best=candidate;distance=gap}});
         return best;
       }
-      function makeDetail(key,icon,name,start,end,duration,durationText){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||duration+" 分钟"}}
+      function makeDetail(key,icon,name,start,end,duration,durationText,smartMin){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||duration+" 分钟",smartMin:smartMin}}
       function compressionRules(){
         if(mode==="flight")return [
           {key:"flight-boarding",min:5},
-          {key:"traffic",min:3},
+          {key:"arrival-road",min:3},
           {key:"flight-gate",min:8},
           {key:"flight-bag",min:10},
           {key:"flight-security",min:10}
         ];
         if(mode==="train")return [
           {key:"train-wait",min:5},
-          {key:"traffic",min:3},
+          {key:"arrival-road",min:3},
           {key:"train-gate",min:8},
           {key:"train-security",min:8}
         ];
         return [];
       }
-      function smartMinimum(key){var rule=compressionRules().find(function(x){return x.key===key});return rule?rule.min:0}
+      function smartMinimum(key){var detail=currentDetails.find(function(x){return x.key===key});if(detail&&Number.isFinite(detail.smartMin))return detail.smartMin;var rule=compressionRules().find(function(x){return x.key===key});return rule?rule.min:0}
       function clearLive(){liveKey=null;liveClock="";liveRemaining=0;liveOverrides={}}
       function parkLivePanel(){var panel=$("livePanel"),home=$("livePanelHome");if(panel&&home&&panel.parentNode!==home)home.appendChild(panel)}
       function placeLivePanel(){var panel=$("livePanel"),slot=$("liveInlineSlot");if(panel&&slot)slot.appendChild(panel)}
@@ -335,7 +335,7 @@
         $("livePanel").classList.add("show");$("liveProject").textContent=item.name;
         if(document.activeElement!==$("liveTime"))$("liveTime").value=liveClock;
         if(document.activeElement!==$("liveRemaining"))$("liveRemaining").value=String(liveRemaining);
-        $("liveRemaining").setAttribute("min",String(smartMinimum(item.key)));
+        $("liveRemaining").setAttribute("min","0");
         $("liveRemainingWrap").style.display=item.duration===0?"none":"flex";
         if(current===null){
           $("breakdownTotal").textContent="等待当前时间";
@@ -360,7 +360,7 @@
             if(remainingShortage<=0)return;
             var ruleIndex=currentDetails.findIndex(function(detail){return detail.key===rule.key});
             if(ruleIndex<index||ruleIndex<0||typeof durations[ruleIndex]!=="number")return;
-            var available=Math.max(0,durations[ruleIndex]-rule.min),reduced=Math.min(available,remainingShortage);
+            var minimum=smartMinimum(rule.key),available=Math.max(0,durations[ruleIndex]-minimum),reduced=Math.min(available,remainingShortage);
             if(reduced>0){durations[ruleIndex]-=reduced;reductions[ruleIndex]=reduced;autoReduced+=reduced;remainingShortage-=reduced}
           });
         }
@@ -397,8 +397,8 @@
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
         var departText=isFlight?"起飞":isTrain?"发车":"计划到达";
         var roadText=isDrive?"开车路程所需时间":isFlight?"打车到机场，高德地图所显示预估时间":"打车到高铁站，高德地图所显示预估时间";
-        var advance=isFlight?(checkedBag?100:70):isTrain?45:0;
-        var minimum=isFlight?(checkedBag?90:65):isTrain?30:0;
+        var advance=isFlight?(checkedBag?108:75):isTrain?45:0;
+        var minimum=isFlight?(checkedBag?98:70):isTrain?30:0;
         var wait=isDrive?0:waitInput;
         $("extraInputWrap").style.display=extraEnabled?"block":"none";
         $("extraTimeRow").style.display=extraEnabled?"flex":"none";
@@ -450,17 +450,23 @@
         var details=[];
         if(prepEnabled)details.push(makeDetail("prep","☕","起床准备",wake,prepEnd,prep));
         if(!isDrive)details.push(makeDetail("wait","🚕","等待车辆",call,leave,wait));
-        details.push(
-          makeDetail("road",isDrive?"🚗":"🛣",roadText,leave,roadEnd,road),
-          makeDetail("traffic","⏱","路况余量",roadEnd,trafficStart,traffic)
-        );
+        if(isDrive){
+          details.push(makeDetail("road","🚗",roadText,leave,roadEnd,road));
+          details.push(makeDetail("traffic","⏱","路况余量",roadEnd,extraStart,traffic));
+        }else{
+          details.push(makeDetail("arrival-road","📍",isFlight?"到达机场（包含路况余量 "+traffic+" 分钟）":"到达高铁站（包含路况余量 "+traffic+" 分钟）",leave,extraStart,road+traffic,null,road+3));
+        }
         if(extraEnabled)details.push(makeDetail("extra","✨","额外事项",extraStart,arrive,extra));
         var processAt=arrive;
         if(isFlight){
           if(checkedBag){
+            details.push(makeDetail("flight-bag-find","🔎","寻找行李托运点",processAt,processAt+3,3));
+            processAt+=3;
             details.push(makeDetail("flight-bag","🧳","办理行李托运",processAt,processAt+30,30));
             processAt+=30;
           }
+          details.push(makeDetail("flight-security-walk","🚶","通往安检点",processAt,processAt+5,5));
+          processAt+=5;
           details.push(makeDetail("flight-security","🛂","机场安检",processAt,processAt+20,20,"20 分钟（通常 15–20）"));
           processAt+=20;
           details.push(makeDetail("flight-gate","🚶","寻找并前往登机口",processAt,processAt+15,15,"15 分钟（通常 10–15）"));
@@ -495,7 +501,7 @@
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
       $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
       $("liveTime").addEventListener("input",function(){liveClock=this.value;renderLive()});
-      $("liveRemaining").addEventListener("input",function(){var value=Number(this.value),minimum=smartMinimum(liveKey);liveRemaining=Number.isFinite(value)?Math.max(minimum,Math.min(600,Math.round(value))):minimum;renderLive()});
+      $("liveRemaining").addEventListener("input",function(){var value=Number(this.value);liveRemaining=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;renderLive()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
       ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
