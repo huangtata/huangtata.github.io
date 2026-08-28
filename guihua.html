@@ -24,6 +24,7 @@
     .controls{padding:26px 30px;border-right:1px solid var(--line)}
     .field{margin-bottom:22px}
     .label{display:block;margin:0 0 9px;color:#527066;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    #roadLabel{letter-spacing:.04em;line-height:1.45}
     .mode{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:5px;border-radius:16px;background:#e8ebdf}
     .mode button{height:42px;border:0;border-radius:12px;background:transparent;color:#536b62;font-weight:750}
     .mode button.active{background:var(--green);color:white;box-shadow:0 5px 14px rgba(23,54,45,.16)}
@@ -147,7 +148,7 @@
           <div class="input-grid field">
             <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" type="time" value="09:00"></label>
             <div>
-              <span class="label" id="roadLabel">高德预计路程</span>
+              <span class="label" id="roadLabel">打车到机场，高德地图所显示预估时间</span>
               <div class="quick-picks" aria-label="路程时间快捷选择">
                 <button class="quick-pick" id="road10" type="button">10</button>
                 <button class="quick-pick" id="road15" type="button">15</button>
@@ -385,7 +386,7 @@
         var isFlight=mode==="flight",isTrain=mode==="train",isDrive=mode==="drive";
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
         var departText=isFlight?"起飞":isTrain?"发车":"计划到达";
-        var roadText=isDrive?"开车路程所需时间":"高德预计路程";
+        var roadText=isDrive?"开车路程所需时间":isFlight?"打车到机场，高德地图所显示预估时间":"打车到高铁站，高德地图所显示预估时间";
         var advance=isFlight?(checkedBag?100:70):isTrain?45:0;
         var minimum=isFlight?(checkedBag?90:65):isTrain?30:0;
         var wait=isDrive?0:waitInput;
