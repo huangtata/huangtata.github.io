@@ -57,6 +57,9 @@
     .detail-box{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:white}
     .detail-row{display:flex;align-items:center;justify-content:space-between;min-height:49px;padding:8px 15px;border-bottom:1px solid rgba(23,54,45,.08);color:#354d45;font-size:13px;font-weight:650}
     .detail-row:last-child{border:0;background:#f3f5ed}
+    .smart-copy small{display:block;margin-top:4px;color:#799087;font-size:10px;font-weight:500}
+    .smart-value{display:flex;align-items:center;gap:7px;color:var(--green);font-weight:900}
+    .smart-value:before{content:"智能";padding:3px 6px;border-radius:6px;background:#e7f2d7;color:#426333;font-size:9px;font-weight:850}
     .mini{display:flex;align-items:center;gap:7px;color:#6b7e76;font-size:11px}
     .mini input{width:62px;height:32px;padding:0 8px;border:0;border-radius:9px;background:#eef0e6;text-align:right;font-weight:850}
     .advance{color:var(--green);font-weight:900}
@@ -147,7 +150,7 @@
             <label class="detail-row">起床准备 <span class="mini"><input id="prep" type="number" min="0" max="600" value="45">分钟</span></label>
             <div class="detail-row" id="extraTimeRow" style="display:none"><span>额外事项时间</span><span class="advance" id="extraDetailValue">20 分钟</span></div>
             <label class="detail-row" id="waitTimeRow">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
-            <label class="detail-row">路况余量 <span class="mini"><input id="traffic" type="number" min="0" max="600" value="15">分钟</span></label>
+            <div class="detail-row"><span class="smart-copy">路况余量<small>根据路程时长自动调整</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
             <div class="detail-row" id="advanceRow"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">100 分钟</span></div>
           </div>
         </section>
@@ -183,11 +186,18 @@
       var mode="flight", checkedBag=true, extraEnabled=false;
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[15,25,35,45,60];
-      var defaults={departure:"09:00",road:"",prep:45,extra:20,wait:8,traffic:15};
+      var defaults={departure:"09:00",road:"",prep:45,extra:20,wait:8};
       function number(id){var v=Number($(id).value);return Number.isFinite(v)?Math.max(0,Math.min(600,Math.round(v))):0}
       function getRoad(){
         var raw=$("road").value.trim(),value=Number(raw);
         return raw!==""&&Number.isInteger(value)&&value>=1&&value<=600?value:null;
+      }
+      function getTrafficBuffer(road){
+        if(road<10)return 10;
+        if(road<30)return 15;
+        if(road<60)return 20;
+        if(road<=120)return 35;
+        return 45;
       }
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
       function format(total){
@@ -199,7 +209,8 @@
         return t;
       }
       function render(){
-        var departure=toMinutes($("departure").value),road=getRoad(),prep=number("prep"),extra=extraEnabled?number("extra"):0,waitInput=number("wait"),traffic=number("traffic");
+        var departure=toMinutes($("departure").value),road=getRoad(),prep=number("prep"),extra=extraEnabled?number("extra"):0,waitInput=number("wait");
+        var traffic=road===null?null:getTrafficBuffer(road);
         var isFlight=mode==="flight",isTrain=mode==="train",isDrive=mode==="drive";
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
         var departText=isFlight?"起飞":isTrain?"发车":"计划到达";
@@ -224,6 +235,7 @@
         $("road").setAttribute("aria-invalid",String(road===null));
         $("roadHint").classList.toggle("ok",road!==null);
         $("roadHint").textContent=road===null?($("road").value.trim()===""?"必填：请选择上方时间或手动输入":"请输入 1–600 的整数分钟"):"已填入 "+road+" 分钟";
+        $("trafficValue").textContent=traffic===null?"等待路程":traffic+" 分钟";
         if(road===null){
           $("arrivalSummary").textContent="--:--";
           $("callSummary").textContent="--:--";
@@ -288,7 +300,7 @@
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("extraSwitch").addEventListener("click",function(){extraEnabled=!extraEnabled;this.classList.toggle("on",extraEnabled);this.setAttribute("aria-checked",String(extraEnabled));render()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
-      ["departure","road","prep","extra","wait","traffic"].forEach(function(id){$(id).addEventListener("input",render)});
+      ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
         mode="flight";checkedBag=true;extraEnabled=false;
