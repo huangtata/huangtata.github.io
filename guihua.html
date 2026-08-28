@@ -33,7 +33,7 @@
     input[type="time"]{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850}
     .road-input{height:56px;padding:0 58px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
     .road-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
-    .quick-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
+    .quick-picks{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:8px}
     .quick-pick{height:27px;padding:0;border:1px solid rgba(23,54,45,.13);border-radius:8px;background:white;color:#527066;font-size:11px;font-weight:800;transition:.15s}
     .quick-pick:hover,.quick-pick.active{border-color:var(--green);background:var(--green);color:var(--lime)}
     .road-hint{display:block;margin-top:6px;color:#b05b4e;font-size:10px;font-weight:650}
@@ -124,6 +124,7 @@
             <div>
               <span class="label" id="roadLabel">高德预计路程</span>
               <div class="quick-picks" aria-label="路程时间快捷选择">
+                <button class="quick-pick" id="road10" type="button">10</button>
                 <button class="quick-pick" id="road15" type="button">15</button>
                 <button class="quick-pick" id="road25" type="button">25</button>
                 <button class="quick-pick" id="road35" type="button">35</button>
@@ -150,7 +151,7 @@
             <label class="detail-row">起床准备 <span class="mini"><input id="prep" type="number" min="0" max="600" value="45">分钟</span></label>
             <div class="detail-row" id="extraTimeRow" style="display:none"><span>额外事项时间</span><span class="advance" id="extraDetailValue">20 分钟</span></div>
             <label class="detail-row" id="waitTimeRow">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
-            <div class="detail-row"><span class="smart-copy">路况余量<small>根据路程时长自动调整</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
+            <div class="detail-row"><span class="smart-copy">路况余量<small>预留堵车、红绿灯、临时绕行等不确定时间</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
             <div class="detail-row" id="advanceRow"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">100 分钟</span></div>
           </div>
         </section>
@@ -161,7 +162,7 @@
               <div class="travel-icon" id="travelIcon">✈</div>
             </div>
             <div class="summary">
-              <div class="summary-card"><div class="summary-label" id="actionSummaryLabel">🚕 建议叫车</div><div class="summary-time" id="callSummary">--:--</div></div>
+              <div class="summary-card accent"><div class="summary-label" id="actionSummaryLabel">🚕 建议叫车</div><div class="summary-time" id="callSummary">--:--</div></div>
               <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">--:--</div></div>
             </div>
             <section class="breakdown">
@@ -185,7 +186,7 @@
     (function(){
       var mode="flight", checkedBag=true, extraEnabled=false;
       var $=function(id){return document.getElementById(id)};
-      var roadPresets=[15,25,35,45,60];
+      var roadPresets=[10,15,25,35,45,60];
       var defaults={departure:"09:00",road:"",prep:45,extra:20,wait:8};
       function number(id){var v=Number($(id).value);return Number.isFinite(v)?Math.max(0,Math.min(600,Math.round(v))):0}
       function getRoad(){
@@ -284,7 +285,10 @@
           processAt+=15;
           details.push(["🚄","进站安检与候车",processAt,departure,departure-processAt]);
         }
-        $("breakdownList").innerHTML=details.map(function(x){var duration=typeof x[4]==="number"?x[4]+" 分钟":x[4];return '<div class="breakdown-row"><div class="project"><span class="project-icon">'+x[0]+'</span>'+x[1]+'</div><div class="range">'+format(x[2])+' → '+format(x[3])+'</div><div class="duration">'+duration+'</div></div>'}).join("");
+        if(isFlight)details.push(["✈","航班起飞",departure,null,"行程开始"]);
+        else if(isTrain)details.push(["🚄","高铁发车",departure,null,"行程开始"]);
+        else details.push(["🏁","到达目的地",departure,null,"抵达"]);
+        $("breakdownList").innerHTML=details.map(function(x){var duration=typeof x[4]==="number"?x[4]+" 分钟":x[4],range=x[3]===null?format(x[2]):format(x[2])+" → "+format(x[3]);return '<div class="breakdown-row"><div class="project"><span class="project-icon">'+x[0]+'</span>'+x[1]+'</div><div class="range">'+range+'</div><div class="duration">'+duration+'</div></div>'}).join("");
       }
       function setMode(next){
         mode=next;
