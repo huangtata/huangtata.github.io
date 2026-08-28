@@ -43,6 +43,7 @@
     .bag strong{display:block;font-size:14px}
     .bag small{display:block;margin-top:4px;color:#6b7e76;font-size:11px}
     .extra-card{margin-top:-10px}
+    .extra-input-field{margin-top:-10px}
     .switch{position:relative;width:38px;height:22px;padding:0;border:0;border-radius:99px;background:#b9c3bd;transition:.2s}
     .switch:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:.2s}
     .switch.on{background:var(--green)}
@@ -135,10 +136,13 @@
             <div class="bag-copy"><div class="bag-icon">✨</div><div><strong>增加额外事项</strong><small>勾选后可填写所需时间，并纳入倒推</small></div></div>
             <button id="extraSwitch" class="switch" type="button" role="switch" aria-checked="false" aria-label="是否增加额外事项"></button>
           </div>
+          <div class="field extra-input-field" id="extraInputWrap" style="display:none">
+            <label><span class="label">额外事项所需时间</span><span class="input-wrap"><input id="extra" class="road-input" type="number" min="0" max="600" value="20"><span class="unit">分钟</span></span></label>
+          </div>
           <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
           <div class="detail-box">
             <label class="detail-row">起床准备 <span class="mini"><input id="prep" type="number" min="0" max="600" value="45">分钟</span></label>
-            <label class="detail-row" id="extraTimeRow" style="display:none">额外事项时间 <span class="mini"><input id="extra" type="number" min="0" max="600" value="20">分钟</span></label>
+            <div class="detail-row" id="extraTimeRow" style="display:none"><span>额外事项时间</span><span class="advance" id="extraDetailValue">20 分钟</span></div>
             <label class="detail-row">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
             <label class="detail-row">路况余量 <span class="mini"><input id="traffic" type="number" min="0" max="600" value="15">分钟</span></label>
             <div class="detail-row"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">100 分钟</span></div>
@@ -188,7 +192,9 @@
         var isFlight=mode==="flight",terminal=isFlight?"机场":"高铁站",departText=isFlight?"起飞":"发车";
         var advance=isFlight?(checkedBag?100:70):45,minimum=isFlight?(checkedBag?90:65):30;
         var arrive=departure-advance,leave=arrive-road-traffic,call=leave-wait,wake=call-prep-extra,prepEnd=wake+prep,critical=departure-minimum-road,cutoff=departure-(isFlight?30:5);
+        $("extraInputWrap").style.display=extraEnabled?"block":"none";
         $("extraTimeRow").style.display=extraEnabled?"flex":"none";
+        $("extraDetailValue").textContent=extra+" 分钟";
         $("departureLabel").textContent=departText+"时间";
         $("advanceLabel").textContent="建议提前到"+terminal;
         $("advanceValue").textContent=advance+" 分钟";
