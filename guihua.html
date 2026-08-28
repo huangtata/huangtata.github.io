@@ -86,18 +86,37 @@
     .breakdown-title h3{margin:0;font-size:20px;letter-spacing:-.025em}
     .breakdown-title p{margin:5px 0 0;color:#6b7e76;font-size:11px}
     .breakdown-total{flex:0 0 auto;padding:7px 12px;border-radius:99px;background:var(--green);color:var(--lime);font-size:11px;font-weight:850}
+    .live-panel{display:none;margin:0 0 14px;padding:14px;border:1px solid #d7e3c6;border-radius:16px;background:#f4fae8}
+    .live-panel.show{display:block}
+    .live-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+    .live-title{font-size:13px;font-weight:850;color:var(--green)}
+    .live-close{width:28px;height:28px;padding:0;border:0;border-radius:9px;background:#e4ead9;color:#62776f;font-size:17px;line-height:1}
+    .live-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .live-field{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid rgba(23,54,45,.11);border-radius:12px;background:white;color:#62776f;font-size:11px;font-weight:700}
+    .live-field input{width:92px;height:32px;padding:0 7px;border:0;border-radius:8px;background:#eef1e9;text-align:center;font-size:13px;font-weight:850}
+    .live-status{margin-top:10px;padding:10px 12px;border-radius:11px;font-size:12px;font-weight:750;line-height:1.55}
+    .live-status.good{background:#e3f3d9;color:#315f35}
+    .live-status.bad{background:#fff0eb;color:#a14335}
+    .live-status.neutral{background:#edf0e9;color:#52675f}
+    .live-note{margin:8px 2px 0;color:#71847c;font-size:10px;line-height:1.55}
     .breakdown-table{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:white}
-    .breakdown-row{display:grid;grid-template-columns:minmax(150px,1.05fr) minmax(210px,1.35fr) 180px;align-items:center;min-height:54px;padding:8px 18px;border-bottom:1px solid rgba(23,54,45,.08)}
+    .breakdown-row{display:grid;grid-template-columns:minmax(150px,1.05fr) minmax(190px,1.25fr) minmax(185px,.95fr);align-items:center;min-height:54px;padding:8px 18px;border-bottom:1px solid rgba(23,54,45,.08)}
     .breakdown-row:last-child{border:0}
     .breakdown-row.head{min-height:36px;background:#e8ebdf;color:#62776f;font-size:10px;font-weight:800;letter-spacing:.1em}
+    .breakdown-row.live-current{background:#f2f9df;box-shadow:inset 3px 0 0 #7aa534}
+    .breakdown-row.live-future{background:#fbfdf7}
+    .breakdown-row.live-past{opacity:.52}
     .project{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:750}
     .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
     .range{color:#354d45;font-size:13px;font-weight:700}
-    .duration{color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    .duration{display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    .locate-btn{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(23,54,45,.15);border-radius:8px;background:white;color:#62776f;font-size:10px;font-weight:800}
+    .locate-btn:hover,.locate-btn.active{border-color:var(--green);background:var(--green);color:var(--lime)}
+    .live-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#dff0b5;color:#48651d;font-size:8px;font-weight:850;vertical-align:1px}
     .empty-plan{padding:34px 18px;color:#6b7e76;text-align:center;font-size:12px;line-height:1.7}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
-    @media(max-width:540px){header{height:62px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
+    @media(max-width:540px){header{height:62px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn{padding:5px 7px}}
     @media print{.shell{padding:0}.app{box-shadow:none}.reset{display:none}}
   </style>
 </head>
@@ -167,7 +186,7 @@
         <section class="result">
           <div class="result-inner">
             <div class="result-top">
-              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">--:--</span> 起床</h2></div>
+              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">--:--</span> <span id="headlineAction">起床</span></h2></div>
               <div class="travel-icon" id="travelIcon">✈</div>
             </div>
             <div class="summary">
@@ -176,11 +195,20 @@
             </div>
             <section class="breakdown">
               <div class="breakdown-title">
-                <div><h3>逐项耗时明细</h3><p>每个环节的开始、结束与预留时长；区间项目按较稳妥的上限倒推</p></div>
+                <div><h3>逐项耗时明细</h3><p>查看每项时间；点击任一“定位当前”，即可按实际进度重新推算余下行程</p></div>
                 <span class="breakdown-total" id="breakdownTotal">等待填写路程</span>
               </div>
+              <div class="live-panel" id="livePanel">
+                <div class="live-head"><div class="live-title">📍 当前位于：<span id="liveProject">--</span></div><button class="live-close" id="liveClose" type="button" aria-label="退出实时推算">×</button></div>
+                <div class="live-fields">
+                  <label class="live-field">现在时间 <input id="liveTime" type="time" aria-label="当前时间"></label>
+                  <label class="live-field" id="liveRemainingWrap">本项还需 <span><input id="liveRemaining" type="number" min="0" max="600" value="0" aria-label="当前项目剩余时间"> 分钟</span></label>
+                </div>
+                <div class="live-status neutral" id="liveStatus">请选择当前时间</div>
+                <div class="live-note">从当前项目的剩余时间开始，自动顺排所有后续环节；已进行一部分时，可修改“本项还需”。</div>
+              </div>
               <div class="breakdown-table">
-                <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时</span></div>
+                <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时 / 实时定位</span></div>
                 <div id="breakdownList"><div class="empty-plan">请先选择或输入高德预计路程时间<br>填写后将自动生成完整规划</div></div>
               </div>
             </section>
@@ -194,6 +222,7 @@
   <script>
     (function(){
       var mode="flight", checkedBag=true, extraEnabled=false, prepEnabled=true;
+      var liveKey=null,liveClock="",liveRemaining=0,currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
       var defaults={departure:"09:00",road:"",prep:45,extra:20,wait:8};
@@ -210,6 +239,7 @@
         return 45;
       }
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
+      function nowClock(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
       function format(total){
         var day=Math.floor(total/1440),n=((total%1440)+1440)%1440,h=Math.floor(n/60),m=n%60,t=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
         if(day===-1)return "前一天 "+t;
@@ -217,6 +247,75 @@
         if(day===1)return "第二天 "+t;
         if(day>1)return "第"+(day+1)+"天 "+t;
         return t;
+      }
+      function alignClock(value,reference){
+        if(!/^\d{2}:\d{2}$/.test(value||""))return null;
+        var clock=toMinutes(value),day=Math.floor(reference/1440),best=clock+day*1440,distance=Math.abs(best-reference);
+        [-1,1].forEach(function(offset){var candidate=clock+(day+offset)*1440,gap=Math.abs(candidate-reference);if(gap<distance){best=candidate;distance=gap}});
+        return best;
+      }
+      function makeDetail(key,icon,name,start,end,duration,durationText){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||duration+" 分钟"}}
+      function clearLive(){liveKey=null;liveClock="";liveRemaining=0}
+      function attachLocateButtons(){
+        document.querySelectorAll("[data-live-key]").forEach(function(button){
+          button.addEventListener("click",function(){
+            var key=this.getAttribute("data-live-key"),item=currentDetails.find(function(x){return x.key===key});
+            if(!item)return;
+            liveKey=key;liveClock=nowClock();liveRemaining=item.duration;renderLive();
+          });
+        });
+      }
+      function rowsHTML(details,live){
+        return details.map(function(item,index){
+          var timing=item,rowClass="",durationText=item.durationText,tag="";
+          if(live){
+            if(index<live.index)rowClass=" live-past";
+            else if(index===live.index){rowClass=" live-current";tag='<span class="live-tag">当前</span>';}
+            else rowClass=" live-future";
+            if(index>=live.index){timing=live.schedule[index];durationText=item.end===null?item.durationText:timing.duration+" 分钟";}
+          }
+          var range=timing.end===null?format(timing.start):format(timing.start)+" → "+format(timing.end);
+          var active=live&&index===live.index?" active":"";
+          return '<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span>'+item.name+tag+'</span></div><div class="range">'+range+'</div><div class="duration"><span>'+durationText+'</span><button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
+        }).join("");
+      }
+      function renderLive(){
+        var index=currentDetails.findIndex(function(x){return x.key===liveKey});
+        if(index<0){
+          clearLive();$("livePanel").classList.remove("show");
+          $("breakdownTotal").textContent="合计 "+currentPlanTotal+" 分钟";
+          $("breakdownList").innerHTML=rowsHTML(currentDetails,null);attachLocateButtons();return;
+        }
+        var item=currentDetails[index],current=alignClock(liveClock,item.start);
+        $("livePanel").classList.add("show");$("liveProject").textContent=item.name;
+        if(document.activeElement!==$("liveTime"))$("liveTime").value=liveClock;
+        if(document.activeElement!==$("liveRemaining"))$("liveRemaining").value=String(liveRemaining);
+        $("liveRemainingWrap").style.display=item.duration===0?"none":"flex";
+        if(current===null){
+          $("breakdownTotal").textContent="等待当前时间";
+          $("liveStatus").className="live-status neutral";$("liveStatus").textContent="请设置有效的当前时间";
+          $("breakdownList").innerHTML=rowsHTML(currentDetails,null);attachLocateButtons();return;
+        }
+        var cursor=current,schedule=[];
+        currentDetails.forEach(function(detail,i){
+          if(i<index){schedule[i]=detail;return;}
+          var duration=i===index?liveRemaining:detail.duration;
+          schedule[i]={start:cursor,end:detail.end===null?null:cursor+duration,duration:duration};
+          cursor+=duration;
+        });
+        $("breakdownTotal").textContent="余下 "+(cursor-current)+" 分钟";
+        var difference=cursor-currentDeparture,status=$("liveStatus");
+        if(difference>0){
+          status.className="live-status bad";
+          status.textContent="时间不足，还差 "+difference+" 分钟｜预计 "+format(cursor)+" 完成余下环节，晚于"+currentTargetLabel;
+        }else if(difference<0){
+          status.className="live-status good";
+          status.textContent="时间充足，还剩 "+Math.abs(difference)+" 分钟余量｜预计 "+format(cursor)+" 完成余下环节";
+        }else{
+          status.className="live-status neutral";
+          status.textContent="时间刚好｜预计 "+format(cursor)+" 完成余下环节，请立即继续";
+        }
+        $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:schedule});attachLocateButtons();
       }
       function render(){
         var departure=toMinutes($("departure").value),road=getRoad(),prep=prepEnabled?number("prep"):0,extra=extraEnabled?number("extra"):0,waitInput=number("wait");
@@ -234,6 +333,7 @@
         $("prepInputWrap").style.display=prepEnabled?"flex":"none";
         $("prepOffText").style.display=prepEnabled?"none":"inline";
         $("prep").disabled=!prepEnabled;
+        $("headlineAction").textContent=prepEnabled?"起床":"出门";
         $("departureLabel").textContent=isDrive?"计划到达时间":departText+"时间";
         $("roadLabel").textContent=roadText;
         $("waitTimeRow").style.display=isDrive?"none":"flex";
@@ -250,6 +350,7 @@
         $("roadHint").textContent=road===null?($("road").value.trim()===""?"必填：请选择上方时间或手动输入":"请输入 1–600 的整数分钟"):"已填入 "+road+" 分钟";
         $("trafficValue").textContent=traffic===null?"等待路程":traffic+" 分钟";
         if(road===null){
+          currentDetails=[];clearLive();$("livePanel").classList.remove("show");
           $("arrivalSummary").textContent="--:--";
           $("callSummary").textContent="--:--";
           $("wakeHeadline").textContent="--:--";
@@ -269,40 +370,42 @@
         var critical=departure-minimum-road-extra;
         $("arrivalSummary").textContent=format(arrive);
         $("callSummary").textContent=format(call);
-        $("wakeHeadline").textContent=format(wake);
+        $("wakeHeadline").textContent=format(prepEnabled?wake:leave);
         $("criticalValue").textContent=format(critical);
-        $("breakdownTotal").textContent="合计 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
+        currentPlanTotal=prep+extra+wait+road+traffic+advance;
+        $("breakdownTotal").textContent="合计 "+currentPlanTotal+" 分钟";
         var details=[];
-        if(prepEnabled)details.push(["☕","起床准备",wake,prepEnd,prep]);
-        if(!isDrive)details.push(["🚕","等待车辆",call,leave,wait]);
+        if(prepEnabled)details.push(makeDetail("prep","☕","起床准备",wake,prepEnd,prep));
+        if(!isDrive)details.push(makeDetail("wait","🚕","等待车辆",call,leave,wait));
         details.push(
-          [isDrive?"🚗":"🛣",roadText,leave,roadEnd,road],
-          ["⏱","路况余量",roadEnd,trafficStart,traffic]
+          makeDetail("road",isDrive?"🚗":"🛣",roadText,leave,roadEnd,road),
+          makeDetail("traffic","⏱","路况余量",roadEnd,trafficStart,traffic)
         );
-        if(extraEnabled)details.push(["✨","额外事项",extraStart,arrive,extra]);
+        if(extraEnabled)details.push(makeDetail("extra","✨","额外事项",extraStart,arrive,extra));
         var processAt=arrive;
         if(isFlight){
           if(checkedBag){
-            details.push(["🧳","办理行李托运",processAt,processAt+30,30]);
+            details.push(makeDetail("flight-bag","🧳","办理行李托运",processAt,processAt+30,30));
             processAt+=30;
           }
-          details.push(["🛂","机场安检",processAt,processAt+20,"20 分钟（通常 15–20）"]);
+          details.push(makeDetail("flight-security","🛂","机场安检",processAt,processAt+20,20,"20 分钟（通常 15–20）"));
           processAt+=20;
-          details.push(["🚶","寻找并前往登机口",processAt,processAt+15,"15 分钟（通常 10–15）"]);
+          details.push(makeDetail("flight-gate","🚶","寻找并前往登机口",processAt,processAt+15,15,"15 分钟（通常 10–15）"));
           processAt+=15;
-          details.push(["🛫","候机与登机余量",processAt,departure,departure-processAt]);
+          details.push(makeDetail("flight-boarding","🛫","候机与登机余量",processAt,departure,departure-processAt));
         }else if(isTrain){
-          details.push(["🔎","寻找高铁进站口",processAt,processAt+15,15]);
+          details.push(makeDetail("train-gate","🔎","寻找高铁进站口",processAt,processAt+15,15));
           processAt+=15;
-          details.push(["🚄","进站安检与候车",processAt,departure,departure-processAt]);
+          details.push(makeDetail("train-wait","🚄","进站安检与候车",processAt,departure,departure-processAt));
         }
-        if(isFlight)details.push(["✈","航班起飞",departure,null,"行程开始"]);
-        else if(isTrain)details.push(["🚄","高铁发车",departure,null,"行程开始"]);
-        else details.push(["🏁","到达目的地",departure,null,"抵达"]);
-        $("breakdownList").innerHTML=details.map(function(x){var duration=typeof x[4]==="number"?x[4]+" 分钟":x[4],range=x[3]===null?format(x[2]):format(x[2])+" → "+format(x[3]);return '<div class="breakdown-row"><div class="project"><span class="project-icon">'+x[0]+'</span>'+x[1]+'</div><div class="range">'+range+'</div><div class="duration">'+duration+'</div></div>'}).join("");
+        if(isFlight)details.push(makeDetail("flight-departure","✈","航班起飞",departure,null,0,"行程开始"));
+        else if(isTrain)details.push(makeDetail("train-departure","🚄","高铁发车",departure,null,0,"行程开始"));
+        else details.push(makeDetail("drive-arrival","🏁","到达目的地",departure,null,0,"抵达"));
+        currentDetails=details;currentDeparture=departure;currentTargetLabel=(isFlight?"原定起飞 ":isTrain?"原定发车 ":"计划到达 ")+format(departure);
+        renderLive();
       }
       function setMode(next){
-        mode=next;
+        mode=next;clearLive();
         $("flightBtn").classList.toggle("active",mode==="flight");
         $("trainBtn").classList.toggle("active",mode==="train");
         $("driveBtn").classList.toggle("active",mode==="drive");
@@ -315,11 +418,14 @@
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("extraSwitch").addEventListener("click",function(){extraEnabled=!extraEnabled;this.classList.toggle("on",extraEnabled);this.setAttribute("aria-checked",String(extraEnabled));render()});
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
+      $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
+      $("liveTime").addEventListener("input",function(){liveClock=this.value;renderLive()});
+      $("liveRemaining").addEventListener("input",function(){var value=Number(this.value);liveRemaining=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;renderLive()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
       ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
-        mode="flight";checkedBag=true;extraEnabled=false;prepEnabled=true;
+        mode="flight";checkedBag=true;extraEnabled=false;prepEnabled=true;clearLive();
         $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
         $("bagRow").style.display="flex";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
