@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#17362d">
+  <title>出行时间规划</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{--ink:#10231d;--green:#17362d;--lime:#d9ff78;--paper:#f8f8f2;--mist:#eef1e9;--muted:#62776f;--line:rgba(23,54,45,.12);--warn:#ffcf8e}
+    html{background:var(--mist)}
+    body{margin:0;min-height:100vh;color:var(--ink);background:var(--mist);font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif;font-feature-settings:"tnum" 1}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    .shell{width:min(1440px,100%);margin:auto;padding:20px}
+    .app{overflow:hidden;border:1px solid var(--line);border-radius:28px;background:var(--paper);box-shadow:0 30px 80px rgba(16,35,29,.12)}
+    header{height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--green);color:var(--lime);font-size:21px}
+    .eyebrow{margin:0 0 2px;color:#527066;font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase}
+    h1{margin:0;font-size:20px;letter-spacing:-.02em}
+    .privacy{padding:9px 14px;border-radius:999px;background:#e9ecdf;color:#527066;font-size:12px;font-weight:650}
+    .layout{display:grid;grid-template-columns:minmax(360px,.84fr) minmax(510px,1.16fr)}
+    .controls{padding:34px;border-right:1px solid var(--line)}
+    .intro{margin-bottom:26px}
+    .intro p{margin:0 0 8px;color:#527066;font-size:14px;font-weight:600}
+    .intro h2{margin:0;font-size:38px;line-height:1.08;letter-spacing:-.045em}
+    .field{margin-bottom:22px}
+    .label{display:block;margin:0 0 9px;color:#527066;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    .mode{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:16px;background:#e8ebdf}
+    .mode button{height:42px;border:0;border-radius:12px;background:transparent;color:#536b62;font-weight:750}
+    .mode button.active{background:var(--green);color:white;box-shadow:0 5px 14px rgba(23,54,45,.16)}
+    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .input-wrap{position:relative}
+    input[type="time"],input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
+    input[type="time"]{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850}
+    .road-input{height:56px;padding:0 58px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
+    input:focus{border-color:#527066;box-shadow:0 0 0 3px rgba(82,112,102,.14)}
+    .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#62776f;font-size:12px;font-weight:700;pointer-events:none}
+    .bag{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding:14px 16px;border:1px solid var(--line);border-radius:17px;background:#eef0e6}
+    .bag-copy{display:flex;align-items:center;gap:12px}
+    .bag-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:white;font-size:19px}
+    .bag strong{display:block;font-size:14px}
+    .bag small{display:block;margin-top:4px;color:#6b7e76;font-size:11px}
+    .switch{position:relative;width:38px;height:22px;padding:0;border:0;border-radius:99px;background:#b9c3bd;transition:.2s}
+    .switch:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:.2s}
+    .switch.on{background:var(--green)}
+    .switch.on:after{transform:translateX(16px)}
+    .detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .detail-head .label{margin:0}
+    .reset{border:0;background:transparent;color:#62776f;font-size:11px}
+    .detail-box{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:white}
+    .detail-row{display:flex;align-items:center;justify-content:space-between;min-height:49px;padding:8px 15px;border-bottom:1px solid rgba(23,54,45,.08);color:#354d45;font-size:13px;font-weight:650}
+    .detail-row:last-child{border:0;background:#f3f5ed}
+    .mini{display:flex;align-items:center;gap:7px;color:#6b7e76;font-size:11px}
+    .mini input{width:62px;height:32px;padding:0 8px;border:0;border-radius:9px;background:#eef0e6;text-align:right;font-weight:850}
+    .advance{color:var(--green);font-weight:900}
+    .result{position:relative;overflow:hidden;padding:38px;background:var(--green);color:white}
+    .result:before{content:"";position:absolute;right:-80px;top:-95px;width:260px;height:260px;border:45px solid rgba(217,255,120,.07);border-radius:50%}
+    .result-inner{position:relative}
+    .result-top{display:flex;justify-content:space-between;gap:20px;margin-bottom:25px}
+    .result-top .eyebrow{color:#9fb7ad;font-size:11px}
+    .result h2{margin:0;font-size:29px;letter-spacing:-.03em}
+    .highlight{color:var(--lime)}
+    .travel-icon{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:15px;background:var(--lime);color:var(--green);font-size:23px}
+    .summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+    .summary-card{padding:16px;border:1px solid rgba(255,255,255,.1);border-radius:17px;background:rgba(255,255,255,.07)}
+    .summary-card.accent{border:0;background:var(--lime);color:var(--green)}
+    .summary-label{margin-bottom:11px;color:#a9beb6;font-size:11px;font-weight:650}
+    .accent .summary-label{color:var(--green)}
+    .summary-time{font-size:29px;font-weight:900;white-space:nowrap}
+    .timeline{padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:21px;background:#102b23}
+    .timeline-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .timeline h3{margin:0;font-size:15px}
+    .total{padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.08);color:#b8c8c2;font-size:10px}
+    .steps{position:relative;margin:0;padding:0;list-style:none}
+    .steps:before{content:"";position:absolute;left:13px;top:26px;bottom:26px;width:1px;background:rgba(255,255,255,.14)}
+    .step{position:relative;display:grid;grid-template-columns:27px 1fr auto;align-items:center;gap:12px;padding:10px 0}
+    .dot{z-index:1;display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#29483f;color:#c6d6d0;font-size:12px}
+    .step:first-child .dot{background:var(--lime);color:var(--green)}
+    .step-title{font-size:13px;font-weight:750}
+    .step-note{margin-top:3px;color:#91aaa1;font-size:10px}
+    .step-time{font-size:13px;font-weight:900;white-space:nowrap}
+    .warning{display:flex;gap:10px;margin-top:14px;padding:14px;border:1px solid rgba(255,191,105,.24);border-radius:16px;background:rgba(255,191,105,.1);color:#d8e2de;font-size:11px;line-height:1.7}
+    .warning strong{color:var(--warn)}
+    .breakdown{padding:30px 34px 34px;border-top:1px solid var(--line);background:#f3f5ed}
+    .breakdown-title{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:15px}
+    .breakdown-title h3{margin:0;font-size:20px;letter-spacing:-.025em}
+    .breakdown-title p{margin:5px 0 0;color:#6b7e76;font-size:11px}
+    .breakdown-total{flex:0 0 auto;padding:7px 12px;border-radius:99px;background:var(--green);color:var(--lime);font-size:11px;font-weight:850}
+    .breakdown-table{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:white}
+    .breakdown-row{display:grid;grid-template-columns:minmax(150px,1.1fr) minmax(210px,1.5fr) 100px;align-items:center;min-height:54px;padding:8px 18px;border-bottom:1px solid rgba(23,54,45,.08)}
+    .breakdown-row:last-child{border:0}
+    .breakdown-row.head{min-height:36px;background:#e8ebdf;color:#62776f;font-size:10px;font-weight:800;letter-spacing:.1em}
+    .project{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:750}
+    .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
+    .range{color:#354d45;font-size:13px;font-weight:700}
+    .duration{color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
+    @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
+    @media(max-width:540px){header{height:68px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:22px 17px}.intro h2{font-size:31px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.timeline{padding:17px}.step{gap:9px}.step-note{max-width:165px}.app{border-radius:22px}.breakdown{padding:23px 17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
+    @media print{.shell{padding:0}.app{box-shadow:none}.reset{display:none}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="app">
+      <header>
+        <div class="brand">
+          <div class="brand-icon">◷</div>
+          <div><p class="eyebrow">Ready to go</p><h1>出行时间规划</h1></div>
+        </div>
+        <div class="privacy">✓ 所有计算仅在本机完成</div>
+      </header>
+      <div class="layout">
+        <section class="controls">
+          <div class="intro"><p>从出发时间，倒推你的每一步</p><h2>不赶，不慌，<br>刚刚好出发。</h2></div>
+          <div class="field">
+            <span class="label">出行方式</span>
+            <div class="mode">
+              <button id="flightBtn" class="active" type="button">✈ 飞机</button>
+              <button id="trainBtn" type="button">🚄 高铁</button>
+            </div>
+          </div>
+          <div class="input-grid field">
+            <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" type="time" value="09:00"></label>
+            <label><span class="label">高德预计路程</span><span class="input-wrap"><input id="road" class="road-input" type="number" min="0" max="600" value="50"><span class="unit">分钟</span></span></label>
+          </div>
+          <div class="bag" id="bagRow">
+            <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后自动多预留 30 分钟</small></div></div>
+            <button id="bagSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否需要办理托运"></button>
+          </div>
+          <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
+          <div class="detail-box">
+            <label class="detail-row">起床准备 <span class="mini"><input id="prep" type="number" min="0" max="600" value="45">分钟</span></label>
+            <label class="detail-row">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
+            <label class="detail-row">路况余量 <span class="mini"><input id="traffic" type="number" min="0" max="600" value="15">分钟</span></label>
+            <div class="detail-row"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">120 分钟</span></div>
+          </div>
+        </section>
+        <section class="result">
+          <div class="result-inner">
+            <div class="result-top">
+              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">05:02</span> 起床</h2></div>
+              <div class="travel-icon" id="travelIcon">✈</div>
+            </div>
+            <div class="summary">
+              <div class="summary-card"><div class="summary-label">🚕 建议叫车</div><div class="summary-time" id="callSummary">05:47</div></div>
+              <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">07:00</div></div>
+            </div>
+            <div class="timeline">
+              <div class="timeline-head"><h3>完整时间轴</h3><span class="total" id="totalValue">共需预留 238 分钟</span></div>
+              <ol class="steps" id="steps"></ol>
+            </div>
+            <div class="warning"><span>⚠</span><div><strong>风险临界线：</strong>最晚不要超过 <b id="criticalValue">06:40</b> 出门。该时间不含等车与路况余量，仅作紧急参考。</div></div>
+          </div>
+        </section>
+      </div>
+      <section class="breakdown">
+        <div class="breakdown-title">
+          <div><h3>逐项耗时明细</h3><p>每个环节的开始时间、结束时间与实际预留时长</p></div>
+          <span class="breakdown-total" id="breakdownTotal">合计 238 分钟</span>
+        </div>
+        <div class="breakdown-table">
+          <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时</span></div>
+          <div id="breakdownList"></div>
+        </div>
+      </section>
+    </div>
+    <footer>提示：机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。</footer>
+  </div>
+  <script>
+    (function(){
+      var mode="flight", checkedBag=true;
+      var $=function(id){return document.getElementById(id)};
+      var defaults={departure:"09:00",road:50,prep:45,wait:8,traffic:15};
+      function number(id){var v=parseInt($(id).value,10);return Number.isFinite(v)?Math.max(0,Math.min(600,v)):0}
+      function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
+      function format(total){var day=Math.floor(total/1440),n=((total%1440)+1440)%1440,h=Math.floor(n/60),m=n%60,t=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");return day<0?"前一天 "+t:day>0?"第二天 "+t:t}
+      function render(){
+        var departure=toMinutes($("departure").value),road=number("road"),prep=number("prep"),wait=number("wait"),traffic=number("traffic");
+        var isFlight=mode==="flight",terminal=isFlight?"机场":"高铁站",departText=isFlight?"起飞":"发车";
+        var advance=isFlight?(checkedBag?120:90):45,minimum=isFlight?(checkedBag?90:70):30;
+        var arrive=departure-advance,leave=arrive-road-traffic,call=leave-wait,wake=call-prep,critical=departure-minimum-road,cutoff=departure-(isFlight?30:5);
+        $("departureLabel").textContent=departText+"时间";
+        $("advanceLabel").textContent="建议提前到"+terminal;
+        $("advanceValue").textContent=advance+" 分钟";
+        $("arrivalSummaryLabel").textContent="📍 建议到达"+terminal;
+        $("arrivalSummary").textContent=format(arrive);
+        $("callSummary").textContent=format(call);
+        $("wakeHeadline").textContent=format(wake);
+        $("criticalValue").textContent=format(critical);
+        $("totalValue").textContent="共需预留 "+(prep+wait+road+traffic+advance)+" 分钟";
+        $("breakdownTotal").textContent="合计 "+(prep+wait+road+traffic+advance)+" 分钟";
+        $("travelIcon").textContent=isFlight?"✈":"🚄";
+        var items=[
+          ["☕","起床、洗漱与准备",prep+" 分钟",wake],
+          ["🚕","最晚开始叫车","预计等车 "+wait+" 分钟",call],
+          ["📍","车辆出发","路程 "+road+" + 路况余量 "+traffic+" 分钟",leave],
+          ["✓","到达"+terminal,"提前 "+advance+" 分钟",arrive],
+          ["◷",isFlight?"登机截止参考":"检票截止参考","具体以承运方通知为准",cutoff],
+          [isFlight?"✈":"🚄",departText,isFlight&&checkedBag?"已包含托运时间":"行程开始",departure]
+        ];
+        $("steps").innerHTML=items.map(function(x){return '<li class="step"><span class="dot">'+x[0]+'</span><div><div class="step-title">'+x[1]+'</div><div class="step-note">'+x[2]+'</div></div><time class="step-time">'+format(x[3])+'</time></li>'}).join("");
+        var roadEnd=leave+road;
+        var details=[
+          ["☕","起床准备",wake,call,prep],
+          ["🚕","等待车辆",call,leave,wait],
+          ["🛣","高德预计路程",leave,roadEnd,road],
+          ["⏱","路况余量",roadEnd,arrive,traffic],
+          [isFlight?"🛫":"🚄",isFlight?(checkedBag?"机场流程（含托运）":"机场流程"):"进站安检与候车",arrive,departure,advance]
+        ];
+        $("breakdownList").innerHTML=details.map(function(x){return '<div class="breakdown-row"><div class="project"><span class="project-icon">'+x[0]+'</span>'+x[1]+'</div><div class="range">'+format(x[2])+' → '+format(x[3])+'</div><div class="duration">'+x[4]+' 分钟</div></div>'}).join("");
+      }
+      function setMode(next){
+        mode=next;
+        $("flightBtn").classList.toggle("active",mode==="flight");
+        $("trainBtn").classList.toggle("active",mode==="train");
+        $("bagRow").style.display=mode==="flight"?"flex":"none";
+        render();
+      }
+      $("flightBtn").addEventListener("click",function(){setMode("flight")});
+      $("trainBtn").addEventListener("click",function(){setMode("train")});
+      $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
+      ["departure","road","prep","wait","traffic"].forEach(function(id){$(id).addEventListener("input",render)});
+      $("resetBtn").addEventListener("click",function(){
+        Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
+        checkedBag=true;$("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");render();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
