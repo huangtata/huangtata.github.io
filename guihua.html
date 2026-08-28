@@ -35,6 +35,12 @@
     input[type="time"],input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
     input[type="time"]{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850}
     .road-input{height:56px;padding:0 58px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
+    .road-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
+    .quick-picks{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
+    .quick-pick{height:27px;padding:0;border:1px solid rgba(23,54,45,.13);border-radius:8px;background:white;color:#527066;font-size:11px;font-weight:800;transition:.15s}
+    .quick-pick:hover,.quick-pick.active{border-color:var(--green);background:var(--green);color:var(--lime)}
+    .road-hint{display:block;margin-top:6px;color:#b05b4e;font-size:10px;font-weight:650}
+    .road-hint.ok{color:#527066}
     input:focus{border-color:#527066;box-shadow:0 0 0 3px rgba(82,112,102,.14)}
     .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#62776f;font-size:12px;font-weight:700;pointer-events:none}
     .bag{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding:14px 16px;border:1px solid var(--line);border-radius:17px;background:#eef0e6}
@@ -86,6 +92,7 @@
     .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
     .range{color:#354d45;font-size:13px;font-weight:700}
     .duration{color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    .empty-plan{padding:34px 18px;color:#6b7e76;text-align:center;font-size:12px;line-height:1.7}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
     @media(max-width:540px){header{height:68px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:22px 17px}.intro h2{font-size:31px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
@@ -114,7 +121,18 @@
           </div>
           <div class="input-grid field">
             <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" type="time" value="09:00"></label>
-            <label><span class="label">高德预计路程</span><span class="input-wrap"><input id="road" class="road-input" type="number" min="0" max="600" value="50"><span class="unit">分钟</span></span></label>
+            <div>
+              <span class="label">高德预计路程</span>
+              <div class="quick-picks" aria-label="路程时间快捷选择">
+                <button class="quick-pick" id="road15" type="button">15</button>
+                <button class="quick-pick" id="road25" type="button">25</button>
+                <button class="quick-pick" id="road35" type="button">35</button>
+                <button class="quick-pick" id="road45" type="button">45</button>
+                <button class="quick-pick" id="road60" type="button">60</button>
+              </div>
+              <label class="input-wrap"><input id="road" class="road-input" type="number" min="1" max="600" step="1" value="" placeholder="请输入" required aria-required="true"><span class="unit">分钟</span></label>
+              <span class="road-hint" id="roadHint">必填：请选择上方时间或手动输入</span>
+            </div>
           </div>
           <div class="bag" id="bagRow">
             <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后自动多预留 30 分钟</small></div></div>
@@ -139,24 +157,24 @@
         <section class="result">
           <div class="result-inner">
             <div class="result-top">
-              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">05:22</span> 起床</h2></div>
+              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">--:--</span> 起床</h2></div>
               <div class="travel-icon" id="travelIcon">✈</div>
             </div>
             <div class="summary">
-              <div class="summary-card"><div class="summary-label">🚕 建议叫车</div><div class="summary-time" id="callSummary">06:07</div></div>
-              <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">07:20</div></div>
+              <div class="summary-card"><div class="summary-label">🚕 建议叫车</div><div class="summary-time" id="callSummary">--:--</div></div>
+              <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">--:--</div></div>
             </div>
             <section class="breakdown">
               <div class="breakdown-title">
                 <div><h3>逐项耗时明细</h3><p>每个环节的开始、结束与预留时长；区间项目按较稳妥的上限倒推</p></div>
-                <span class="breakdown-total" id="breakdownTotal">合计 218 分钟</span>
+                <span class="breakdown-total" id="breakdownTotal">等待填写路程</span>
               </div>
               <div class="breakdown-table">
                 <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时</span></div>
-                <div id="breakdownList"></div>
+                <div id="breakdownList"><div class="empty-plan">请先选择或输入高德预计路程时间<br>填写后将自动生成完整规划</div></div>
               </div>
             </section>
-            <div class="warning"><span>⚠</span><div><strong>风险临界线：</strong>最晚不要超过 <b id="criticalValue">06:40</b> 出门。该时间不含等车与路况余量，仅作紧急参考。</div></div>
+            <div class="warning"><span>⚠</span><div><strong>风险临界线：</strong>最晚不要超过 <b id="criticalValue">--:--</b> 出门。该时间不含等车与路况余量，仅作紧急参考。</div></div>
           </div>
         </section>
       </div>
@@ -167,8 +185,13 @@
     (function(){
       var mode="flight", checkedBag=true, extraEnabled=false;
       var $=function(id){return document.getElementById(id)};
-      var defaults={departure:"09:00",road:50,prep:45,extra:20,wait:8,traffic:15};
-      function number(id){var v=parseInt($(id).value,10);return Number.isFinite(v)?Math.max(0,Math.min(600,v)):0}
+      var roadPresets=[15,25,35,45,60];
+      var defaults={departure:"09:00",road:"",prep:45,extra:20,wait:8,traffic:15};
+      function number(id){var v=Number($(id).value);return Number.isFinite(v)?Math.max(0,Math.min(600,Math.round(v))):0}
+      function getRoad(){
+        var raw=$("road").value.trim(),value=Number(raw);
+        return raw!==""&&Number.isInteger(value)&&value>=1&&value<=600?value:null;
+      }
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
       function format(total){
         var day=Math.floor(total/1440),n=((total%1440)+1440)%1440,h=Math.floor(n/60),m=n%60,t=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
@@ -179,9 +202,30 @@
         return t;
       }
       function render(){
-        var departure=toMinutes($("departure").value),road=number("road"),prep=number("prep"),extra=extraEnabled?number("extra"):0,wait=number("wait"),traffic=number("traffic");
+        var departure=toMinutes($("departure").value),road=getRoad(),prep=number("prep"),extra=extraEnabled?number("extra"):0,wait=number("wait"),traffic=number("traffic");
         var isFlight=mode==="flight",terminal=isFlight?"机场":"高铁站",departText=isFlight?"起飞":"发车";
         var advance=isFlight?(checkedBag?100:70):45,minimum=isFlight?(checkedBag?90:65):30;
+        $("extraInputWrap").style.display=extraEnabled?"block":"none";
+        $("extraTimeRow").style.display=extraEnabled?"flex":"none";
+        $("extraDetailValue").textContent=extra+" 分钟";
+        $("departureLabel").textContent=departText+"时间";
+        $("advanceLabel").textContent="建议提前到"+terminal;
+        $("advanceValue").textContent=advance+" 分钟";
+        $("arrivalSummaryLabel").textContent="📍 建议到达"+terminal;
+        $("travelIcon").textContent=isFlight?"✈":"🚄";
+        roadPresets.forEach(function(minutes){$("road"+minutes).classList.toggle("active",road===minutes)});
+        $("road").setAttribute("aria-invalid",String(road===null));
+        $("roadHint").classList.toggle("ok",road!==null);
+        $("roadHint").textContent=road===null?($("road").value.trim()===""?"必填：请选择上方时间或手动输入":"请输入 1–600 的整数分钟"):"已填入 "+road+" 分钟";
+        if(road===null){
+          $("arrivalSummary").textContent="--:--";
+          $("callSummary").textContent="--:--";
+          $("wakeHeadline").textContent="--:--";
+          $("criticalValue").textContent="--:--";
+          $("breakdownTotal").textContent="等待填写路程";
+          $("breakdownList").innerHTML='<div class="empty-plan">请先选择或输入高德预计路程时间<br>填写后将自动生成完整规划</div>';
+          return;
+        }
         var arrive=departure-advance;
         var extraStart=arrive-extra;
         var trafficStart=extraStart-traffic;
@@ -191,19 +235,11 @@
         var prepEnd=wake+prep;
         var roadEnd=leave+road;
         var critical=departure-minimum-road-extra;
-        $("extraInputWrap").style.display=extraEnabled?"block":"none";
-        $("extraTimeRow").style.display=extraEnabled?"flex":"none";
-        $("extraDetailValue").textContent=extra+" 分钟";
-        $("departureLabel").textContent=departText+"时间";
-        $("advanceLabel").textContent="建议提前到"+terminal;
-        $("advanceValue").textContent=advance+" 分钟";
-        $("arrivalSummaryLabel").textContent="📍 建议到达"+terminal;
         $("arrivalSummary").textContent=format(arrive);
         $("callSummary").textContent=format(call);
         $("wakeHeadline").textContent=format(wake);
         $("criticalValue").textContent=format(critical);
         $("breakdownTotal").textContent="合计 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
-        $("travelIcon").textContent=isFlight?"✈":"🚄";
         var details=[
           ["☕","起床准备",wake,prepEnd,prep],
           ["🚕","等待车辆",call,leave,wait],
@@ -240,6 +276,7 @@
       $("trainBtn").addEventListener("click",function(){setMode("train")});
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("extraSwitch").addEventListener("click",function(){extraEnabled=!extraEnabled;this.classList.toggle("on",extraEnabled);this.setAttribute("aria-checked",String(extraEnabled));render()});
+      roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
       ["departure","road","prep","extra","wait","traffic"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
