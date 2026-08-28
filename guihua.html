@@ -87,8 +87,10 @@
     .breakdown-title h3{margin:0;font-size:20px;letter-spacing:-.025em}
     .breakdown-title p{margin:5px 0 0;color:#6b7e76;font-size:11px}
     .breakdown-total{flex:0 0 auto;padding:7px 12px;border-radius:99px;background:var(--green);color:var(--lime);font-size:11px;font-weight:850}
-    .live-panel{display:none;margin:0 0 14px;padding:14px;border:1px solid #d7e3c6;border-radius:16px;background:#f4fae8}
+    .live-panel{display:none;margin:0;padding:14px;border:1px solid #d7e3c6;border-radius:16px;background:#f4fae8}
     .live-panel.show{display:block}
+    .live-inline-slot{padding:0 12px 12px;border-bottom:1px solid rgba(23,54,45,.08);background:#f2f9df}
+    .live-inline-slot .live-panel{margin-top:10px}
     .live-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
     .live-title{font-size:13px;font-weight:850;color:var(--green)}
     .live-close{width:28px;height:28px;padding:0;border:0;border-radius:9px;background:#e4ead9;color:#62776f;font-size:17px;line-height:1}
@@ -110,6 +112,7 @@
     .project{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:750}
     .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
     .range{color:#354d45;font-size:13px;font-weight:700}
+    .range-end{color:#e96f98;font-weight:900}
     .duration{display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--green);text-align:right;font-size:13px;font-weight:900}
     .live-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:700}
     .live-duration-edit input{width:54px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:#fff;text-align:right;color:var(--green);font-size:12px;font-weight:900}
@@ -203,14 +206,16 @@
                 <div><h3>逐项耗时明细</h3><p>查看每项时间；点击任一“定位当前”，即可按实际进度重新推算余下行程</p></div>
                 <span class="breakdown-total" id="breakdownTotal">等待填写路程</span>
               </div>
-              <div class="live-panel" id="livePanel">
-                <div class="live-head"><div class="live-title">📍 当前位于：<span id="liveProject">--</span></div><button class="live-close" id="liveClose" type="button" aria-label="退出实时推算">×</button></div>
-                <div class="live-fields">
-                  <label class="live-field">现在时间 <input id="liveTime" type="time" aria-label="当前时间"></label>
-                  <label class="live-field" id="liveRemainingWrap">本项还需 <span><input id="liveRemaining" type="number" min="0" max="600" value="0" aria-label="当前项目剩余时间"> 分钟</span></label>
+              <div id="livePanelHome">
+                <div class="live-panel" id="livePanel">
+                  <div class="live-head"><div class="live-title">📍 当前位于：<span id="liveProject">--</span></div><button class="live-close" id="liveClose" type="button" aria-label="退出实时推算">×</button></div>
+                  <div class="live-fields">
+                    <label class="live-field">现在时间 <input id="liveTime" type="time" aria-label="当前时间"></label>
+                    <label class="live-field" id="liveRemainingWrap">本项还需 <span><input id="liveRemaining" type="number" min="0" max="600" value="0" aria-label="当前项目剩余时间"> 分钟</span></label>
+                  </div>
+                  <div class="live-status neutral" id="liveStatus">请选择当前时间</div>
+                  <div class="live-note">时间不足时会先按最低值自动压缩；仍赶不上，可修改“本项还需”及下方其他项目分钟数继续推算。</div>
                 </div>
-                <div class="live-status neutral" id="liveStatus">请选择当前时间</div>
-                <div class="live-note">时间不足时会先按最低值自动压缩；仍赶不上，可修改“本项还需”及下方其他项目分钟数继续推算。</div>
               </div>
               <div class="breakdown-table">
                 <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时 / 实时定位</span></div>
@@ -277,6 +282,8 @@
       }
       function smartMinimum(key){var rule=compressionRules().find(function(x){return x.key===key});return rule?rule.min:0}
       function clearLive(){liveKey=null;liveClock="";liveRemaining=0;liveOverrides={}}
+      function parkLivePanel(){var panel=$("livePanel"),home=$("livePanelHome");if(panel&&home&&panel.parentNode!==home)home.appendChild(panel)}
+      function placeLivePanel(){var panel=$("livePanel"),slot=$("liveInlineSlot");if(panel&&slot)slot.appendChild(panel)}
       function attachLocateButtons(){
         document.querySelectorAll("[data-live-key]").forEach(function(button){
           button.addEventListener("click",function(){
@@ -302,7 +309,8 @@
             else rowClass=" live-future";
             if(index>=live.index){timing=live.schedule[index];durationText=item.end===null?item.durationText:timing.duration+" 分钟";}
           }
-          var range=timing.end===null?format(timing.start):format(timing.start)+" → "+format(timing.end);
+          var endTime=timing.end===null?timing.start:timing.end;
+          var range='<span>'+format(timing.start)+'</span> → <span class="range-end">'+format(endTime)+'</span>';
           var active=live&&index===live.index?" active":"";
           if(timing.autoAdded)adjustmentNote='<small class="auto-buffer">已自动增加 '+timing.autoAdded+' 分钟</small>';
           if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+timing.autoReduced+' 分钟，最低 '+timing.smartMin+' 分钟</small>';
@@ -311,10 +319,12 @@
           }else if(live&&index===live.index&&item.end!==null){
             durationMarkup='<span>剩余 '+durationText+adjustmentNote+'</span>';
           }else durationMarkup='<span>'+durationText+'</span>';
-          return '<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span>'+item.name+tag+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
+          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span>'+item.name+tag+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
+          return row+(live&&index===live.index?'<div class="live-inline-slot" id="liveInlineSlot"></div>':'');
         }).join("");
       }
       function renderLive(){
+        parkLivePanel();
         var index=currentDetails.findIndex(function(x){return x.key===liveKey});
         if(index<0){
           clearLive();$("livePanel").classList.remove("show");
@@ -330,7 +340,7 @@
         if(current===null){
           $("breakdownTotal").textContent="等待当前时间";
           $("liveStatus").className="live-status neutral";$("liveStatus").textContent="请设置有效的当前时间";
-          $("breakdownList").innerHTML=rowsHTML(currentDetails,null);attachLocateButtons();return;
+          $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:currentDetails});attachLocateButtons();placeLivePanel();return;
         }
         var cursor=current,schedule=[],durations=[],bufferKey=mode==="flight"?"flight-boarding":mode==="train"?"train-wait":null;
         var bufferName=mode==="flight"?"候机与登机余量":mode==="train"?"候车余量":"";
@@ -378,7 +388,7 @@
           status.className="live-status neutral";
           status.textContent="时间刚好｜预计 "+format(cursor)+" 完成余下环节，请立即继续";
         }
-        $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:schedule});attachLocateButtons();
+        $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:schedule});attachLocateButtons();placeLivePanel();
       }
       function render(){
         var departure=toMinutes($("departure").value),road=getRoad(),prep=prepEnabled?number("prep"):0,extra=extraEnabled?number("extra"):0,waitInput=number("wait");
@@ -413,7 +423,7 @@
         $("roadHint").textContent=road===null?($("road").value.trim()===""?"必填：请选择上方时间或手动输入":"请输入 1–600 的整数分钟"):"已填入 "+road+" 分钟";
         $("trafficValue").textContent=traffic===null?"等待路程":traffic+" 分钟";
         if(road===null){
-          currentDetails=[];clearLive();$("livePanel").classList.remove("show");
+          parkLivePanel();currentDetails=[];clearLive();$("livePanel").classList.remove("show");
           $("arrivalSummary").textContent="--:--";
           $("callSummary").textContent="--:--";
           $("wakeHeadline").textContent="--:--";
