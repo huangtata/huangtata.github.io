@@ -62,6 +62,8 @@
     .smart-value:before{content:"智能";padding:3px 6px;border-radius:6px;background:#e7f2d7;color:#426333;font-size:9px;font-weight:850}
     .mini{display:flex;align-items:center;gap:7px;color:#6b7e76;font-size:11px}
     .mini input{width:62px;height:32px;padding:0 8px;border:0;border-radius:9px;background:#eef0e6;text-align:right;font-weight:850}
+    .detail-actions{display:flex;align-items:center;gap:10px}
+    .off-label{display:none;color:#8a9a94;font-size:11px;font-weight:650}
     .advance{color:var(--green);font-weight:900}
     .result{position:relative;overflow:hidden;padding:30px;background:var(--green);color:white}
     .result:before{content:"";position:absolute;right:-80px;top:-95px;width:260px;height:260px;border:45px solid rgba(217,255,120,.07);border-radius:50%}
@@ -148,7 +150,14 @@
           </div>
           <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
           <div class="detail-box">
-            <label class="detail-row">起床准备 <span class="mini"><input id="prep" type="number" min="0" max="600" value="45">分钟</span></label>
+            <div class="detail-row">
+              <span>起床准备</span>
+              <span class="detail-actions">
+                <span class="mini" id="prepInputWrap"><input id="prep" type="number" min="0" max="600" value="45" aria-label="起床准备时间">分钟</span>
+                <span class="off-label" id="prepOffText">已关闭</span>
+                <button id="prepSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否计算起床准备时间"></button>
+              </span>
+            </div>
             <div class="detail-row" id="extraTimeRow" style="display:none"><span>额外事项时间</span><span class="advance" id="extraDetailValue">20 分钟</span></div>
             <label class="detail-row" id="waitTimeRow">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
             <div class="detail-row"><span class="smart-copy">路况余量<small>预留堵车、红绿灯、临时绕行等不确定时间</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
@@ -184,7 +193,7 @@
   </div>
   <script>
     (function(){
-      var mode="flight", checkedBag=true, extraEnabled=false;
+      var mode="flight", checkedBag=true, extraEnabled=false, prepEnabled=true;
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
       var defaults={departure:"09:00",road:"",prep:45,extra:20,wait:8};
@@ -210,7 +219,7 @@
         return t;
       }
       function render(){
-        var departure=toMinutes($("departure").value),road=getRoad(),prep=number("prep"),extra=extraEnabled?number("extra"):0,waitInput=number("wait");
+        var departure=toMinutes($("departure").value),road=getRoad(),prep=prepEnabled?number("prep"):0,extra=extraEnabled?number("extra"):0,waitInput=number("wait");
         var traffic=road===null?null:getTrafficBuffer(road);
         var isFlight=mode==="flight",isTrain=mode==="train",isDrive=mode==="drive";
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
@@ -222,6 +231,9 @@
         $("extraInputWrap").style.display=extraEnabled?"block":"none";
         $("extraTimeRow").style.display=extraEnabled?"flex":"none";
         $("extraDetailValue").textContent=extra+" 分钟";
+        $("prepInputWrap").style.display=prepEnabled?"flex":"none";
+        $("prepOffText").style.display=prepEnabled?"none":"inline";
+        $("prep").disabled=!prepEnabled;
         $("departureLabel").textContent=isDrive?"计划到达时间":departText+"时间";
         $("roadLabel").textContent=roadText;
         $("waitTimeRow").style.display=isDrive?"none":"flex";
@@ -260,9 +272,8 @@
         $("wakeHeadline").textContent=format(wake);
         $("criticalValue").textContent=format(critical);
         $("breakdownTotal").textContent="合计 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
-        var details=[
-          ["☕","起床准备",wake,prepEnd,prep]
-        ];
+        var details=[];
+        if(prepEnabled)details.push(["☕","起床准备",wake,prepEnd,prep]);
         if(!isDrive)details.push(["🚕","等待车辆",call,leave,wait]);
         details.push(
           [isDrive?"🚗":"🛣",roadText,leave,roadEnd,road],
@@ -303,15 +314,17 @@
       $("driveBtn").addEventListener("click",function(){setMode("drive")});
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("extraSwitch").addEventListener("click",function(){extraEnabled=!extraEnabled;this.classList.toggle("on",extraEnabled);this.setAttribute("aria-checked",String(extraEnabled));render()});
+      $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
       ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
-        mode="flight";checkedBag=true;extraEnabled=false;
+        mode="flight";checkedBag=true;extraEnabled=false;prepEnabled=true;
         $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
         $("bagRow").style.display="flex";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
-        $("extraSwitch").classList.remove("on");$("extraSwitch").setAttribute("aria-checked","false");render();
+        $("extraSwitch").classList.remove("on");$("extraSwitch").setAttribute("aria-checked","false");
+        $("prepSwitch").classList.add("on");$("prepSwitch").setAttribute("aria-checked","true");render();
       });
       render();
     })();
