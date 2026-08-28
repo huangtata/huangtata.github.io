@@ -113,6 +113,7 @@
     .live-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:700}
     .live-duration-edit input{width:54px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:#fff;text-align:right;color:var(--green);font-size:12px;font-weight:900}
     .auto-buffer{display:block;margin-top:3px;color:#66852e;font-size:9px;font-weight:750;white-space:nowrap}
+    .auto-reduced{display:block;margin-top:3px;color:#b35a42;font-size:9px;font-weight:750;white-space:nowrap}
     .locate-btn{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(23,54,45,.15);border-radius:8px;background:white;color:#62776f;font-size:10px;font-weight:800}
     .locate-btn:hover,.locate-btn.active{border-color:var(--green);background:var(--green);color:var(--lime)}
     .live-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#dff0b5;color:#48651d;font-size:8px;font-weight:850;vertical-align:1px}
@@ -208,7 +209,7 @@
                   <label class="live-field" id="liveRemainingWrap">本项还需 <span><input id="liveRemaining" type="number" min="0" max="600" value="0" aria-label="当前项目剩余时间"> 分钟</span></label>
                 </div>
                 <div class="live-status neutral" id="liveStatus">请选择当前时间</div>
-                <div class="live-note">从当前项目开始顺排余下环节；可修改“本项还需”及下方任一后续项目分钟数，结果会立即更新。</div>
+                <div class="live-note">时间不足时会先按最低值自动压缩；仍赶不上，可修改“本项还需”及下方其他项目分钟数继续推算。</div>
               </div>
               <div class="breakdown-table">
                 <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时 / 实时定位</span></div>
@@ -258,6 +259,23 @@
         return best;
       }
       function makeDetail(key,icon,name,start,end,duration,durationText){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||duration+" 分钟"}}
+      function compressionRules(){
+        if(mode==="flight")return [
+          {key:"flight-boarding",min:5},
+          {key:"flight-security",min:5},
+          {key:"flight-bag",min:10},
+          {key:"traffic",min:3},
+          {key:"flight-gate",min:8}
+        ];
+        if(mode==="train")return [
+          {key:"train-wait",min:5},
+          {key:"traffic",min:3},
+          {key:"train-gate",min:8},
+          {key:"train-security",min:3}
+        ];
+        return [];
+      }
+      function smartMinimum(key){var rule=compressionRules().find(function(x){return x.key===key});return rule?rule.min:0}
       function clearLive(){liveKey=null;liveClock="";liveRemaining=0;liveOverrides={}}
       function attachLocateButtons(){
         document.querySelectorAll("[data-live-key]").forEach(function(button){
@@ -269,15 +287,15 @@
         });
         document.querySelectorAll("[data-live-duration]").forEach(function(input){
           input.addEventListener("change",function(){
-            var key=this.getAttribute("data-live-duration"),value=Number(this.value);
-            liveOverrides[key]=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;
+            var key=this.getAttribute("data-live-duration"),value=Number(this.value),minimum=smartMinimum(key);
+            liveOverrides[key]=Number.isFinite(value)?Math.max(minimum,Math.min(600,Math.round(value))):minimum;
             renderLive();
           });
         });
       }
       function rowsHTML(details,live){
         return details.map(function(item,index){
-          var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="";
+          var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="",adjustmentNote="";
           if(live){
             if(index<live.index)rowClass=" live-past";
             else if(index===live.index){rowClass=" live-current";tag='<span class="live-tag">当前</span>';}
@@ -286,10 +304,12 @@
           }
           var range=timing.end===null?format(timing.start):format(timing.start)+" → "+format(timing.end);
           var active=live&&index===live.index?" active":"";
+          if(timing.autoAdded)adjustmentNote='<small class="auto-buffer">已自动增加 '+timing.autoAdded+' 分钟</small>';
+          if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+timing.autoReduced+' 分钟，最低 '+timing.smartMin+' 分钟</small>';
           if(live&&index>live.index&&item.end!==null){
-            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="0" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+item.name+'所需时间">分钟</label>'+(timing.autoAdded?'<small class="auto-buffer">已自动增加 '+timing.autoAdded+' 分钟</small>':'')+'</span>';
+            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+item.name+'所需时间">分钟</label>'+adjustmentNote+'</span>';
           }else if(live&&index===live.index&&item.end!==null){
-            durationMarkup='<span>剩余 '+durationText+(timing.autoAdded?'<small class="auto-buffer">已自动增加 '+timing.autoAdded+' 分钟</small>':'')+'</span>';
+            durationMarkup='<span>剩余 '+durationText+adjustmentNote+'</span>';
           }else durationMarkup='<span>'+durationText+'</span>';
           return '<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span>'+item.name+tag+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
         }).join("");
@@ -305,6 +325,7 @@
         $("livePanel").classList.add("show");$("liveProject").textContent=item.name;
         if(document.activeElement!==$("liveTime"))$("liveTime").value=liveClock;
         if(document.activeElement!==$("liveRemaining"))$("liveRemaining").value=String(liveRemaining);
+        $("liveRemaining").setAttribute("min",String(smartMinimum(item.key)));
         $("liveRemainingWrap").style.display=item.duration===0?"none":"flex";
         if(current===null){
           $("breakdownTotal").textContent="等待当前时间";
@@ -321,11 +342,22 @@
         durations.forEach(function(duration){if(typeof duration==="number")naturalFinish+=duration});
         var bufferIndex=bufferKey?currentDetails.findIndex(function(detail){return detail.key===bufferKey}):-1;
         var autoAdded=bufferIndex>=index&&naturalFinish<currentDeparture?currentDeparture-naturalFinish:0;
-        if(autoAdded>0)durations[bufferIndex]+=autoAdded;
+        var originalShortage=Math.max(0,naturalFinish-currentDeparture),remainingShortage=originalShortage,autoReduced=0,reductions=[];
+        if(autoAdded>0){
+          durations[bufferIndex]+=autoAdded;
+        }else if(remainingShortage>0){
+          compressionRules().forEach(function(rule){
+            if(remainingShortage<=0)return;
+            var ruleIndex=currentDetails.findIndex(function(detail){return detail.key===rule.key});
+            if(ruleIndex<index||ruleIndex<0||typeof durations[ruleIndex]!=="number")return;
+            var available=Math.max(0,durations[ruleIndex]-rule.min),reduced=Math.min(available,remainingShortage);
+            if(reduced>0){durations[ruleIndex]-=reduced;reductions[ruleIndex]=reduced;autoReduced+=reduced;remainingShortage-=reduced}
+          });
+        }
         currentDetails.forEach(function(detail,i){
           if(i<index){schedule[i]=detail;return;}
           var duration=durations[i];
-          schedule[i]={start:cursor,end:detail.end===null?null:cursor+duration,duration:duration,autoAdded:i===bufferIndex?autoAdded:0};
+          schedule[i]={start:cursor,end:detail.end===null?null:cursor+duration,duration:duration,autoAdded:i===bufferIndex?autoAdded:0,autoReduced:reductions[i]||0,smartMin:smartMinimum(detail.key)};
           cursor+=duration;
         });
         $("breakdownTotal").textContent="余下 "+(cursor-current)+" 分钟";
@@ -335,7 +367,10 @@
           status.textContent="时间充足，多出的 "+autoAdded+" 分钟已全部加入“"+bufferName+"”｜余下环节将衔接至"+currentTargetLabel;
         }else if(difference>0){
           status.className="live-status bad";
-          status.textContent="时间不足，还差 "+difference+" 分钟｜预计 "+format(cursor)+" 完成，晚于"+currentTargetLabel+"；可修改下方余下项目分钟数";
+          status.textContent=(autoReduced>0?"已智能压缩 "+autoReduced+" 分钟，":"时间不足，")+"仍差 "+difference+" 分钟｜预计 "+format(cursor)+" 完成；可修改下方其他项目分钟数";
+        }else if(autoReduced>0){
+          status.className="live-status good";
+          status.textContent="时间紧张，已按优先级智能压缩 "+autoReduced+" 分钟｜预计刚好赶上"+currentTargetLabel;
         }else if(difference<0){
           status.className="live-status good";
           status.textContent="时间充足，还剩 "+Math.abs(difference)+" 分钟余量｜预计 "+format(cursor)+" 完成余下环节";
@@ -422,9 +457,9 @@
           processAt+=15;
           details.push(makeDetail("flight-boarding","🛫","候机与登机余量",processAt,departure,departure-processAt));
         }else if(isTrain){
-          details.push(makeDetail("train-gate","🔎","寻找高铁进站口",processAt,processAt+15,15));
-          processAt+=15;
           details.push(makeDetail("train-security","🛂","进站安检",processAt,processAt+15,15,"15 分钟（一般）"));
+          processAt+=15;
+          details.push(makeDetail("train-gate","🔎","寻找高铁进站口",processAt,processAt+15,15));
           processAt+=15;
           details.push(makeDetail("train-wait","🚄","候车余量",processAt,departure,departure-processAt));
         }
@@ -450,7 +485,7 @@
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
       $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
       $("liveTime").addEventListener("input",function(){liveClock=this.value;renderLive()});
-      $("liveRemaining").addEventListener("input",function(){var value=Number(this.value);liveRemaining=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;renderLive()});
+      $("liveRemaining").addEventListener("input",function(){var value=Number(this.value),minimum=smartMinimum(liveKey);liveRemaining=Number.isFinite(value)?Math.max(minimum,Math.min(600,Math.round(value))):minimum;renderLive()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
       ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
