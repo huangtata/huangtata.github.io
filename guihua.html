@@ -180,7 +180,7 @@
       function render(){
         var departure=toMinutes($("departure").value),road=number("road"),prep=number("prep"),wait=number("wait"),traffic=number("traffic");
         var isFlight=mode==="flight",terminal=isFlight?"机场":"高铁站",departText=isFlight?"起飞":"发车";
-        var advance=isFlight?(checkedBag?120:90):45,minimum=isFlight?(checkedBag?90:70):30;
+        var advance=isFlight?(checkedBag?100:70):45,minimum=isFlight?(checkedBag?90:65):30;
         var arrive=departure-advance,leave=arrive-road-traffic,call=leave-wait,wake=call-prep,critical=departure-minimum-road,cutoff=departure-(isFlight?30:5);
         $("departureLabel").textContent=departText+"时间";
         $("advanceLabel").textContent="建议提前到"+terminal;
