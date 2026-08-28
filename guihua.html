@@ -139,10 +139,12 @@
     .extra-editor-actions{display:flex;align-items:center;gap:7px}
     .extra-editor-actions label{display:flex;align-items:center;gap:4px;color:#62776f;font-size:10px;font-weight:750}
     .extra-editor-actions input,.extra-duration-edit input{width:58px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:white;color:var(--green);text-align:right;font-size:12px;font-weight:900}
+    .extra-editor-actions input.extra-editor-name{width:138px;text-align:left}
     .extra-editor-confirm,.extra-editor-cancel{height:30px;padding:0 10px;border:0;border-radius:8px;font-size:10px;font-weight:850}
     .extra-editor-confirm{background:var(--green);color:var(--lime)}
     .extra-editor-cancel{background:#e5eadf;color:#62776f}
     .extra-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:750}
+    .extra-name-input{width:150px;height:28px;margin:0 2px;padding:0 7px;border:1px solid rgba(23,54,45,.13);border-radius:7px;background:#f8faf4;color:var(--green);font-size:12px;font-weight:800;vertical-align:middle}
     .live-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#dff0b5;color:#48651d;font-size:8px;font-weight:850;vertical-align:1px}
     .empty-plan{padding:34px 18px;color:#6b7e76;text-align:center;font-size:12px;line-height:1.7}
     .export-toast{position:fixed;left:50%;bottom:24px;z-index:60;max-width:calc(100% - 32px);padding:11px 16px;border-radius:999px;background:#10231d;color:white;box-shadow:0 12px 35px rgba(16,35,29,.25);font-size:12px;font-weight:750;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transform:translate(-50%,12px);transition:.22s}
@@ -320,7 +322,7 @@
         baseDetails.forEach(function(baseItem){
           var order=detailOrder(baseItem.key);
           while(pending.length&&pending[0].beforeOrder<=order){
-            var extra=pending.shift(),custom=makeDetail(extra.id,"✨","额外事项",0,0,extra.duration,extra.duration+" 分钟",1);
+            var extra=pending.shift(),custom=makeDetail(extra.id,"✨",cleanExtraName(extra.name),0,0,extra.duration,extra.duration+" 分钟",1);
             custom.isCustomExtra=true;custom.extraId=extra.id;custom.projectNote="安排在“"+extra.beforeName+"”之前";sequence.push(custom);
           }
           sequence.push(Object.assign({},baseItem));
@@ -370,10 +372,10 @@
         });
         document.querySelectorAll("[data-extra-confirm]").forEach(function(button){
           button.addEventListener("click",function(){
-            var beforeKey=this.getAttribute("data-extra-confirm"),target=currentDetails.find(function(item){return item.key===beforeKey}),input=$("extraEditorMinutes"),value=input?Number(input.value):20;
+            var beforeKey=this.getAttribute("data-extra-confirm"),target=currentDetails.find(function(item){return item.key===beforeKey}),input=$("extraEditorMinutes"),nameInput=$("extraEditorName"),value=input?Number(input.value):20,name=cleanExtraName(nameInput?nameInput.value:"");
             if(!target)return;
             value=Number.isFinite(value)?Math.max(1,Math.min(600,Math.round(value))):20;
-            customExtras.push({id:"custom-extra-"+(nextExtraId++),mode:mode,beforeKey:beforeKey,beforeOrder:detailOrder(beforeKey),beforeName:target.name,duration:value,sequence:nextExtraId});
+            customExtras.push({id:"custom-extra-"+(nextExtraId++),mode:mode,beforeKey:beforeKey,beforeOrder:detailOrder(beforeKey),beforeName:target.name,name:name,duration:value,sequence:nextExtraId});
             extraEditorBeforeKey=null;render();
           });
         });
@@ -384,11 +386,16 @@
             if(!item)return;item.duration=Number.isFinite(value)?Math.max(1,Math.min(600,Math.round(value))):1;render();
           });
         });
+        document.querySelectorAll("[data-extra-name]").forEach(function(input){
+          input.addEventListener("change",function(){var id=this.getAttribute("data-extra-name"),item=customExtras.find(function(extra){return extra.id===id});if(!item)return;item.name=cleanExtraName(this.value);render()});
+        });
         document.querySelectorAll("[data-extra-delete]").forEach(function(button){
           button.addEventListener("click",function(){var id=this.getAttribute("data-extra-delete");customExtras=customExtras.filter(function(extra){return extra.id!==id});extraEditorBeforeKey=null;render()});
         });
       }
       function splitDurationText(text){var value=String(text),match=value.match(/^(.*?)(（[^）]+）)$/);return match?{main:match[1],note:match[2]}:{main:value,note:""}}
+      function cleanExtraName(value){var name=Array.from(String(value||"").trim()).slice(0,20).join("");return name||"额外事项"}
+      function escapeHTML(value){return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
       function rowsHTML(details,live){
         return details.map(function(item,index){
           var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="",adjustmentNote="",splitNote="",editorHTML="",rowAction="";
@@ -403,7 +410,7 @@
           }
           var endTime=timing.end===null?timing.start:timing.end;
           var nextName=details[index+1]?details[index+1].name:(mode==="drive"?"行程结束":"行程开始");
-          var range='<span>'+format(timing.start)+'</span> → <span class="range-end">'+format(endTime)+'</span><small class="next-step">'+nextName+'</small>';
+          var range='<span>'+format(timing.start)+'</span> → <span class="range-end">'+format(endTime)+'</span><small class="next-step">'+escapeHTML(nextName)+'</small>';
           var active=live&&index===live.index?" active":"";
           var displayDuration=splitDurationText(durationText),referenceDuration=splitDurationText(item.durationText);
           var durationNote=referenceDuration.note?'<small class="duration-note">'+referenceDuration.note+'</small>':'';
@@ -411,16 +418,17 @@
           if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+timing.autoReduced+' 分钟，最低 '+timing.smartMin+' 分钟</small>';
           if(Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart)splitNote='<small class="duration-split">'+item.roadPart+' + '+(timing.duration-item.roadPart)+' 分钟</small>';
           if(live&&index>live.index&&item.end!==null){
-            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+item.name+'所需时间">分钟</label>'+splitNote+durationNote+adjustmentNote+'</span>';
+            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+escapeHTML(item.name)+'所需时间">分钟</label>'+splitNote+durationNote+adjustmentNote+'</span>';
           }else if(live&&index===live.index&&item.end!==null){
             durationMarkup='<span>剩余 '+displayDuration.main+durationNote+adjustmentNote+'</span>';
           }else if(item.isCustomExtra){
             durationMarkup='<span><label class="extra-duration-edit"><input type="number" min="1" max="600" value="'+item.duration+'" data-extra-duration="'+item.extraId+'" aria-label="修改额外事项时间">分钟</label></span>';
           }else durationMarkup='<span>'+displayDuration.main+durationNote+'</span>';
-          var projectNote=item.projectNote?'<small class="project-note">'+item.projectNote+'</small>':'';
+          var projectNote=item.projectNote?'<small class="project-note">'+escapeHTML(item.projectNote)+'</small>':'';
+          var projectTitle=item.isCustomExtra?'<span class="project-start">'+format(timing.start)+'</span><input class="extra-name-input" type="text" maxlength="20" value="'+escapeHTML(item.name)+'" data-extra-name="'+item.extraId+'" aria-label="修改额外事项名称">'+tag:'<span class="project-start">'+format(timing.start)+'</span>'+escapeHTML(item.name)+tag;
           rowAction=item.isCustomExtra?'<button class="extra-delete-btn" type="button" data-extra-delete="'+item.extraId+'">删除</button>':'<button class="extra-add-btn" type="button" data-add-before="'+item.key+'">＋前加事项</button>';
-          if(extraEditorBeforeKey===item.key)editorHTML='<div class="extra-editor-row"><div class="extra-editor-copy">在“'+item.name+'”之前增加额外事项</div><div class="extra-editor-actions"><label><input id="extraEditorMinutes" type="number" min="1" max="600" value="20" aria-label="额外事项所需时间">分钟</label><button class="extra-editor-confirm" type="button" data-extra-confirm="'+item.key+'">添加</button><button class="extra-editor-cancel" type="button" data-extra-cancel>取消</button></div></div>';
-          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span class="project-copy"><span><span class="project-start">'+format(timing.start)+'</span>'+item.name+tag+'</span>'+projectNote+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button>'+rowAction+'</div></div>';
+          if(extraEditorBeforeKey===item.key)editorHTML='<div class="extra-editor-row"><div class="extra-editor-copy">在“'+escapeHTML(item.name)+'”之前增加</div><div class="extra-editor-actions"><input class="extra-editor-name" id="extraEditorName" type="text" maxlength="20" value="额外事项" placeholder="事项名称" aria-label="额外事项名称"><label><input id="extraEditorMinutes" type="number" min="1" max="600" value="20" aria-label="额外事项所需时间">分钟</label><button class="extra-editor-confirm" type="button" data-extra-confirm="'+item.key+'">添加</button><button class="extra-editor-cancel" type="button" data-extra-cancel>取消</button></div></div>';
+          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span class="project-copy"><span>'+projectTitle+'</span>'+projectNote+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button>'+rowAction+'</div></div>';
           return editorHTML+row+(live&&index===live.index?'<div class="live-inline-slot" id="liveInlineSlot"></div>':'');
         }).join("");
       }
@@ -656,14 +664,14 @@
       }
       function visibleDetailRows(){
         return Array.from(document.querySelectorAll("#breakdownList .breakdown-row")).map(function(row){
-          var icon=row.querySelector(".project-icon"),name=row.querySelector(".project-copy > span"),projectStart=row.querySelector(".project-start"),note=row.querySelector(".project-note");
+          var icon=row.querySelector(".project-icon"),name=row.querySelector(".project-copy > span"),projectStart=row.querySelector(".project-start"),customName=row.querySelector("[data-extra-name]"),note=row.querySelector(".project-note");
           var times=row.querySelectorAll(".range > span"),next=row.querySelector(".next-step"),duration=row.querySelector(".duration > span"),durationInput=row.querySelector("[data-live-duration]");
           var durationText=duration?duration.textContent.replace(/\s+/g," ").trim():"";
           if(durationInput){
             var extras=Array.from(duration.querySelectorAll("small")).map(function(item){return item.textContent.trim()}).join(" ");
             durationText=durationInput.value+" 分钟"+(extras?" "+extras:"");
           }
-          var startLabel=projectStart?projectStart.textContent.trim():(times[0]?times[0].textContent.trim():"--:--"),nameText=name?name.textContent.replace(/\s+/g," ").trim():"项目";
+          var startLabel=projectStart?projectStart.textContent.trim():(times[0]?times[0].textContent.trim():"--:--"),nameText=customName?cleanExtraName(customName.value):(name?name.textContent.replace(/\s+/g," ").trim():"项目");
           if(nameText.indexOf(startLabel)===0)nameText=nameText.slice(startLabel.length);
           return {icon:icon?icon.textContent.trim():"•",name:nameText,note:note?note.textContent.trim():"",startLabel:startLabel,start:times[0]?times[0].textContent.trim():"--:--",end:times[1]?times[1].textContent.trim():"--:--",next:next?next.textContent.trim():"",duration:durationText};
         });
