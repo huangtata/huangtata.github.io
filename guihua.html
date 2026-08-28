@@ -262,16 +262,16 @@
       function compressionRules(){
         if(mode==="flight")return [
           {key:"flight-boarding",min:5},
-          {key:"flight-security",min:5},
-          {key:"flight-bag",min:10},
           {key:"traffic",min:3},
-          {key:"flight-gate",min:8}
+          {key:"flight-gate",min:8},
+          {key:"flight-bag",min:10},
+          {key:"flight-security",min:10}
         ];
         if(mode==="train")return [
           {key:"train-wait",min:5},
           {key:"traffic",min:3},
           {key:"train-gate",min:8},
-          {key:"train-security",min:3}
+          {key:"train-security",min:8}
         ];
         return [];
       }
