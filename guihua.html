@@ -71,21 +71,9 @@
     .summary-label{margin-bottom:11px;color:#a9beb6;font-size:11px;font-weight:650}
     .accent .summary-label{color:var(--green)}
     .summary-time{font-size:29px;font-weight:900;white-space:nowrap}
-    .timeline{padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:21px;background:#102b23}
-    .timeline-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .timeline h3{margin:0;font-size:15px}
-    .total{padding:5px 10px;border-radius:99px;background:rgba(255,255,255,.08);color:#b8c8c2;font-size:10px}
-    .steps{position:relative;margin:0;padding:0;list-style:none}
-    .steps:before{content:"";position:absolute;left:13px;top:26px;bottom:26px;width:1px;background:rgba(255,255,255,.14)}
-    .step{position:relative;display:grid;grid-template-columns:27px 1fr auto;align-items:center;gap:12px;padding:10px 0}
-    .dot{z-index:1;display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#29483f;color:#c6d6d0;font-size:12px}
-    .step:first-child .dot{background:var(--lime);color:var(--green)}
-    .step-title{font-size:13px;font-weight:750}
-    .step-note{margin-top:3px;color:#91aaa1;font-size:10px}
-    .step-time{font-size:12px;font-weight:900;white-space:nowrap}
     .warning{display:flex;gap:10px;margin-top:14px;padding:14px;border:1px solid rgba(255,191,105,.24);border-radius:16px;background:rgba(255,191,105,.1);color:#d8e2de;font-size:11px;line-height:1.7}
     .warning strong{color:var(--warn)}
-    .breakdown{padding:30px 34px 34px;border-top:1px solid var(--line);background:#f3f5ed}
+    .breakdown{padding:20px;border:1px solid rgba(255,255,255,.14);border-radius:21px;background:#fff;color:var(--ink);box-shadow:0 14px 35px rgba(5,22,17,.16)}
     .breakdown-title{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:15px}
     .breakdown-title h3{margin:0;font-size:20px;letter-spacing:-.025em}
     .breakdown-title p{margin:5px 0 0;color:#6b7e76;font-size:11px}
@@ -100,7 +88,7 @@
     .duration{color:var(--green);text-align:right;font-size:13px;font-weight:900}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
-    @media(max-width:540px){header{height:68px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:22px 17px}.intro h2{font-size:31px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.timeline{padding:17px}.step{grid-template-columns:27px 1fr;gap:7px 9px}.step-note{max-width:190px}.step-time{grid-column:2;color:#d9ff78}.app{border-radius:22px}.breakdown{padding:23px 17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
+    @media(max-width:540px){header{height:68px;padding:0 17px}.brand-icon{width:38px;height:38px}.controls,.result{padding:22px 17px}.intro h2{font-size:31px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.breakdown-row{grid-template-columns:1fr auto;gap:4px 12px;padding:11px 13px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3}}
     @media print{.shell{padding:0}.app{box-shadow:none}.reset{display:none}}
   </style>
 </head>
@@ -158,24 +146,20 @@
               <div class="summary-card"><div class="summary-label">🚕 建议叫车</div><div class="summary-time" id="callSummary">06:07</div></div>
               <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">07:20</div></div>
             </div>
-            <div class="timeline">
-              <div class="timeline-head"><h3>完整时间轴</h3><span class="total" id="totalValue">共需预留 218 分钟</span></div>
-              <ol class="steps" id="steps"></ol>
-            </div>
+            <section class="breakdown">
+              <div class="breakdown-title">
+                <div><h3>逐项耗时明细</h3><p>每个环节的开始、结束与预留时长；区间项目按较稳妥的上限倒推</p></div>
+                <span class="breakdown-total" id="breakdownTotal">合计 218 分钟</span>
+              </div>
+              <div class="breakdown-table">
+                <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时</span></div>
+                <div id="breakdownList"></div>
+              </div>
+            </section>
             <div class="warning"><span>⚠</span><div><strong>风险临界线：</strong>最晚不要超过 <b id="criticalValue">06:40</b> 出门。该时间不含等车与路况余量，仅作紧急参考。</div></div>
           </div>
         </section>
       </div>
-      <section class="breakdown">
-        <div class="breakdown-title">
-          <div><h3>逐项耗时明细</h3><p>每个环节的开始、结束与预留时长；区间项目按较稳妥的上限倒推</p></div>
-          <span class="breakdown-total" id="breakdownTotal">合计 218 分钟</span>
-        </div>
-        <div class="breakdown-table">
-          <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时</span></div>
-          <div id="breakdownList"></div>
-        </div>
-      </section>
     </div>
     <footer>提示：机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。</footer>
   </div>
@@ -207,7 +191,6 @@
         var prepEnd=wake+prep;
         var roadEnd=leave+road;
         var critical=departure-minimum-road-extra;
-        var cutoff=departure-(isFlight?30:5);
         $("extraInputWrap").style.display=extraEnabled?"block":"none";
         $("extraTimeRow").style.display=extraEnabled?"flex":"none";
         $("extraDetailValue").textContent=extra+" 分钟";
@@ -219,22 +202,8 @@
         $("callSummary").textContent=format(call);
         $("wakeHeadline").textContent=format(wake);
         $("criticalValue").textContent=format(critical);
-        $("totalValue").textContent="共需预留 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
         $("breakdownTotal").textContent="合计 "+(prep+extra+wait+road+traffic+advance)+" 分钟";
         $("travelIcon").textContent=isFlight?"✈":"🚄";
-        var items=[
-          ["☕","起床、洗漱与准备",prep+" 分钟",wake,prepEnd],
-          ["🚕","等待车辆","预计等车 "+wait+" 分钟",call,leave],
-          ["🛣","高德预计路程",road+" 分钟",leave,roadEnd],
-          ["⏱","路况余量",traffic+" 分钟",roadEnd,trafficStart]
-        ];
-        if(extraEnabled)items.push(["✨","额外事项",extra+" 分钟",extraStart,arrive]);
-        items.push(
-          ["✓",terminal+"流程","提前 "+advance+" 分钟",arrive,departure],
-          ["◷",isFlight?"登机截止参考":"检票截止参考","具体以承运方通知为准",cutoff,null],
-          [isFlight?"✈":"🚄",departText,isFlight&&checkedBag?"已包含托运时间":"行程开始",departure,null]
-        );
-        $("steps").innerHTML=items.map(function(x){var range=x[4]===null?format(x[3]):format(x[3])+" → "+format(x[4]);return '<li class="step"><span class="dot">'+x[0]+'</span><div><div class="step-title">'+x[1]+'</div><div class="step-note">'+x[2]+'</div></div><time class="step-time">'+range+'</time></li>'}).join("");
         var details=[
           ["☕","起床准备",wake,prepEnd,prep],
           ["🚕","等待车辆",call,leave,wait],
