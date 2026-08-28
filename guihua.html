@@ -110,11 +110,14 @@
     .breakdown-row.live-future{background:#fbfdf7}
     .breakdown-row.live-past{opacity:.52}
     .project{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:750}
+    .project-copy{display:block;min-width:0}
+    .project-note{display:block;margin-top:3px;color:#96a39e;font-size:9px;font-weight:600;line-height:1.25}
     .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
     .range{color:#354d45;font-size:13px;font-weight:700}
     .range-end{color:#e96f98;font-weight:900}
     .next-step{display:inline-block;margin-left:6px;color:#96a39e;font-size:9px;font-weight:600;line-height:1.25;vertical-align:1px}
     .duration{display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    .duration-note{display:block;margin-top:3px;color:#96a39e;font-size:9px;font-weight:600;white-space:nowrap}
     .duration-split{display:block;margin-top:3px;color:#80918a;font-size:9px;font-weight:700;white-space:nowrap}
     .live-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:700}
     .live-duration-edit input{width:54px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:#fff;text-align:right;color:var(--green);font-size:12px;font-weight:900}
@@ -302,6 +305,7 @@
           });
         });
       }
+      function splitDurationText(text){var value=String(text),match=value.match(/^(.*?)(（[^）]+）)$/);return match?{main:match[1],note:match[2]}:{main:value,note:""}}
       function rowsHTML(details,live){
         return details.map(function(item,index){
           var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="",adjustmentNote="",splitNote="";
@@ -316,17 +320,20 @@
           }
           var endTime=timing.end===null?timing.start:timing.end;
           var nextName=details[index+1]?details[index+1].name:(mode==="drive"?"行程结束":"行程开始");
-          var range='<span>'+format(timing.start)+'</span> → <span class="range-end">'+format(endTime)+'</span><small class="next-step">下一项：'+nextName+'</small>';
+          var range='<span>'+format(timing.start)+'</span> → <span class="range-end">'+format(endTime)+'</span><small class="next-step">'+nextName+'</small>';
           var active=live&&index===live.index?" active":"";
+          var displayDuration=splitDurationText(durationText),referenceDuration=splitDurationText(item.durationText);
+          var durationNote=referenceDuration.note?'<small class="duration-note">'+referenceDuration.note+'</small>':'';
           if(timing.autoAdded)adjustmentNote='<small class="auto-buffer">已自动增加 '+timing.autoAdded+' 分钟</small>';
           if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+timing.autoReduced+' 分钟，最低 '+timing.smartMin+' 分钟</small>';
           if(Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart)splitNote='<small class="duration-split">'+item.roadPart+' + '+(timing.duration-item.roadPart)+' 分钟</small>';
           if(live&&index>live.index&&item.end!==null){
-            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+item.name+'所需时间">分钟</label>'+splitNote+adjustmentNote+'</span>';
+            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+item.name+'所需时间">分钟</label>'+splitNote+durationNote+adjustmentNote+'</span>';
           }else if(live&&index===live.index&&item.end!==null){
-            durationMarkup='<span>剩余 '+durationText+adjustmentNote+'</span>';
-          }else durationMarkup='<span>'+durationText+'</span>';
-          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span>'+item.name+tag+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
+            durationMarkup='<span>剩余 '+displayDuration.main+durationNote+adjustmentNote+'</span>';
+          }else durationMarkup='<span>'+displayDuration.main+durationNote+'</span>';
+          var projectNote=item.projectNote?'<small class="project-note">'+item.projectNote+'</small>':'';
+          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span class="project-copy"><span>'+item.name+tag+'</span>'+projectNote+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
           return row+(live&&index===live.index?'<div class="live-inline-slot" id="liveInlineSlot"></div>':'');
         }).join("");
       }
@@ -350,7 +357,7 @@
           $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:currentDetails});attachLocateButtons();placeLivePanel();return;
         }
         var cursor=current,schedule=[],durations=[],bufferKey=mode==="flight"?"flight-boarding":mode==="train"?"train-wait":null;
-        var bufferName=mode==="flight"?"进入候机准备登机":mode==="train"?"进入候车准备上车":"";
+        var bufferName=mode==="flight"?"候机准备登机":mode==="train"?"候车准备发车":"";
         currentDetails.forEach(function(detail,i){
           if(i<index)return;
           durations[i]=i===index?liveRemaining:(Object.prototype.hasOwnProperty.call(liveOverrides,detail.key)?liveOverrides[detail.key]:detail.duration);
@@ -461,8 +468,9 @@
           details.push(makeDetail("road","🚗",roadText,leave,roadEnd,road));
           details.push(makeDetail("traffic","⏱","路况余量",roadEnd,extraStart,traffic));
         }else{
-          var arrivalRoad=makeDetail("arrival-road","📍",isFlight?"上车出发机场（包含路况余量 "+traffic+" 分钟）":"上车出发高铁站（包含路况余量 "+traffic+" 分钟）",leave,extraStart,road+traffic,road+" + "+traffic+" 分钟",road+3);
+          var arrivalRoad=makeDetail("arrival-road","📍",isFlight?"上车出发机场":"上车出发高铁站",leave,extraStart,road+traffic,road+" + "+traffic+" 分钟",road+3);
           arrivalRoad.roadPart=road;
+          arrivalRoad.projectNote="（包含路况余量 "+traffic+" 分钟）";
           details.push(arrivalRoad);
         }
         if(extraEnabled)details.push(makeDetail("extra","✨","额外事项",extraStart,arrive,extra));
@@ -480,13 +488,13 @@
           processAt+=20;
           details.push(makeDetail("flight-gate","🚶","前往登机口",processAt,processAt+15,15,"15 分钟（通常 10–15）"));
           processAt+=15;
-          details.push(makeDetail("flight-boarding","🛫","进入候机准备登机",processAt,departure,departure-processAt));
+          details.push(makeDetail("flight-boarding","🛫","候机准备登机",processAt,departure,departure-processAt));
         }else if(isTrain){
           details.push(makeDetail("train-security","🛂","开始进站安检",processAt,processAt+15,15,"15 分钟（一般）"));
           processAt+=15;
           details.push(makeDetail("train-gate","🔎","前往高铁进站口",processAt,processAt+15,15));
           processAt+=15;
-          details.push(makeDetail("train-wait","🚄","进入候车准备上车",processAt,departure,departure-processAt));
+          details.push(makeDetail("train-wait","🚄","候车准备发车",processAt,departure,departure-processAt));
         }
         if(isFlight)details.push(makeDetail("flight-departure","✈","航班起飞",departure,null,0,"行程开始"));
         else if(isTrain)details.push(makeDetail("train-departure","🚄","高铁发车",departure,null,0,"行程开始"));
