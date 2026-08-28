@@ -236,11 +236,10 @@
         return raw!==""&&Number.isInteger(value)&&value>=1&&value<=600?value:null;
       }
       function getTrafficBuffer(road){
-        if(road<10)return 10;
-        if(road<30)return 15;
-        if(road<60)return 20;
-        if(road<=120)return 35;
-        return 45;
+        if(road<20)return 10;
+        if(road<60)return 15;
+        if(road<=120)return 25;
+        return 35;
       }
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
       function nowClock(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
