@@ -53,8 +53,6 @@
     .bag-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:white;font-size:19px}
     .bag strong{display:block;font-size:14px}
     .bag small{display:block;margin-top:4px;color:#6b7e76;font-size:11px}
-    .extra-card{margin-top:-10px}
-    .extra-input-field{margin-top:-10px}
     .switch{position:relative;width:38px;height:22px;padding:0;border:0;border-radius:99px;background:#b9c3bd;transition:.2s}
     .switch:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:.2s}
     .switch.on{background:var(--green)}
@@ -124,7 +122,7 @@
     .range{color:#354d45;font-size:13px;font-weight:700}
     .range-end{color:#e96f98;font-weight:900}
     .next-step{display:inline-block;margin-left:6px;color:#96a39e;font-size:9px;font-weight:600;line-height:1.25;vertical-align:1px}
-    .duration{display:flex;align-items:center;justify-content:flex-end;gap:8px;color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    .duration{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;color:var(--green);text-align:right;font-size:13px;font-weight:900}
     .duration-note{display:block;margin-top:3px;color:#96a39e;font-size:9px;font-weight:600;white-space:nowrap}
     .duration-split{display:block;margin-top:3px;color:#80918a;font-size:9px;font-weight:700;white-space:nowrap}
     .live-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:700}
@@ -133,6 +131,18 @@
     .auto-reduced{display:block;margin-top:3px;color:#b35a42;font-size:9px;font-weight:750;white-space:nowrap}
     .locate-btn{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(23,54,45,.15);border-radius:8px;background:white;color:#62776f;font-size:10px;font-weight:800}
     .locate-btn:hover,.locate-btn.active{border-color:var(--green);background:var(--green);color:var(--lime)}
+    .extra-add-btn,.extra-delete-btn{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(23,54,45,.13);border-radius:8px;background:#f1f4eb;color:#527066;font-size:10px;font-weight:800}
+    .extra-add-btn:hover{border-color:#789447;background:#eef8d5;color:#49641e}
+    .extra-delete-btn{border-color:#efd5cf;background:#fff4f1;color:#ad5c4d}
+    .extra-editor-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px;border-bottom:1px solid #dce7c8;background:#f4fae8}
+    .extra-editor-copy{color:#3f5c52;font-size:11px;font-weight:750;line-height:1.45}
+    .extra-editor-actions{display:flex;align-items:center;gap:7px}
+    .extra-editor-actions label{display:flex;align-items:center;gap:4px;color:#62776f;font-size:10px;font-weight:750}
+    .extra-editor-actions input,.extra-duration-edit input{width:58px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:white;color:var(--green);text-align:right;font-size:12px;font-weight:900}
+    .extra-editor-confirm,.extra-editor-cancel{height:30px;padding:0 10px;border:0;border-radius:8px;font-size:10px;font-weight:850}
+    .extra-editor-confirm{background:var(--green);color:var(--lime)}
+    .extra-editor-cancel{background:#e5eadf;color:#62776f}
+    .extra-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:750}
     .live-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#dff0b5;color:#48651d;font-size:8px;font-weight:850;vertical-align:1px}
     .empty-plan{padding:34px 18px;color:#6b7e76;text-align:center;font-size:12px;line-height:1.7}
     .export-toast{position:fixed;left:50%;bottom:24px;z-index:60;max-width:calc(100% - 32px);padding:11px 16px;border-radius:999px;background:#10231d;color:white;box-shadow:0 12px 35px rgba(16,35,29,.25);font-size:12px;font-weight:750;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transform:translate(-50%,12px);transition:.22s}
@@ -149,7 +159,7 @@
     .preview-download{flex:0 0 auto;height:42px;margin-top:10px;border:0;border-radius:13px;background:var(--green);color:var(--lime);font-size:13px;font-weight:850}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
-    @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn{padding:5px 7px}}
+    @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn,.extra-add-btn,.extra-delete-btn{padding:5px 7px}.extra-editor-row{align-items:flex-start;flex-direction:column;padding:11px 12px}.extra-editor-actions{width:100%;justify-content:flex-end}}
     @media print{.shell{padding:0}.app{box-shadow:none}.reset,.export-btn,.image-preview,.export-toast{display:none!important}}
   </style>
 </head>
@@ -196,13 +206,6 @@
             <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后自动多预留 23 分钟</small></div></div>
             <button id="bagSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否需要办理托运"></button>
           </div>
-          <div class="bag extra-card">
-            <div class="bag-copy"><div class="bag-icon">✨</div><div><strong>增加额外事项</strong><small>勾选后将同步提前起床、叫车与出门</small></div></div>
-            <button id="extraSwitch" class="switch" type="button" role="switch" aria-checked="false" aria-label="是否增加额外事项"></button>
-          </div>
-          <div class="field extra-input-field" id="extraInputWrap" style="display:none">
-            <label><span class="label">额外事项所需时间</span><span class="input-wrap"><input id="extra" class="road-input" type="number" min="0" max="600" value="20"><span class="unit">分钟</span></span></label>
-          </div>
           <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
           <div class="detail-box">
             <div class="detail-row">
@@ -213,7 +216,6 @@
                 <button id="prepSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否计算起床准备时间"></button>
               </span>
             </div>
-            <div class="detail-row" id="extraTimeRow" style="display:none"><span>额外事项时间</span><span class="advance" id="extraDetailValue">20 分钟</span></div>
             <label class="detail-row" id="waitTimeRow">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
             <div class="detail-row"><span class="smart-copy">路况余量<small>预留堵车、红绿灯、临时绕行等不确定时间</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
             <div class="detail-row" id="advanceRow"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">100 分钟</span></div>
@@ -231,7 +233,7 @@
             </div>
             <section class="breakdown">
               <div class="breakdown-title">
-                <div><h3>逐项耗时明细</h3><p>查看每项时间；点击任一“定位当前”，即可按实际进度重新推算余下行程</p></div>
+                <div><h3>逐项耗时明细</h3><p>可在任一项目之前增加额外事项；点击“定位当前”可按实际进度重新推算</p></div>
                 <span class="breakdown-total" id="breakdownTotal">等待填写路程</span>
               </div>
               <div id="livePanelHome">
@@ -270,11 +272,12 @@
   </div>
   <script>
     (function(){
-      var mode="flight", checkedBag=true, extraEnabled=false, prepEnabled=true;
+      var mode="flight", checkedBag=true, prepEnabled=true;
       var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
+      var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
-      var defaults={departure:"",road:"",prep:45,extra:20,wait:8};
+      var defaults={departure:"",road:"",prep:45,wait:8};
       function number(id){var v=Number($(id).value);return Number.isFinite(v)?Math.max(0,Math.min(600,Math.round(v))):0}
       function getRoad(){
         var raw=$("road").value.trim(),value=Number(raw);
@@ -303,6 +306,30 @@
         return best;
       }
       function makeDetail(key,icon,name,start,end,duration,durationText,smartMin){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||duration+" 分钟",smartMin:smartMin}}
+      function detailOrder(key){
+        var maps={
+          flight:{prep:0,wait:10,"arrival-road":20,"flight-bag-find":30,"flight-bag":40,"flight-security-walk":50,"flight-security":60,"flight-gate":70,"flight-boarding":80,"flight-departure":100},
+          train:{prep:0,wait:10,"arrival-road":20,"train-security":30,"train-gate":40,"train-wait":50,"train-departure":100},
+          drive:{prep:0,road:20,traffic:30,"drive-arrival":100}
+        };
+        return Object.prototype.hasOwnProperty.call(maps[mode],key)?maps[mode][key]:999;
+      }
+      function activeExtras(){return customExtras.filter(function(item){return item.mode===mode})}
+      function applyCustomExtras(baseDetails,departure){
+        var pending=activeExtras().slice().sort(function(a,b){return a.beforeOrder-b.beforeOrder||a.sequence-b.sequence}),sequence=[];
+        baseDetails.forEach(function(baseItem){
+          var order=detailOrder(baseItem.key);
+          while(pending.length&&pending[0].beforeOrder<=order){
+            var extra=pending.shift(),custom=makeDetail(extra.id,"✨","额外事项",0,0,extra.duration,extra.duration+" 分钟",1);
+            custom.isCustomExtra=true;custom.extraId=extra.id;custom.projectNote="安排在“"+extra.beforeName+"”之前";sequence.push(custom);
+          }
+          sequence.push(Object.assign({},baseItem));
+        });
+        if(!sequence.length)return sequence;
+        var last=sequence[sequence.length-1];last.start=departure;last.end=null;last.duration=0;
+        for(var i=sequence.length-2;i>=0;i--){sequence[i].end=sequence[i+1].start;sequence[i].start=sequence[i].end-sequence[i].duration}
+        return sequence;
+      }
       function compressionRules(){
         if(mode==="flight")return [
           {key:"flight-boarding",min:5},
@@ -338,11 +365,33 @@
             renderLive();
           });
         });
+        document.querySelectorAll("[data-add-before]").forEach(function(button){
+          button.addEventListener("click",function(){extraEditorBeforeKey=this.getAttribute("data-add-before");renderLive()});
+        });
+        document.querySelectorAll("[data-extra-confirm]").forEach(function(button){
+          button.addEventListener("click",function(){
+            var beforeKey=this.getAttribute("data-extra-confirm"),target=currentDetails.find(function(item){return item.key===beforeKey}),input=$("extraEditorMinutes"),value=input?Number(input.value):20;
+            if(!target)return;
+            value=Number.isFinite(value)?Math.max(1,Math.min(600,Math.round(value))):20;
+            customExtras.push({id:"custom-extra-"+(nextExtraId++),mode:mode,beforeKey:beforeKey,beforeOrder:detailOrder(beforeKey),beforeName:target.name,duration:value,sequence:nextExtraId});
+            extraEditorBeforeKey=null;render();
+          });
+        });
+        document.querySelectorAll("[data-extra-cancel]").forEach(function(button){button.addEventListener("click",function(){extraEditorBeforeKey=null;renderLive()})});
+        document.querySelectorAll("[data-extra-duration]").forEach(function(input){
+          input.addEventListener("change",function(){
+            var id=this.getAttribute("data-extra-duration"),item=customExtras.find(function(extra){return extra.id===id}),value=Number(this.value);
+            if(!item)return;item.duration=Number.isFinite(value)?Math.max(1,Math.min(600,Math.round(value))):1;render();
+          });
+        });
+        document.querySelectorAll("[data-extra-delete]").forEach(function(button){
+          button.addEventListener("click",function(){var id=this.getAttribute("data-extra-delete");customExtras=customExtras.filter(function(extra){return extra.id!==id});extraEditorBeforeKey=null;render()});
+        });
       }
       function splitDurationText(text){var value=String(text),match=value.match(/^(.*?)(（[^）]+）)$/);return match?{main:match[1],note:match[2]}:{main:value,note:""}}
       function rowsHTML(details,live){
         return details.map(function(item,index){
-          var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="",adjustmentNote="",splitNote="";
+          var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="",adjustmentNote="",splitNote="",editorHTML="",rowAction="";
           if(live){
             if(index<live.index)rowClass=" live-past";
             else if(index===live.index){rowClass=" live-current";tag='<span class="live-tag">当前</span>';}
@@ -365,10 +414,14 @@
             durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+item.name+'所需时间">分钟</label>'+splitNote+durationNote+adjustmentNote+'</span>';
           }else if(live&&index===live.index&&item.end!==null){
             durationMarkup='<span>剩余 '+displayDuration.main+durationNote+adjustmentNote+'</span>';
+          }else if(item.isCustomExtra){
+            durationMarkup='<span><label class="extra-duration-edit"><input type="number" min="1" max="600" value="'+item.duration+'" data-extra-duration="'+item.extraId+'" aria-label="修改额外事项时间">分钟</label></span>';
           }else durationMarkup='<span>'+displayDuration.main+durationNote+'</span>';
           var projectNote=item.projectNote?'<small class="project-note">'+item.projectNote+'</small>':'';
-          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span class="project-copy"><span><span class="project-start">'+format(timing.start)+'</span>'+item.name+tag+'</span>'+projectNote+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button></div></div>';
-          return row+(live&&index===live.index?'<div class="live-inline-slot" id="liveInlineSlot"></div>':'');
+          rowAction=item.isCustomExtra?'<button class="extra-delete-btn" type="button" data-extra-delete="'+item.extraId+'">删除</button>':'<button class="extra-add-btn" type="button" data-add-before="'+item.key+'">＋前加事项</button>';
+          if(extraEditorBeforeKey===item.key)editorHTML='<div class="extra-editor-row"><div class="extra-editor-copy">在“'+item.name+'”之前增加额外事项</div><div class="extra-editor-actions"><label><input id="extraEditorMinutes" type="number" min="1" max="600" value="20" aria-label="额外事项所需时间">分钟</label><button class="extra-editor-confirm" type="button" data-extra-confirm="'+item.key+'">添加</button><button class="extra-editor-cancel" type="button" data-extra-cancel>取消</button></div></div>';
+          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span class="project-copy"><span><span class="project-start">'+format(timing.start)+'</span>'+item.name+tag+'</span>'+projectNote+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button>'+rowAction+'</div></div>';
+          return editorHTML+row+(live&&index===live.index?'<div class="live-inline-slot" id="liveInlineSlot"></div>':'');
         }).join("");
       }
       function renderLive(){
@@ -439,7 +492,7 @@
         $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:schedule});attachLocateButtons();placeLivePanel();
       }
       function render(){
-        var departureRaw=$("departure").value,departureValid=/^\d{2}:\d{2}$/.test(departureRaw),departure=departureValid?toMinutes(departureRaw):null,road=getRoad(),prep=prepEnabled?number("prep"):0,extra=extraEnabled?number("extra"):0,waitInput=number("wait");
+        var departureRaw=$("departure").value,departureValid=/^\d{2}:\d{2}$/.test(departureRaw),departure=departureValid?toMinutes(departureRaw):null,road=getRoad(),prep=prepEnabled?number("prep"):0,waitInput=number("wait");
         var traffic=road===null?null:getTrafficBuffer(road);
         var isFlight=mode==="flight",isTrain=mode==="train",isDrive=mode==="drive";
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
@@ -448,9 +501,6 @@
         var advance=isFlight?(checkedBag?93:70):isTrain?55:0;
         var minimum=isFlight?(checkedBag?83:65):isTrain?40:0;
         var wait=isDrive?0:waitInput;
-        $("extraInputWrap").style.display=extraEnabled?"block":"none";
-        $("extraTimeRow").style.display=extraEnabled?"flex":"none";
-        $("extraDetailValue").textContent=extra+" 分钟";
         $("prepInputWrap").style.display=prepEnabled?"flex":"none";
         $("prepOffText").style.display=prepEnabled?"none":"inline";
         $("prep").disabled=!prepEnabled;
@@ -485,33 +535,24 @@
           return;
         }
         var arrive=departure-advance;
-        var extraStart=arrive-extra;
-        var trafficStart=extraStart-traffic;
+        var trafficStart=arrive-traffic;
         var leave=trafficStart-road;
         var call=isDrive?leave:leave-wait;
         var wake=call-prep;
         var prepEnd=wake+prep;
         var roadEnd=leave+road;
-        var critical=departure-minimum-road-extra;
-        $("arrivalSummary").textContent=format(arrive);
-        $("callSummary").textContent=format(call);
-        $("wakeHeadline").textContent=format(prepEnabled?wake:leave);
-        $("criticalValue").textContent=format(critical);
-        currentPlanTotal=prep+extra+wait+road+traffic+advance;
-        $("breakdownTotal").textContent="合计 "+currentPlanTotal+" 分钟";
         var details=[];
         if(prepEnabled)details.push(makeDetail("prep","☕","起床准备",wake,prepEnd,prep));
         if(!isDrive)details.push(makeDetail("wait","🚕","开始呼叫打车",call,leave,wait));
         if(isDrive){
           details.push(makeDetail("road","🚗",roadText,leave,roadEnd,road));
-          details.push(makeDetail("traffic","⏱","路况余量",roadEnd,extraStart,traffic));
+          details.push(makeDetail("traffic","⏱","路况余量",roadEnd,arrive,traffic));
         }else{
-          var arrivalRoad=makeDetail("arrival-road","📍",isFlight?"上车出发机场":"上车出发高铁站",leave,extraStart,road+traffic,road+" + "+traffic+" 分钟",road+3);
+          var arrivalRoad=makeDetail("arrival-road","📍",isFlight?"上车出发机场":"上车出发高铁站",leave,arrive,road+traffic,road+" + "+traffic+" 分钟",road+3);
           arrivalRoad.roadPart=road;
           arrivalRoad.projectNote="（包含路况余量 "+traffic+" 分钟）";
           details.push(arrivalRoad);
         }
-        if(extraEnabled)details.push(makeDetail("extra","✨","额外事项",extraStart,arrive,extra));
         var processAt=arrive;
         if(isFlight){
           if(checkedBag){
@@ -537,6 +578,20 @@
         if(isFlight)details.push(makeDetail("flight-departure","✈","航班起飞",departure,null,0,"行程开始"));
         else if(isTrain)details.push(makeDetail("train-departure","🚄","高铁发车",departure,null,0,"行程开始"));
         else details.push(makeDetail("drive-arrival","🏁","到达目的地",departure,null,0,"抵达"));
+        details=applyCustomExtras(details,departure);
+        var roadDetail=details.find(function(item){return item.key===(isDrive?"road":"arrival-road")});
+        var waitDetail=details.find(function(item){return item.key==="wait"});
+        var firstProcessKey=isFlight?(checkedBag?"flight-bag-find":"flight-security-walk"):isTrain?"train-security":"drive-arrival";
+        var firstProcess=details.find(function(item){return item.key===firstProcessKey});
+        leave=roadDetail?roadDetail.start:departure;call=isDrive?leave:(waitDetail?waitDetail.start:leave);arrive=firstProcess?firstProcess.start:departure;
+        var wakeTime=prepEnabled&&details.length?details[0].start:leave;
+        var critical=leave+(advance-minimum)+traffic;
+        $("arrivalSummary").textContent=format(arrive);
+        $("callSummary").textContent=format(call);
+        $("wakeHeadline").textContent=format(wakeTime);
+        $("criticalValue").textContent=format(critical);
+        currentPlanTotal=details.reduce(function(total,item){return total+(item.end===null?0:item.duration)},0);
+        $("breakdownTotal").textContent="合计 "+currentPlanTotal+" 分钟";
         currentDetails=details;currentDeparture=departure;currentTargetLabel=(isFlight?"原定起飞 ":isTrain?"原定发车 ":"计划到达 ")+format(departure);
         renderLive();
       }
@@ -625,7 +680,8 @@
               [$("roadLabel").textContent,roadValue===null?"未填写":roadValue+" 分钟"]
             ];
             if(mode==="flight")settings.push(["办理行李托运",checkedBag?"需要":"不需要"]);
-            settings.push(["额外事项",extraEnabled?number("extra")+" 分钟":"关闭"]);
+            var modeExtras=activeExtras(),extraTotal=modeExtras.reduce(function(total,item){return total+item.duration},0);
+            settings.push(["额外事项",modeExtras.length?modeExtras.length+" 项，共 "+extraTotal+" 分钟":"未添加"]);
             settings.push(["起床准备",prepEnabled?number("prep")+" 分钟":"关闭"]);
             if(mode!=="drive")settings.push(["开始呼叫打车",number("wait")+" 分钟"]);
             settings.push(["路况余量",$("trafficValue").textContent]);
@@ -735,7 +791,7 @@
         }finally{button.disabled=false;button.textContent=original}
       }
       function setMode(next){
-        mode=next;clearLive();
+        mode=next;extraEditorBeforeKey=null;clearLive();
         $("flightBtn").classList.toggle("active",mode==="flight");
         $("trainBtn").classList.toggle("active",mode==="train");
         $("driveBtn").classList.toggle("active",mode==="drive");
@@ -746,7 +802,6 @@
       $("trainBtn").addEventListener("click",function(){setMode("train")});
       $("driveBtn").addEventListener("click",function(){setMode("drive")});
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
-      $("extraSwitch").addEventListener("click",function(){extraEnabled=!extraEnabled;this.classList.toggle("on",extraEnabled);this.setAttribute("aria-checked",String(extraEnabled));render()});
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
       $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
       $("liveTime").addEventListener("input",function(){liveClock=this.value;renderLive()});
@@ -756,14 +811,13 @@
       $("previewDownload").addEventListener("click",savePreviewImage);
       $("imagePreview").addEventListener("click",function(event){if(event.target===this)closeImagePreview()});
       roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
-      ["departure","road","prep","extra","wait"].forEach(function(id){$(id).addEventListener("input",render)});
+      ["departure","road","prep","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
-        mode="flight";checkedBag=true;extraEnabled=false;prepEnabled=true;clearLive();
+        mode="flight";checkedBag=true;prepEnabled=true;customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
         $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
         $("bagRow").style.display="flex";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
-        $("extraSwitch").classList.remove("on");$("extraSwitch").setAttribute("aria-checked","false");
         $("prepSwitch").classList.add("on");$("prepSwitch").setAttribute("aria-checked","true");render();
       });
       render();
