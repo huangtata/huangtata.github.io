@@ -1,0 +1,1283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#17362d">
+  <title>出行时间规划</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{--ink:#10231d;--green:#17362d;--lime:#d9ff78;--paper:#f8f8f2;--mist:#eef1e9;--muted:#62776f;--line:rgba(23,54,45,.12);--warn:#ffcf8e}
+    html{background:var(--mist)}
+    body{margin:0;min-height:100vh;color:var(--ink);background:var(--mist);font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif;font-feature-settings:"tnum" 1}
+    button,input{font:inherit}
+    button{cursor:pointer}
+    .shell{width:min(1440px,100%);margin:auto;padding:10px}
+    .app{overflow:hidden;border:1px solid var(--line);border-radius:28px;background:var(--paper);box-shadow:0 30px 80px rgba(16,35,29,.12)}
+    header{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--green);color:var(--lime);font-size:21px}
+    .eyebrow{margin:0 0 2px;color:#527066;font-size:10px;font-weight:800;letter-spacing:.22em;text-transform:uppercase}
+    h1{margin:0;font-size:20px;letter-spacing:-.02em}
+    .header-actions{display:flex;align-items:center;gap:9px}
+    .privacy{padding:9px 14px;border-radius:999px;background:#e9ecdf;color:#527066;font-size:12px;font-weight:650}
+    .export-btn{height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--green);color:var(--lime);font-size:12px;font-weight:850;box-shadow:0 6px 16px rgba(23,54,45,.14);transition:.18s}
+    .export-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(23,54,45,.2)}
+    .export-btn:disabled{cursor:wait;opacity:.68;transform:none}
+    .layout{display:grid;grid-template-columns:minmax(360px,.84fr) minmax(510px,1.16fr)}
+    .controls{padding:26px 30px;border-right:1px solid var(--line)}
+    .field{margin-bottom:22px}
+    .label{display:block;margin:0 0 9px;color:#527066;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    #roadLabel{letter-spacing:.04em;line-height:1.45}
+    .mode{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:5px;border-radius:16px;background:#e8ebdf}
+    .mode button{height:42px;border:0;border-radius:12px;background:transparent;color:#536b62;font-weight:750}
+    .mode button.active{background:var(--green);color:white;box-shadow:0 5px 14px rgba(23,54,45,.16)}
+    .transport-choice{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+    .transport-choice button{min-height:42px;padding:6px 8px;border:1px solid rgba(23,54,45,.14);border-radius:12px;background:white;color:#536b62;font-size:12px;font-weight:800;line-height:1.25}
+    .transport-choice button.active{border-color:var(--green);background:var(--green);color:var(--lime);box-shadow:0 5px 14px rgba(23,54,45,.14)}
+    .transport-hint{display:block;margin-top:7px;color:#b05b4e;font-size:10px;font-weight:700}
+    .amap-route{margin-bottom:22px;padding:14px;border:1px solid rgba(23,54,45,.12);border-radius:17px;background:#eef0e6}
+    .amap-route-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .amap-route-head strong{font-size:13px}
+    .amap-badge{padding:4px 7px;border-radius:7px;background:#fff;color:#527066;font-size:9px;font-weight:850}
+    .route-place-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .route-place-wrap{position:relative;min-width:0}
+    .route-place{width:100%;height:44px;min-width:0;padding:0 34px 0 11px;border:1px solid rgba(23,54,45,.14);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+    .route-clear{display:none;position:absolute;right:7px;top:50%;width:26px;height:26px;padding:0;transform:translateY(-50%);border:0;border-radius:50%;background:#e6e9e2;color:#657970;font-size:16px;font-weight:800;line-height:26px}
+    .route-clear.show{display:block}
+    .route-suggestions{display:none;margin-top:8px;border:1px solid rgba(23,54,45,.14);border-radius:11px;background:#fff;box-shadow:0 7px 18px rgba(23,54,45,.11);overflow:hidden}
+    .route-suggestions.show{display:block}
+    .route-suggest-head{padding:7px 10px;background:#f0f2eb;color:#61776e;font-size:9px;font-weight:800}
+    .route-suggest-list{max-height:244px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .route-suggest-item{display:block;width:100%;padding:9px 10px;border:0;border-top:1px solid rgba(23,54,45,.08);background:#fff;text-align:left;color:var(--ink)}
+    .route-suggest-item:first-child{border-top:0}
+    .route-suggest-item:active{background:#eef1e7}
+    .route-suggest-item span{display:block;font-size:11px;font-weight:800;line-height:1.35}
+    .route-suggest-item small{display:block;margin-top:3px;color:#71847d;font-size:9px;font-weight:600;line-height:1.4}
+    .route-suggest-empty{padding:13px 10px;color:#7a8c85;font-size:10px;text-align:center}
+    .route-confirm{display:none;margin-top:8px;padding:8px 10px;border:1px solid rgba(23,54,45,.1);border-radius:10px;background:rgba(255,255,255,.72)}
+    .route-confirm.show{display:block}
+    .route-confirm-row{display:grid;grid-template-columns:40px 1fr;gap:7px;align-items:start;color:#71847d;font-size:9px;line-height:1.45}
+    .route-confirm-row+.route-confirm-row{margin-top:4px}
+    .route-confirm-row strong{min-width:0;color:#36564c;font-size:10px;word-break:break-word}
+    .route-confirm-row strong.unconfirmed{color:#b05b4e}
+    .route-fetch{width:100%;height:40px;margin-top:9px;border:0;border-radius:11px;background:var(--green);color:var(--lime);font-size:12px;font-weight:850}
+    .route-fetch:disabled{cursor:not-allowed;opacity:.5}
+    .route-status{display:block;margin-top:8px;color:#647970;font-size:10px;font-weight:650;line-height:1.5}
+    .route-status.error{color:#b05b4e}.route-status.success{color:#486b37}
+    .route-options{display:none;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+    .route-options.show{display:grid}
+    .route-option{min-height:38px;padding:6px 3px;border:1px solid rgba(23,54,45,.14);border-radius:10px;background:#fff;color:#526b62;font-size:10px;font-weight:850;line-height:1.25}
+    .route-option.active{border-color:var(--green);background:var(--green);color:var(--lime)}
+    .route-option small{display:block;margin-top:2px;font-size:8px;font-weight:700;opacity:.72}
+    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .input-wrap{position:relative}
+    .time-input,input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
+    .time-input{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850;cursor:pointer;caret-color:transparent}
+    .time-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
+    .time-input::placeholder{color:#9aa9a3}
+    .road-input{height:56px;padding:0 82px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
+    .road-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
+    .road-input.amap-filled{border-color:#78a66d;background:#f5faee;color:#3f7d39;box-shadow:0 0 0 3px rgba(89,137,72,.1)}
+    .road-input:disabled,.quick-pick:disabled{cursor:not-allowed;opacity:.5}
+    .quick-picks{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:8px}
+    .quick-pick{height:27px;padding:0;border:1px solid rgba(23,54,45,.13);border-radius:8px;background:white;color:#527066;font-size:11px;font-weight:800;transition:.15s}
+    .quick-pick:hover,.quick-pick.active{border-color:var(--green);background:var(--green);color:var(--lime)}
+    .road-hint{display:block;margin-top:6px;color:#b05b4e;font-size:10px;font-weight:650}
+    .road-hint.ok{color:#527066}
+    .road-hint.amap-match{color:#3f7d39;font-weight:850}
+    .time-hint{display:none;margin-top:6px;color:#b05b4e;font-size:10px;font-weight:650}
+    .time-hint.show{display:block}
+    input:focus{border-color:#527066;box-shadow:0 0 0 3px rgba(82,112,102,.14)}
+    .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#62776f;font-size:12px;font-weight:700;pointer-events:none}
+    .unit-select{position:absolute;right:8px;top:50%;width:68px;height:38px;padding:0 5px;border:0;border-radius:10px;outline:0;background:#eef1e9;color:#526b62;font-size:12px;font-weight:800;transform:translateY(-50%)}
+    .unit-select.amap-filled{background:#e6f1dc;color:#3f7d39}
+    .bag{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding:14px 16px;border:1px solid var(--line);border-radius:17px;background:#eef0e6}
+    .bag-copy{display:flex;align-items:center;gap:12px;min-width:0}
+    .bag-copy>div:last-child{min-width:0}
+    .bag .switch{flex:0 0 auto}
+    .bag-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:white;font-size:19px}
+    .bag strong{display:block;font-size:14px}
+    .bag small{display:block;margin-top:4px;color:#6b7e76;font-size:11px}
+    .switch{position:relative;width:38px;height:22px;padding:0;border:0;border-radius:99px;background:#b9c3bd;transition:.2s}
+    .switch:after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:white;transition:.2s}
+    .switch.on{background:var(--green)}
+    .switch.on:after{transform:translateX(16px)}
+    .detail-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .detail-head .label{margin:0}
+    .reset{border:0;background:transparent;color:#62776f;font-size:11px}
+    .detail-box{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:white}
+    .detail-row{display:flex;align-items:center;justify-content:space-between;min-height:49px;padding:8px 15px;border-bottom:1px solid rgba(23,54,45,.08);color:#354d45;font-size:13px;font-weight:650}
+    .detail-row:last-child{border:0;background:#f3f5ed}
+    .smart-copy small{display:block;margin-top:4px;color:#799087;font-size:10px;font-weight:500}
+    .smart-value{display:flex;align-items:center;gap:7px;color:var(--green);font-weight:900}
+    .smart-value:before{content:"智能";padding:3px 6px;border-radius:6px;background:#e7f2d7;color:#426333;font-size:9px;font-weight:850}
+    .smart-value.fixed:before{content:"默认"}
+    .mini{display:flex;align-items:center;gap:7px;color:#6b7e76;font-size:11px}
+    .mini input{width:62px;height:32px;padding:0 8px;border:0;border-radius:9px;background:#eef0e6;text-align:right;font-weight:850}
+    .detail-actions{display:flex;align-items:center;gap:10px}
+    .off-label{display:none;color:#8a9a94;font-size:11px;font-weight:650}
+    .advance{color:var(--green);font-weight:900}
+    .result{position:relative;overflow:hidden;padding:30px;background:var(--green);color:white}
+    .result:before{content:"";position:absolute;right:-80px;top:-95px;width:260px;height:260px;border:45px solid rgba(217,255,120,.07);border-radius:50%}
+    .result-inner{position:relative}
+    .result-top{display:flex;justify-content:space-between;gap:20px;margin-bottom:25px}
+    .result-top .eyebrow{color:#9fb7ad;font-size:11px}
+    .result h2{margin:0;font-size:29px;letter-spacing:-.03em}
+    .highlight{color:var(--lime)}
+    .travel-icon{display:grid;place-items:center;flex:0 0 48px;height:48px;border-radius:15px;background:var(--lime);color:var(--green);font-size:23px}
+    .summary{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+    .summary-card{padding:16px;border:1px solid rgba(255,255,255,.1);border-radius:17px;background:rgba(255,255,255,.07)}
+    .summary-card.accent{border:0;background:var(--lime);color:var(--green)}
+    .summary-label{margin-bottom:11px;color:#a9beb6;font-size:11px;font-weight:650}
+    .accent .summary-label{color:var(--green)}
+    .summary-time{font-size:29px;font-weight:900;white-space:nowrap}
+    .warning{display:flex;gap:10px;margin-top:14px;padding:14px;border:1px solid rgba(255,191,105,.24);border-radius:16px;background:rgba(255,191,105,.1);color:#d8e2de;font-size:11px;line-height:1.7}
+    .warning strong{color:var(--warn)}
+    .breakdown{padding:20px;border:1px solid rgba(255,255,255,.14);border-radius:21px;background:#fff;color:var(--ink);box-shadow:0 14px 35px rgba(5,22,17,.16)}
+    .breakdown-title{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:15px}
+    .breakdown-title h3{margin:0;font-size:20px;letter-spacing:-.025em}
+    .breakdown-title p{margin:5px 0 0;color:#6b7e76;font-size:11px}
+    .breakdown-total{flex:0 0 auto;padding:7px 12px;border-radius:99px;background:var(--green);color:var(--lime);font-size:11px;font-weight:850}
+    .live-panel{display:none;margin:0;padding:14px;border:1px solid #d7e3c6;border-radius:16px;background:#f4fae8}
+    .live-panel.show{display:block}
+    .live-inline-slot{padding:0 12px 12px;border-bottom:1px solid rgba(23,54,45,.08);background:#f2f9df}
+    .live-inline-slot .live-panel{margin-top:10px}
+    .live-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+    .live-title{font-size:13px;font-weight:850;color:var(--green)}
+    .live-close{width:28px;height:28px;padding:0;border:0;border-radius:9px;background:#e4ead9;color:#62776f;font-size:17px;line-height:1}
+    .live-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .live-field{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid rgba(23,54,45,.11);border-radius:12px;background:white;color:#62776f;font-size:11px;font-weight:700}
+    .live-field input{width:92px;height:32px;padding:0 7px;border:0;border-radius:8px;background:#eef1e9;text-align:center;font-size:13px;font-weight:850}
+    .live-status{margin-top:10px;padding:10px 12px;border-radius:11px;font-size:12px;font-weight:750;line-height:1.55}
+    .live-status.good{background:#e3f3d9;color:#315f35}
+    .live-status.bad{background:#fff0eb;color:#a14335}
+    .live-status.neutral{background:#edf0e9;color:#52675f}
+    .live-note{margin:8px 2px 0;color:#71847c;font-size:10px;line-height:1.55}
+    .breakdown-table{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:white}
+    .breakdown-row{display:grid;grid-template-columns:minmax(150px,1.05fr) minmax(190px,1.25fr) minmax(185px,.95fr);align-items:center;min-height:54px;padding:8px 18px;border-bottom:1px solid rgba(23,54,45,.08)}
+    .breakdown-row:last-child{border:0}
+    .breakdown-row.head{min-height:36px;background:#e8ebdf;color:#62776f;font-size:10px;font-weight:800;letter-spacing:.1em}
+    .breakdown-row.live-current{background:#f2f9df;box-shadow:inset 3px 0 0 #7aa534}
+    .breakdown-row.live-future{background:#fbfdf7}
+    .breakdown-row.live-past{opacity:.52}
+    .project{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:750}
+    .project-copy{display:block;min-width:0}
+    .project-start{color:#e96f98;font-weight:900}
+    .project-note{display:block;margin-top:3px;color:#96a39e;font-size:9px;font-weight:600;line-height:1.25}
+    .project-note.deadline-note{color:#b35a42;font-weight:800}
+    .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
+    .range{color:#354d45;font-size:13px;font-weight:700}
+    .range-end{color:#e96f98;font-weight:900}
+    .next-step{display:inline-block;margin-left:6px;color:#96a39e;font-size:9px;font-weight:600;line-height:1.25;vertical-align:1px}
+    .duration{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;color:var(--green);text-align:right;font-size:13px;font-weight:900}
+    .duration-note{display:block;margin-top:3px;color:#96a39e;font-size:9px;font-weight:600;white-space:nowrap}
+    .duration-split{display:block;margin-top:3px;color:#80918a;font-size:9px;font-weight:700;white-space:nowrap}
+    .live-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:700}
+    .live-duration-edit input{width:54px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:#fff;text-align:right;color:var(--green);font-size:12px;font-weight:900}
+    .auto-buffer{display:block;margin-top:3px;color:#66852e;font-size:9px;font-weight:750;white-space:nowrap}
+    .auto-reduced{display:block;margin-top:3px;color:#b35a42;font-size:9px;font-weight:750;white-space:nowrap}
+    .locate-btn{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(23,54,45,.15);border-radius:8px;background:white;color:#62776f;font-size:10px;font-weight:800}
+    .locate-btn:hover,.locate-btn.active{border-color:var(--green);background:var(--green);color:var(--lime)}
+    .extra-add-btn,.extra-delete-btn{flex:0 0 auto;padding:6px 8px;border:1px solid rgba(23,54,45,.13);border-radius:8px;background:#f1f4eb;color:#527066;font-size:10px;font-weight:800}
+    .extra-add-btn:hover{border-color:#789447;background:#eef8d5;color:#49641e}
+    .extra-delete-btn{border-color:#efd5cf;background:#fff4f1;color:#ad5c4d}
+    .extra-editor-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 18px;border-bottom:1px solid #dce7c8;background:#f4fae8}
+    .extra-editor-copy{color:#3f5c52;font-size:11px;font-weight:750;line-height:1.45}
+    .extra-editor-actions{display:flex;align-items:center;justify-content:flex-end;flex:1;flex-wrap:wrap;gap:7px;min-width:0}
+    .extra-editor-actions label{display:flex;align-items:center;gap:4px;min-width:0;color:#62776f;font-size:10px;font-weight:750}
+    .extra-editor-actions input,.extra-duration-edit input{width:58px;height:30px;padding:0 6px;border:1px solid rgba(23,54,45,.14);border-radius:8px;background:white;color:var(--green);text-align:right;font-size:12px;font-weight:900}
+    .extra-editor-actions input.extra-editor-name{width:138px;text-align:left}
+    .extra-editor-confirm,.extra-editor-cancel{height:30px;min-width:52px;padding:0 10px;border:0;border-radius:8px;font-size:10px;font-weight:850;white-space:nowrap}
+    .extra-editor-confirm{background:var(--green);color:var(--lime)}
+    .extra-editor-cancel{background:#e5eadf;color:#62776f}
+    .extra-duration-edit{display:flex;align-items:center;justify-content:flex-end;gap:4px;color:#62776f;font-size:10px;font-weight:750}
+    .extra-name-input{width:150px;height:28px;margin:0 2px;padding:0 7px;border:1px solid rgba(23,54,45,.13);border-radius:7px;background:#f8faf4;color:var(--green);font-size:12px;font-weight:800;vertical-align:middle}
+    .live-tag{display:inline-block;margin-left:5px;padding:2px 5px;border-radius:5px;background:#dff0b5;color:#48651d;font-size:8px;font-weight:850;vertical-align:1px}
+    .empty-plan{padding:34px 18px;color:#6b7e76;text-align:center;font-size:12px;line-height:1.7}
+    .export-toast{position:fixed;left:50%;bottom:24px;z-index:60;max-width:calc(100% - 32px);padding:11px 16px;border-radius:999px;background:#10231d;color:white;box-shadow:0 12px 35px rgba(16,35,29,.25);font-size:12px;font-weight:750;line-height:1.45;text-align:center;opacity:0;pointer-events:none;transform:translate(-50%,12px);transition:.22s}
+    .export-toast.show{opacity:1;transform:translate(-50%,0)}
+    .image-preview{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(7,20,16,.82);backdrop-filter:blur(8px)}
+    .image-preview.show{display:flex}
+    .preview-card{display:flex;flex-direction:column;width:min(640px,100%);max-height:94vh;padding:14px;border-radius:20px;background:white;box-shadow:0 25px 80px rgba(0,0,0,.32)}
+    .preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .preview-copy strong{display:block;color:var(--green);font-size:14px}
+    .preview-copy small{display:block;margin-top:3px;color:#71847c;font-size:10px}
+    .preview-close{flex:0 0 auto;width:32px;height:32px;padding:0;border:0;border-radius:10px;background:#e9ecdf;color:#62776f;font-size:20px;line-height:1}
+    .preview-image-wrap{overflow:auto;min-height:0;border:1px solid var(--line);border-radius:13px;background:var(--mist);text-align:center;-webkit-overflow-scrolling:touch}
+    .preview-image{display:block;width:100%;height:auto}
+    .preview-download{flex:0 0 auto;height:42px;margin-top:10px;border:0;border-radius:13px;background:var(--green);color:var(--lime);font-size:13px;font-weight:850}
+    body.time-picker-open{overflow:hidden}
+    .time-picker-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:flex-end;justify-content:center;padding:18px;background:rgba(7,20,16,.58);backdrop-filter:blur(5px)}
+    .time-picker-overlay.show{display:flex}
+    .time-picker-card{width:min(420px,100%);padding:16px;border-radius:22px;background:#f8faf4;box-shadow:0 24px 70px rgba(0,0,0,.32)}
+    .time-picker-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .time-picker-head strong{color:var(--green);font-size:15px}
+    .time-picker-close{width:31px;height:31px;padding:0;border:0;border-radius:10px;background:#e6eadf;color:#62776f;font-size:19px;line-height:1}
+    .time-picker-preview{margin-bottom:12px;color:var(--green);text-align:center;font-size:30px;font-weight:900;letter-spacing:.04em}
+    .time-picker-caption{display:block;margin-top:-6px;color:#81928b;text-align:center;font-size:9px;font-weight:700}
+    .time-picker-wheels{position:relative;display:grid;grid-template-columns:1fr 30px 1fr;align-items:center;height:220px;margin-top:11px;border:1px solid rgba(23,54,45,.12);border-radius:17px;background:white;overflow:hidden}
+    .time-picker-wheels:before{content:"";position:absolute;left:12px;right:12px;top:50%;z-index:1;height:44px;border-top:1px solid #d9e0d4;border-bottom:1px solid #d9e0d4;border-radius:9px;background:#eef1e9;transform:translateY(-50%);pointer-events:none}
+    .time-picker-wheels:after{content:"";position:absolute;inset:0;z-index:4;background:linear-gradient(to bottom,#fff 0,rgba(255,255,255,.82) 16%,rgba(255,255,255,0) 38%,rgba(255,255,255,0) 62%,rgba(255,255,255,.82) 84%,#fff 100%);pointer-events:none}
+    .time-wheel{position:relative;z-index:2;height:220px;padding:88px 0;outline:0;background:transparent;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .time-wheel::-webkit-scrollbar{display:none}
+    .time-wheel-item{display:block;width:100%;height:44px;padding:0;border:0;background:transparent;color:#8b9a94;text-align:center;font-size:18px;font-weight:750;line-height:44px;scroll-snap-align:center;scroll-snap-stop:always;transition:color .12s,font-size .12s,opacity .12s;opacity:.5}
+    .time-wheel-item.selected{color:var(--green);font-size:24px;font-weight:900;opacity:1}
+    .time-picker-colon{position:relative;z-index:5;color:var(--green);text-align:center;font-size:28px;font-weight:900;pointer-events:none}
+    .time-picker-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:9px;margin-top:14px}
+    .time-picker-actions button{height:43px;border:0;border-radius:13px;font-size:13px;font-weight:850}
+    .time-picker-cancel{background:#e6eadf;color:#62776f}
+    .time-picker-confirm{background:var(--green);color:var(--lime)}
+    footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
+    @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
+    @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.mode{grid-template-columns:repeat(2,1fr)}.input-grid{grid-template-columns:1fr}.route-place-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn,.extra-add-btn,.extra-delete-btn{padding:5px 7px}.extra-add-btn{min-width:88px;white-space:nowrap}.extra-editor-row{align-items:flex-start;flex-direction:column;gap:9px;padding:12px}.extra-editor-actions{display:grid;grid-template-columns:minmax(100px,1fr) 60px 60px;width:100%;gap:8px}.extra-editor-actions input.extra-editor-name{grid-column:1/-1;width:100%;height:38px}.extra-editor-actions label{display:grid;grid-template-columns:minmax(0,1fr) auto;width:100%;gap:5px}.extra-editor-actions label input{width:100%;height:38px}.extra-editor-confirm,.extra-editor-cancel{height:38px;min-width:0;padding:0 8px}}
+    @media print{.shell{padding:0}.app{box-shadow:none}.reset,.export-btn,.image-preview,.export-toast,.time-picker-overlay{display:none!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="app">
+      <header>
+        <div class="brand">
+          <div class="brand-icon">◷</div>
+          <div><p class="eyebrow">Ready to go</p><h1>出行时间规划</h1></div>
+        </div>
+        <div class="header-actions">
+          <div class="privacy">✓ 时间计算在本机完成 · 路线由高德提供</div>
+          <button class="export-btn" id="exportBtn" type="button">↓ 导出整页 JPG</button>
+        </div>
+      </header>
+      <div class="layout">
+        <section class="controls">
+          <div class="field">
+            <span class="label">出行方式</span>
+            <div class="mode">
+              <button id="flightBtn" type="button">✈ 飞机</button>
+              <button id="trainBtn" type="button">🚄 高铁</button>
+              <button id="driveBtn" type="button">🚗 开车</button>
+              <button id="tourBtn" type="button">🗺️ 旅游规划</button>
+            </div>
+          </div>
+          <div class="field" id="departureRow">
+            <label><span class="label" id="departureLabel">起飞／发车／到达时间</span><input id="departure" class="time-input" type="text" value="" placeholder="请先选择出行方式" readonly inputmode="none" disabled required aria-required="true" aria-invalid="false" aria-haspopup="dialog"><span class="time-hint show" id="departureHint">必填：请先选择出行方式</span></label>
+          </div>
+          <div class="field" id="transportRow" style="display:none">
+            <span class="label" id="transportLabel">去机场的交通工具（必选）</span>
+            <div class="transport-choice" role="group" aria-label="选择去机场或高铁站的交通工具">
+              <button id="taxiTransportBtn" type="button">🚕 打车</button>
+              <button id="subwayTransportBtn" type="button">🚇 地铁</button>
+              <button id="mixedTransportBtn" type="button">🚇＋🚕<br>地铁＋打车</button>
+            </div>
+            <span class="transport-hint" id="transportHint">必选：请选择去机场的交通工具</span>
+          </div>
+          <div class="amap-route" id="amapRouteBox" style="display:none">
+            <div class="amap-route-head"><strong>📍 高德自动获取路程时间</strong><span class="amap-badge">AMAP</span></div>
+            <div class="route-place-grid">
+              <div class="route-place-wrap"><input class="route-place" id="routeStart" type="text" autocomplete="off" placeholder="输入起点（从下拉选择）" aria-label="路线起点"><button class="route-clear" id="routeStartClear" type="button" aria-label="清空起点">×</button></div>
+              <div class="route-place-wrap"><input class="route-place" id="routeEnd" type="text" autocomplete="off" placeholder="输入目的地（从下拉选择）" aria-label="路线目的地"><button class="route-clear" id="routeEndClear" type="button" aria-label="清空目的地">×</button></div>
+            </div>
+            <div class="route-suggestions" id="routeSuggestions" aria-live="polite"></div>
+            <div class="route-confirm" id="routeConfirm" aria-live="polite">
+              <div class="route-confirm-row"><span>起点</span><strong id="routeStartConfirmed">未确认</strong></div>
+              <div class="route-confirm-row"><span>目的地</span><strong id="routeEndConfirmed">未确认</strong></div>
+            </div>
+            <button class="route-fetch" id="routeFetchBtn" type="button">自动获取预计时间</button>
+            <span class="route-status" id="routeStatus">选择交通工具后，请输入地点并点击高德下拉建议完成确认</span>
+            <div class="route-options" id="routeOptions" aria-label="高德路线时间方案"></div>
+          </div>
+          <div class="field" id="roadTimeRow" style="display:none">
+            <div>
+              <span class="label" id="roadLabel">打车到机场，高德地图所显示预估时间</span>
+              <div class="quick-picks" aria-label="路程时间快捷选择">
+                <button class="quick-pick" id="road10" type="button">10</button>
+                <button class="quick-pick" id="road15" type="button">15</button>
+                <button class="quick-pick" id="road25" type="button">25</button>
+                <button class="quick-pick" id="road35" type="button">35</button>
+                <button class="quick-pick" id="road45" type="button">45</button>
+                <button class="quick-pick" id="road60" type="button">60</button>
+              </div>
+              <label class="input-wrap"><input id="road" class="road-input" type="text" inputmode="decimal" value="" placeholder="请输入" required aria-required="true"><select id="roadUnit" class="unit-select" aria-label="路程时间单位"><option value="minute" selected>分钟</option><option value="hour">小时</option></select></label>
+              <span class="road-hint" id="roadHint">必填：请选择上方时间或手动输入</span>
+            </div>
+          </div>
+          <div class="field" id="transitAccessRow" style="display:none">
+            <label><span class="label">步行／打车到地铁搭乘点所需时间</span><span class="quick-picks" aria-label="到地铁搭乘点时间快捷选择"><button class="quick-pick" id="access10" type="button">10</button><button class="quick-pick" id="access15" type="button">15</button><button class="quick-pick" id="access25" type="button">25</button><button class="quick-pick" id="access35" type="button">35</button><button class="quick-pick" id="access45" type="button">45</button><button class="quick-pick" id="access60" type="button">60</button></span><span class="input-wrap"><input id="access" class="road-input" type="text" inputmode="decimal" value="" placeholder="请输入" aria-required="true"><select id="accessUnit" class="unit-select" aria-label="到地铁搭乘点时间单位"><option value="minute" selected>分钟</option><option value="hour">小时</option></select></span><span class="road-hint" id="accessHint">必填：请输入到地铁搭乘点所需时间</span></label>
+          </div>
+          <div class="bag" id="bagRow" style="display:none">
+            <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后多预留 23 分钟，并按起飞前 45 分钟完成托运计算</small></div></div>
+            <button id="bagSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否需要办理托运"></button>
+          </div>
+          <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
+          <div class="detail-box">
+            <div class="detail-row">
+              <span>起床准备</span>
+              <span class="detail-actions">
+                <span class="mini" id="prepInputWrap"><input id="prep" type="number" min="0" max="600" value="45" aria-label="起床准备时间">分钟</span>
+                <span class="off-label" id="prepOffText">已关闭</span>
+                <button id="prepSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否计算起床准备时间"></button>
+              </span>
+            </div>
+            <label class="detail-row" id="waitTimeRow">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
+            <div class="detail-row"><span class="smart-copy"><span id="bufferLabel">路况余量</span><small id="bufferHint">预留堵车、红绿灯、临时绕行等不确定时间</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
+            <div class="detail-row" id="advanceRow"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">1小时40分钟</span></div>
+          </div>
+        </section>
+        <section class="result">
+          <div class="result-inner">
+            <div class="result-top">
+              <div><p class="eyebrow">你的出发方案</p><h2>建议在 <span class="highlight" id="wakeHeadline">--:--</span> <span id="headlineAction">起床</span></h2></div>
+              <div class="travel-icon" id="travelIcon">✈</div>
+            </div>
+            <div class="summary">
+              <div class="summary-card accent"><div class="summary-label" id="actionSummaryLabel">🚕 建议叫车</div><div class="summary-time" id="callSummary">--:--</div></div>
+              <div class="summary-card accent"><div class="summary-label" id="arrivalSummaryLabel">📍 建议到达机场</div><div class="summary-time" id="arrivalSummary">--:--</div></div>
+            </div>
+            <section class="breakdown">
+              <div class="breakdown-title">
+                <div><h3>逐项耗时明细</h3><p>可在任一项目之前增加途中新事项；点击“定位当前”可按实际进度重新推算</p></div>
+                <span class="breakdown-total" id="breakdownTotal">等待填写路程</span>
+              </div>
+              <div id="livePanelHome">
+                <div class="live-panel" id="livePanel">
+                  <div class="live-head"><div class="live-title">📍 当前位于：<span id="liveProject">--</span></div><button class="live-close" id="liveClose" type="button" aria-label="退出实时推算">×</button></div>
+                  <div class="live-fields">
+                    <label class="live-field">现在时间 <input id="liveTime" class="time-input" type="text" readonly inputmode="none" aria-label="当前时间，24小时制" aria-haspopup="dialog"></label>
+                    <label class="live-field" id="liveRemainingWrap">本项还需 <span><input id="liveRemaining" type="number" min="0" max="600" value="0" aria-label="当前项目剩余时间"> 分钟</span></label>
+                  </div>
+                  <div class="live-status neutral" id="liveStatus">请选择当前时间</div>
+                  <div class="live-note">时间不足时会先按最低值自动压缩；仍赶不上，可修改“本项还需”及下方其他项目分钟数继续推算。</div>
+                </div>
+              </div>
+              <div class="breakdown-table">
+                <div class="breakdown-row head"><span>项目</span><span>时间范围</span><span style="text-align:right">用时 / 实时定位</span></div>
+                <div id="breakdownList"><div class="empty-plan">请先选择或输入高德预计路程时间<br>填写后将自动生成完整规划</div></div>
+              </div>
+            </section>
+            <div class="warning"><span>⚠</span><div><strong>风险临界线：</strong>最晚不要超过 <b id="criticalValue">--:--</b> 出门。<span id="riskNote">该时间不含等车与路况余量，仅作紧急参考。</span></div></div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <footer>提示：机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。</footer>
+  </div>
+  <div class="export-toast" id="exportToast" role="status" aria-live="polite"></div>
+  <div class="time-picker-overlay" id="timePicker" aria-hidden="true">
+    <div class="time-picker-card" role="dialog" aria-modal="true" aria-labelledby="timePickerTitle">
+      <div class="time-picker-head"><strong id="timePickerTitle">选择时间</strong><button class="time-picker-close" id="timePickerClose" type="button" aria-label="关闭时间选择器">×</button></div>
+      <div class="time-picker-preview" id="timePickerPreview">00:00</div>
+      <span class="time-picker-caption">24小时制 · 左侧小时，右侧分钟</span>
+      <div class="time-picker-wheels">
+        <div class="time-wheel" id="timePickerHour" role="listbox" tabindex="0" aria-label="小时，00到23"></div>
+        <div class="time-picker-colon">:</div>
+        <div class="time-wheel" id="timePickerMinute" role="listbox" tabindex="0" aria-label="分钟，00到59"></div>
+      </div>
+      <div class="time-picker-actions"><button class="time-picker-cancel" id="timePickerCancel" type="button">取消</button><button class="time-picker-confirm" id="timePickerConfirm" type="button">完成并重新计算</button></div>
+    </div>
+  </div>
+  <div class="image-preview" id="imagePreview" aria-hidden="true">
+    <div class="preview-card" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+      <div class="preview-head">
+        <div class="preview-copy"><strong id="previewTitle">整页长图已生成</strong><small>长按图片可存入相册，或点击下方下载 JPG</small></div>
+        <button class="preview-close" id="previewClose" type="button" aria-label="关闭图片预览">×</button>
+      </div>
+      <div class="preview-image-wrap"><img class="preview-image" id="previewImage" alt="出行时间规划整页长图"></div>
+      <button class="preview-download" id="previewDownload" type="button">下载 JPG 图片</button>
+    </div>
+  </div>
+  <script>window._AMapSecurityConfig={securityJsCode:"a4effe4ebd82ca7d44f781269f071274"};</script>
+  <script src="https://webapi.amap.com/loader.js"></script>
+  <script>
+    (function(){
+      var mode="", checkedBag=true, prepEnabled=true,airportTransport="";
+      var BAG_CUTOFF_MINUTES=45;
+      var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
+      var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
+      var inputUnits={road:"minute",access:"minute"};
+      var amapPromise=null,amapAutocomplete=null,amapPoints={start:null,end:null},routeBusy=false,routeChoices=[],selectedRouteMinutes=null;
+      var routeSuggestTarget=null,routeSuggestTimer=null,routeSuggestSequence=0;
+      var timePickerTarget=null,timePickerBuilt=false;
+      var AMAP_WEB_KEY="bba9f294c10c663b5ea6d593c08ea4a3";
+      var $=function(id){return document.getElementById(id)};
+      var roadPresets=[10,15,25,35,45,60];
+      var defaults={departure:"",road:"",access:"",prep:45,wait:8};
+      function number(id){var v=Number($(id).value);return Number.isFinite(v)?Math.max(0,Math.min(600,Math.round(v))):0}
+      function parseDurationRaw(raw,unit){
+        var value=String(raw||"").trim();
+        if(value==="")return null;
+        if(unit==="minute"){
+          var minuteValue=Number(value);
+          return Number.isInteger(minuteValue)&&minuteValue>=1&&minuteValue<=600?minuteValue:null;
+        }
+        var match=value.match(/^(\d+)(?:\.(\d{1,2}))?$/);
+        if(!match)return null;
+        var hours=Number(match[1]),fraction=match[2]||"",minutes=0;
+        if(fraction.length===1){
+          var digit=Number(fraction);
+          if(digit>=7)return null;
+          minutes=digit===5?30:digit===6?60:digit*10;
+        }else if(fraction.length===2){
+          minutes=Number(fraction);
+          if(minutes>60)return null;
+        }
+        var total=hours*60+minutes;
+        return total>=1&&total<=600?total:null;
+      }
+      function getDurationInput(id){return parseDurationRaw($(id).value,inputUnits[id])}
+      function getRoad(){return getDurationInput("road")}
+      function getAccess(){return getDurationInput("access")}
+      function minutesToHourEntry(total){
+        var hours=Math.floor(total/60),minutes=total%60;
+        if(minutes===0)return String(hours);
+        if(minutes===30)return hours+".5";
+        return hours+"."+String(minutes).padStart(2,"0");
+      }
+      function minutesToChineseDuration(total){
+        var hours=Math.floor(total/60),minutes=total%60;
+        return hours>0?hours+"小时"+minutes+"分钟":minutes+"分钟";
+      }
+      function setInputUnit(id,nextUnit,convert){
+        var previous=inputUnits[id],input=$(id),parsed=parseDurationRaw(input.value,previous);
+        inputUnits[id]=nextUnit;$(id+"Unit").value=nextUnit;
+        if(convert&&parsed!==null)input.value=nextUnit==="hour"?minutesToHourEntry(parsed):String(parsed);
+      }
+      function durationInputHint(id,value,emptyText){
+        if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+minutesToChineseDuration(value):"已填入 "+minutesToChineseDuration(value);
+        if($(id).value.trim()==="")return emptyText+(inputUnits[id]==="hour"?"；例如 1.25＝1小时25分，1.5＝1小时30分":"");
+        return inputUnits[id]==="hour"?"小时格式错误：分钟部分只能为 00–60，例如 1.25、1.5、1.6":"请输入 1–600 的整数分钟";
+      }
+      function setRouteStatus(message,type){var status=$("routeStatus");status.textContent=message;status.className="route-status"+(type?" "+type:"")}
+      function firstText(value){return Array.isArray(value)?String(value[0]||""):String(value||"")}
+      function normalizeAmapPoint(poi,label){
+        if(!poi||!poi.location)return null;
+        return {location:poi.location,city:firstText(poi.cityname||poi.city||poi.citycode||poi.adcode||poi.pname),adcode:firstText(poi.adcode),label:String(label||poi.name||"").trim(),name:firstText(poi.name||label).trim(),address:firstText(poi.address).trim()};
+      }
+      function confirmedPoint(which,id){
+        var point=amapPoints[which],value=$(id).value.trim();
+        return point&&point.location&&point.label===value?point:null;
+      }
+      function pointDescription(point){
+        if(!point)return "未从高德下拉建议中确认";
+        return point.name+(point.address&&point.address!==point.name?" · "+point.address:"");
+      }
+      function renderAmapConfirmation(){
+        var start=confirmedPoint("start","routeStart"),end=confirmedPoint("end","routeEnd"),hasText=$("routeStart").value.trim()||$("routeEnd").value.trim();
+        $("routeConfirm").classList.toggle("show",Boolean(hasText||start||end));
+        [["routeStartConfirmed",start],["routeEndConfirmed",end]].forEach(function(item){$(item[0]).textContent=pointDescription(item[1]);$(item[0]).classList.toggle("unconfirmed",!item[1])});
+      }
+      function renderRouteClearButtons(){
+        [["routeStart","routeStartClear"],["routeEnd","routeEndClear"]].forEach(function(item){$(item[1]).classList.toggle("show",Boolean($(item[0]).value.trim()))});
+      }
+      function hideRouteSuggestions(){
+        routeSuggestTarget=null;routeSuggestSequence++;clearTimeout(routeSuggestTimer);$("routeSuggestions").classList.remove("show");$("routeSuggestions").innerHTML="";
+      }
+      function selectAmapSuggestion(which,id,tip){
+        var input=$(id),name=firstText(tip.name).trim();
+        input.value=name;amapPoints[which]=normalizeAmapPoint(tip,name);
+        clearRouteChoices();hideRouteSuggestions();renderRouteClearButtons();renderAmapConfirmation();updateRouteFetchState();
+        setRouteStatus("地点已确认；请核对下方高德识别结果，确认无误后获取路线","success");
+      }
+      function renderAmapSuggestions(which,id,tips){
+        var box=$("routeSuggestions"),valid=(tips||[]).filter(function(tip){return tip&&tip.location&&firstText(tip.name).trim()}).slice(0,10);
+        box.innerHTML="";box.classList.add("show");
+        var head=document.createElement("div");head.className="route-suggest-head";head.textContent=(which==="start"?"起点":"目的地")+"高德匹配结果 · 点击一项确认";box.appendChild(head);
+        var list=document.createElement("div");list.className="route-suggest-list";box.appendChild(list);
+        if(!valid.length){var empty=document.createElement("div");empty.className="route-suggest-empty";empty.textContent="暂未匹配到准确地点，请补充城市、车站或航站楼名称";list.appendChild(empty);return}
+        valid.forEach(function(tip){
+          var button=document.createElement("button"),name=document.createElement("span"),meta=document.createElement("small"),district=firstText(tip.district||tip.adname).trim(),address=firstText(tip.address).trim();
+          button.type="button";button.className="route-suggest-item";name.textContent=firstText(tip.name).trim();meta.textContent=[district,address].filter(function(value,index,array){return value&&array.indexOf(value)===index}).join(" · ")||"高德地点";
+          button.appendChild(name);button.appendChild(meta);button.addEventListener("click",function(){selectAmapSuggestion(which,id,tip)});list.appendChild(button);
+        });
+      }
+      function requestAmapSuggestions(which,id,immediate){
+        var keyword=$(id).value.trim();
+        renderRouteClearButtons();clearTimeout(routeSuggestTimer);routeSuggestTarget=which;
+        if(!keyword){hideRouteSuggestions();return}
+        var run=function(){
+          var sequence=++routeSuggestSequence;
+          $("routeSuggestions").classList.add("show");$("routeSuggestions").innerHTML='<div class="route-suggest-empty">正在实时匹配高德地点…</div>';
+          loadAmap().then(function(){
+            amapAutocomplete.search(keyword,function(status,result){
+              if(sequence!==routeSuggestSequence||routeSuggestTarget!==which||$(id).value.trim()!==keyword)return;
+              renderAmapSuggestions(which,id,status==="complete"&&result?result.tips:[]);
+            });
+          }).catch(function(){if(sequence===routeSuggestSequence)setRouteStatus("高德地点匹配暂时无法加载，请稍后重试","error")});
+        };
+        if(immediate)run();else routeSuggestTimer=setTimeout(run,180);
+      }
+      function clearAmapInput(which,id){
+        $(id).value="";amapPoints[which]=null;clearRouteChoices();hideRouteSuggestions();renderRouteClearButtons();renderAmapConfirmation();updateRouteFetchState();setRouteStatus("已清空，请重新输入并从高德匹配结果中选择","");$(id).focus();
+      }
+      function updateRouteFetchState(){
+        var transportValid=Boolean(mode)&&(mode==="drive"||["taxi","subway","mixed"].indexOf(airportTransport)>=0);
+        $("routeFetchBtn").disabled=routeBusy||!transportValid||!confirmedPoint("start","routeStart")||!confirmedPoint("end","routeEnd");
+      }
+      function loadAmap(){
+        if(amapPromise)return amapPromise;
+        if(!window.AMapLoader)return Promise.reject(new Error("高德地图加载器不可用"));
+        amapPromise=window.AMapLoader.load({key:AMAP_WEB_KEY,version:"2.0",plugins:["AMap.AutoComplete","AMap.Driving","AMap.Transfer"]}).then(function(AMap){
+          amapAutocomplete=new AMap.AutoComplete({});
+          return AMap;
+        }).catch(function(error){amapPromise=null;throw error});
+        return amapPromise;
+      }
+      function resolveAmapPlace(AMap,id,stored){
+        var keyword=$(id).value.trim();
+        if(stored&&stored.location&&stored.label===keyword)return Promise.resolve(stored);
+        return Promise.reject(new Error((id==="routeStart"?"起点":"目的地")+"尚未确认，请输入后点击高德下拉建议中的准确地点"));
+      }
+      function planHasSubway(plan){
+        var seen=[];
+        function scan(value,key){
+          if(value===null||value===undefined)return false;
+          if(typeof value==="string")return /地铁|号线|subway|metro/i.test(value)||(key==="transit_mode"&&/rail/i.test(value));
+          if(typeof value!=="object")return false;
+          if(seen.indexOf(value)>=0)return false;seen.push(value);
+          return Object.keys(value).some(function(childKey){return scan(value[childKey],childKey)});
+        }
+        return scan(plan,"");
+      }
+      function routeOptionsFromResult(result,transit){
+        var routes=transit?(result&&result.plans):(result&&result.routes);
+        if((!routes||!routes.length)&&result&&result.route)routes=transit?result.route.transits:result.route.paths;
+        var options=(routes||[]).map(function(route,index){
+          var seconds=Number(route&&route.time!==undefined?route.time:route&&route.duration);
+          return Number.isFinite(seconds)&&seconds>0?{minutes:Math.ceil(seconds/60),subway:transit&&planHasSubway(route&&route.segments?route.segments:route),sourceIndex:index}:null;
+        }).filter(Boolean);
+        if(transit)options=options.filter(function(option){return option.subway});
+        options.sort(function(a,b){return a.minutes-b.minutes||a.sourceIndex-b.sourceIndex});
+        var used={};return options.filter(function(option){if(used[option.minutes])return false;used[option.minutes]=true;return true}).slice(0,6);
+      }
+      function clearRouteChoices(){routeChoices=[];selectedRouteMinutes=null;$("routeOptions").classList.remove("show");$("routeOptions").innerHTML=""}
+      function applyRouteChoice(minutes,announce){
+        selectedRouteMinutes=minutes;setInputUnit("road",minutes>=60?"hour":"minute",false);$("road").value=minutes>=60?minutesToHourEntry(minutes):String(minutes);render();
+        document.querySelectorAll("[data-route-minutes]").forEach(function(button){button.classList.toggle("active",Number(button.getAttribute("data-route-minutes"))===minutes)});
+        if(announce)setRouteStatus("已选择高德方案："+minutesToChineseDuration(minutes)+"，并已自动重新计算","success");
+      }
+      function showRouteChoices(options,transit){
+        routeChoices=options.slice();selectedRouteMinutes=options[0].minutes;
+        $("routeOptions").innerHTML=options.map(function(option,index){return '<button class="route-option'+(index===0?' active':'')+'" type="button" data-route-minutes="'+option.minutes+'"><span>'+minutesToChineseDuration(option.minutes)+'</span><small>'+(index===0?(transit?'地铁优先 · 最快':'最快方案'):'备选方案 '+(index+1))+'</small></button>'}).join("");
+        $("routeOptions").classList.add("show");
+        document.querySelectorAll("[data-route-minutes]").forEach(function(button){button.addEventListener("click",function(){applyRouteChoice(Number(this.getAttribute("data-route-minutes")),true)})});
+      }
+      function searchAmapRoute(AMap,start,end,transit){
+        return new Promise(function(resolve,reject){
+          var service;
+          if(transit){
+            var startCity=start.city||start.adcode,endCity=end.city||end.adcode,fastestPolicy=AMap.TransferPolicy&&AMap.TransferPolicy.LEAST_TIME!==undefined?AMap.TransferPolicy.LEAST_TIME:0,options={city:startCity||"全国",policy:fastestPolicy};
+            if(endCity&&endCity!==startCity)options.cityd=endCity;
+            service=new AMap.Transfer(options);
+          }else service=new AMap.Driving({policy:0});
+          service.search(start.location,end.location,function(status,result){
+            if(status!=="complete"){reject(new Error(status==="no_data"?"未找到合适路线，请更换地点或手动填写时间":"高德路线查询失败，请稍后重试"));return}
+            var options=routeOptionsFromResult(result,transit);
+            if(!options.length){reject(new Error(transit?"高德暂未返回包含地铁的路线，请检查地点是否选择准确":"高德已返回路线，但没有可用的预计时间"));return}
+            resolve(options);
+          });
+        });
+      }
+      async function fetchAmapDuration(){
+        var startValue=$("routeStart").value.trim(),endValue=$("routeEnd").value.trim(),isDrive=mode==="drive",transportValid=Boolean(mode)&&(isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0);
+        if(!transportValid){setRouteStatus("请先选择去机场／高铁站的交通工具","error");return}
+        if(!startValue||!endValue){setRouteStatus("请完整填写起点和目的地","error");return}
+        routeBusy=true;$("routeFetchBtn").disabled=true;$("routeFetchBtn").textContent="正在查询路线…";setRouteStatus("正在识别地点并获取高德预计时间…","");
+        try{
+          var AMap=await loadAmap();
+          var points=await Promise.all([resolveAmapPlace(AMap,"routeStart",amapPoints.start),resolveAmapPlace(AMap,"routeEnd",amapPoints.end)]);
+          amapPoints.start=points[0];amapPoints.end=points[1];
+          var transit=!isDrive&&(airportTransport==="subway"||airportTransport==="mixed");
+          var options=await searchAmapRoute(AMap,points[0],points[1],transit);
+          showRouteChoices(options,transit);applyRouteChoice(options[0].minutes,false);
+          setRouteStatus("已获取 "+options.length+" 条"+(transit?"地铁优先":"驾车")+"方案，默认采用最快的 "+minutesToChineseDuration(options[0].minutes)+"；也可选择其他时间","success");
+        }catch(error){clearRouteChoices();setRouteStatus(error&&error.message?error.message:"获取路线失败，请手动填写时间","error")}
+        finally{routeBusy=false;$("routeFetchBtn").textContent="自动获取预计时间";render()}
+      }
+      function getTrafficBuffer(road){
+        if(road<20)return 10;
+        if(road<60)return 15;
+        if(road<120)return 25;
+        return 35;
+      }
+      function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
+      function nowClock(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+      function clockValue(total){var value=((Math.round(total)%1440)+1440)%1440;return String(Math.floor(value/60)).padStart(2,"0")+":"+String(value%60).padStart(2,"0")}
+      function buildTimePicker(){
+        if(timePickerBuilt)return;
+        [["timePickerHour",24],["timePickerMinute",60]].forEach(function(config){
+          var wheel=$(config[0]),fragment=document.createDocumentFragment();
+          for(var i=0;i<config[1];i++){
+            var item=document.createElement("button");item.type="button";item.className="time-wheel-item";item.setAttribute("role","option");item.setAttribute("aria-selected","false");item.dataset.value=String(i).padStart(2,"0");item.dataset.index=String(i);item.textContent=item.dataset.value;
+            item.addEventListener("click",function(){wheel.scrollTo({top:Number(this.dataset.index)*44,behavior:"smooth"})});fragment.appendChild(item);
+          }
+          wheel.appendChild(fragment);wheel.dataset.value="00";
+          wheel.addEventListener("scroll",function(){var current=this;cancelAnimationFrame(current._timeWheelFrame);current._timeWheelFrame=requestAnimationFrame(function(){syncTimeWheel(current)})},{passive:true});
+        });
+        timePickerBuilt=true;
+      }
+      function syncTimeWheel(wheel){
+        var index=Math.max(0,Math.min(wheel.children.length-1,Math.round(wheel.scrollTop/44))),value=String(index).padStart(2,"0");
+        wheel.dataset.value=value;Array.from(wheel.children).forEach(function(item,itemIndex){var selected=itemIndex===index;item.classList.toggle("selected",selected);item.setAttribute("aria-selected",String(selected))});updateTimePickerPreview();
+      }
+      function setTimeWheelValue(id,value){var wheel=$(id),index=Math.max(0,Math.min(wheel.children.length-1,Number(value)||0));wheel.scrollTop=index*44;syncTimeWheel(wheel)}
+      function updateTimePickerPreview(){$("timePickerPreview").textContent=($("timePickerHour").dataset.value||"00")+":"+($("timePickerMinute").dataset.value||"00")}
+      function openTimePicker(target){
+        buildTimePicker();timePickerTarget=target;
+        var value=target==="departure"?$("departure").value:(liveClock||$("liveTime").value),valid=/^\d{2}:\d{2}$/.test(value||"");
+        if(!valid)value=nowClock();
+        var parts=value.split(":");
+        $("timePickerTitle").textContent=target==="departure"?"选择"+$("departureLabel").textContent:"设置定位当前时间";
+        $("timePicker").classList.add("show");$("timePicker").setAttribute("aria-hidden","false");document.body.classList.add("time-picker-open");
+        requestAnimationFrame(function(){setTimeWheelValue("timePickerHour",parts[0]);setTimeWheelValue("timePickerMinute",parts[1]);$("timePickerHour").focus({preventScroll:true})});
+      }
+      function closeTimePicker(){
+        timePickerTarget=null;$("timePicker").classList.remove("show");$("timePicker").setAttribute("aria-hidden","true");document.body.classList.remove("time-picker-open");
+      }
+      function confirmTimePicker(){
+        if(!timePickerTarget)return;
+        syncTimeWheel($("timePickerHour"));syncTimeWheel($("timePickerMinute"));
+        var target=timePickerTarget,value=$("timePickerHour").dataset.value+":"+$("timePickerMinute").dataset.value;
+        closeTimePicker();
+        if(target==="departure"){$("departure").value=value;$("departure").dispatchEvent(new Event("input",{bubbles:true}))}
+        else{liveClock=value;$("liveTime").value=value;renderLive()}
+      }
+      function format(total){
+        var day=Math.floor(total/1440),n=((total%1440)+1440)%1440,h=Math.floor(n/60),m=n%60,t=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+        if(day===-1)return "前一天 "+t;
+        if(day<-1)return "提前"+Math.abs(day)+"天 "+t;
+        if(day===1)return "第二天 "+t;
+        if(day>1)return "第"+(day+1)+"天 "+t;
+        return t;
+      }
+      function alignClock(value,reference){
+        if(!/^\d{2}:\d{2}$/.test(value||""))return null;
+        var clock=toMinutes(value),day=Math.floor(reference/1440),best=clock+day*1440,distance=Math.abs(best-reference);
+        [-1,1].forEach(function(offset){var candidate=clock+(day+offset)*1440,gap=Math.abs(candidate-reference);if(gap<distance){best=candidate;distance=gap}});
+        return best;
+      }
+      function makeDetail(key,icon,name,start,end,duration,durationText,smartMin){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||minutesToChineseDuration(duration),smartMin:smartMin}}
+      function detailOrder(key){
+        var maps={
+          flight:{prep:0,wait:10,"transit-access":10,"arrival-road":20,"flight-bag-find":30,"flight-bag":40,"flight-security-walk":50,"flight-security":60,"flight-gate":70,"flight-boarding":80,"flight-departure":100},
+          train:{prep:0,wait:10,"transit-access":10,"arrival-road":20,"train-security":30,"train-gate":40,"train-wait":50,"train-departure":100},
+          drive:{prep:0,road:20,traffic:30,"drive-arrival":100}
+        };
+        var modeMap=maps[mode]||{};return Object.prototype.hasOwnProperty.call(modeMap,key)?modeMap[key]:999;
+      }
+      function activeExtras(){return customExtras.filter(function(item){return item.mode===mode})}
+      function applyCustomExtras(baseDetails,departure){
+        var pending=activeExtras().slice().sort(function(a,b){return a.beforeOrder-b.beforeOrder||a.sequence-b.sequence}),sequence=[];
+        baseDetails.forEach(function(baseItem){
+          var order=detailOrder(baseItem.key);
+          while(pending.length&&pending[0].beforeOrder<=order){
+            var extra=pending.shift(),custom=makeDetail(extra.id,"✨",cleanExtraName(extra.name),0,0,extra.duration,minutesToChineseDuration(extra.duration),1);
+            custom.isCustomExtra=true;custom.extraId=extra.id;custom.projectNote="安排在“"+extra.beforeName+"”之前";sequence.push(custom);
+          }
+          sequence.push(Object.assign({},baseItem));
+        });
+        if(!sequence.length)return sequence;
+        var last=sequence[sequence.length-1];last.start=departure;last.end=null;last.duration=0;
+        for(var i=sequence.length-2;i>=0;i--){sequence[i].end=sequence[i+1].start;sequence[i].start=sequence[i].end-sequence[i].duration}
+        return sequence;
+      }
+      function compressionRules(){
+        if(mode==="flight")return [
+          {key:"flight-boarding",min:5},
+          {key:"arrival-road",min:3},
+          {key:"flight-gate",min:8},
+          {key:"flight-bag",min:10},
+          {key:"flight-security",min:10}
+        ];
+        if(mode==="train")return [
+          {key:"train-wait",min:5},
+          {key:"arrival-road",min:3},
+          {key:"train-gate",min:8},
+          {key:"train-security",min:8}
+        ];
+        if(mode==="drive")return [{key:"road",min:3}];
+        return [];
+      }
+      function smartMinimum(key){var detail=currentDetails.find(function(x){return x.key===key});if(detail&&Number.isFinite(detail.smartMin))return detail.smartMin;var rule=compressionRules().find(function(x){return x.key===key});return rule?rule.min:0}
+      function clearLive(){liveKey=null;liveClock="";liveRemaining=0;liveOverrides={}}
+      function parkLivePanel(){var panel=$("livePanel"),home=$("livePanelHome");if(panel&&home&&panel.parentNode!==home)home.appendChild(panel)}
+      function placeLivePanel(){var panel=$("livePanel"),slot=$("liveInlineSlot");if(panel&&slot)slot.appendChild(panel)}
+      function attachLocateButtons(){
+        document.querySelectorAll("[data-live-key]").forEach(function(button){
+          button.addEventListener("click",function(){
+            var key=this.getAttribute("data-live-key"),item=currentDetails.find(function(x){return x.key===key});
+            if(!item)return;
+            liveKey=key;liveClock=clockValue(item.start);liveRemaining=item.duration;liveOverrides={};renderLive();
+          });
+        });
+        document.querySelectorAll("[data-live-duration]").forEach(function(input){
+          input.addEventListener("change",function(){
+            var key=this.getAttribute("data-live-duration"),value=Number(this.value),minimum=smartMinimum(key);
+            liveOverrides[key]=Number.isFinite(value)?Math.max(minimum,Math.min(600,Math.round(value))):minimum;
+            renderLive();
+          });
+        });
+        document.querySelectorAll("[data-add-before]").forEach(function(button){
+          button.addEventListener("click",function(){extraEditorBeforeKey=this.getAttribute("data-add-before");renderLive()});
+        });
+        document.querySelectorAll("[data-extra-confirm]").forEach(function(button){
+          button.addEventListener("click",function(){
+            var beforeKey=this.getAttribute("data-extra-confirm"),target=currentDetails.find(function(item){return item.key===beforeKey}),input=$("extraEditorMinutes"),nameInput=$("extraEditorName"),value=input?Number(input.value):20,name=cleanExtraName(nameInput?nameInput.value:"");
+            if(!target)return;
+            value=Number.isFinite(value)?Math.max(1,Math.min(600,Math.round(value))):20;
+            customExtras.push({id:"custom-extra-"+(nextExtraId++),mode:mode,beforeKey:beforeKey,beforeOrder:detailOrder(beforeKey),beforeName:target.name,name:name,duration:value,sequence:nextExtraId});
+            extraEditorBeforeKey=null;render();
+          });
+        });
+        document.querySelectorAll("[data-extra-cancel]").forEach(function(button){button.addEventListener("click",function(){extraEditorBeforeKey=null;renderLive()})});
+        document.querySelectorAll("[data-extra-duration]").forEach(function(input){
+          input.addEventListener("change",function(){
+            var id=this.getAttribute("data-extra-duration"),item=customExtras.find(function(extra){return extra.id===id}),value=Number(this.value);
+            if(!item)return;item.duration=Number.isFinite(value)?Math.max(1,Math.min(600,Math.round(value))):1;render();
+          });
+        });
+        document.querySelectorAll("[data-extra-name]").forEach(function(input){
+          input.addEventListener("change",function(){var id=this.getAttribute("data-extra-name"),item=customExtras.find(function(extra){return extra.id===id});if(!item)return;item.name=cleanExtraName(this.value);render()});
+        });
+        document.querySelectorAll("[data-extra-delete]").forEach(function(button){
+          button.addEventListener("click",function(){var id=this.getAttribute("data-extra-delete");customExtras=customExtras.filter(function(extra){return extra.id!==id});extraEditorBeforeKey=null;render()});
+        });
+      }
+      function splitDurationText(text){var value=String(text),match=value.match(/^(.*?)(（[^）]+）)$/);return match?{main:match[1],note:match[2]}:{main:value,note:""}}
+      function cleanExtraName(value){var name=Array.from(String(value||"").trim()).slice(0,20).join("");return name||"额外事项"}
+      function escapeHTML(value){return String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+      function rowsHTML(details,live){
+        return details.map(function(item,index){
+          var timing=item,rowClass="",durationText=item.durationText,tag="",durationMarkup="",adjustmentNote="",splitNote="",editorHTML="",rowAction="";
+          if(live){
+            if(index<live.index)rowClass=" live-past";
+            else if(index===live.index){rowClass=" live-current";tag='<span class="live-tag">当前</span>';}
+            else rowClass=" live-future";
+            if(index>=live.index){
+              timing=live.schedule[index];
+              durationText=item.end===null?item.durationText:Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart?minutesToChineseDuration(item.roadPart)+" + "+minutesToChineseDuration(timing.duration-item.roadPart):minutesToChineseDuration(timing.duration);
+            }
+          }
+          var endTime=timing.end===null?timing.start:timing.end;
+          var nextName=details[index+1]?details[index+1].name:(mode==="drive"?"行程结束":"行程开始");
+          var range='<span>'+format(timing.start)+'</span> → <span class="range-end">'+format(endTime)+'</span><small class="next-step">'+escapeHTML(nextName)+'</small>';
+          var active=live&&index===live.index?" active":"";
+          var displayDuration=splitDurationText(durationText),referenceDuration=splitDurationText(item.durationText);
+          var durationNote=referenceDuration.note?'<small class="duration-note">'+referenceDuration.note+'</small>':'';
+          if(timing.autoAdded)adjustmentNote='<small class="auto-buffer">已自动增加 '+minutesToChineseDuration(timing.autoAdded)+'</small>';
+          if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+minutesToChineseDuration(timing.autoReduced)+'，最低 '+minutesToChineseDuration(timing.smartMin)+'</small>';
+          if(Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart)splitNote='<small class="duration-split">'+minutesToChineseDuration(item.roadPart)+' + '+minutesToChineseDuration(timing.duration-item.roadPart)+'</small>';
+          if(live&&index>live.index&&item.end!==null){
+            durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+escapeHTML(item.name)+'所需时间">分钟</label>'+splitNote+durationNote+adjustmentNote+'</span>';
+          }else if(live&&index===live.index&&item.end!==null){
+            durationMarkup='<span>剩余 '+displayDuration.main+durationNote+adjustmentNote+'</span>';
+          }else if(item.isCustomExtra){
+            durationMarkup='<span><label class="extra-duration-edit"><input type="number" min="1" max="600" value="'+item.duration+'" data-extra-duration="'+item.extraId+'" aria-label="修改额外事项时间">分钟</label></span>';
+          }else durationMarkup='<span>'+displayDuration.main+durationNote+'</span>';
+          var projectNote=item.projectNote?'<small class="project-note'+(item.deadlineNote?' deadline-note':'')+'">'+escapeHTML(item.projectNote)+'</small>':'';
+          var projectTitle=item.isCustomExtra?'<span class="project-start">'+format(timing.start)+'</span><input class="extra-name-input" type="text" maxlength="20" value="'+escapeHTML(item.name)+'" data-extra-name="'+item.extraId+'" aria-label="修改额外事项名称">'+tag:'<span class="project-start">'+format(timing.start)+'</span>'+escapeHTML(item.name)+tag;
+          rowAction=item.isCustomExtra?'<button class="extra-delete-btn" type="button" data-extra-delete="'+item.extraId+'">删除</button>':'<button class="extra-add-btn" type="button" data-add-before="'+item.key+'">＋途中新事项</button>';
+          if(extraEditorBeforeKey===item.key)editorHTML='<div class="extra-editor-row"><div class="extra-editor-copy">在“'+escapeHTML(item.name)+'”之前增加途中新事项</div><div class="extra-editor-actions"><input class="extra-editor-name" id="extraEditorName" type="text" maxlength="20" value="额外事项" placeholder="事项名称" aria-label="额外事项名称"><label><input id="extraEditorMinutes" type="number" min="1" max="600" value="20" aria-label="额外事项所需时间">分钟</label><button class="extra-editor-confirm" type="button" data-extra-confirm="'+item.key+'">添加</button><button class="extra-editor-cancel" type="button" data-extra-cancel>取消</button></div></div>';
+          var row='<div class="breakdown-row'+rowClass+'"><div class="project"><span class="project-icon">'+item.icon+'</span><span class="project-copy"><span>'+projectTitle+'</span>'+projectNote+'</span></div><div class="range">'+range+'</div><div class="duration">'+durationMarkup+'<button class="locate-btn'+active+'" type="button" data-live-key="'+item.key+'">'+(active?"当前项":"定位当前")+'</button>'+rowAction+'</div></div>';
+          return editorHTML+row+(live&&index===live.index?'<div class="live-inline-slot" id="liveInlineSlot"></div>':'');
+        }).join("");
+      }
+      function renderLive(){
+        parkLivePanel();
+        var index=currentDetails.findIndex(function(x){return x.key===liveKey});
+        if(index<0){
+          clearLive();$("livePanel").classList.remove("show");
+          $("breakdownTotal").textContent="合计 "+minutesToChineseDuration(currentPlanTotal);
+          $("breakdownList").innerHTML=rowsHTML(currentDetails,null);attachLocateButtons();return;
+        }
+        var item=currentDetails[index],current=alignClock(liveClock,item.start);
+        $("livePanel").classList.add("show");$("liveProject").textContent=item.name;
+        if(document.activeElement!==$("liveTime"))$("liveTime").value=liveClock;
+        if(document.activeElement!==$("liveRemaining"))$("liveRemaining").value=String(liveRemaining);
+        $("liveRemaining").setAttribute("min","0");
+        $("liveRemainingWrap").style.display=item.duration===0?"none":"flex";
+        if(current===null){
+          $("breakdownTotal").textContent="等待当前时间";
+          $("liveStatus").className="live-status neutral";$("liveStatus").textContent="请设置有效的当前时间";
+          $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:currentDetails});attachLocateButtons();placeLivePanel();return;
+        }
+        var cursor=current,schedule=[],durations=[],bufferKey=mode==="flight"?"flight-boarding":mode==="train"?"train-wait":null;
+        var bufferName=mode==="flight"?"候机准备登机":mode==="train"?"候车准备发车":"";
+        currentDetails.forEach(function(detail,i){
+          if(i<index)return;
+          durations[i]=i===index?liveRemaining:(Object.prototype.hasOwnProperty.call(liveOverrides,detail.key)?liveOverrides[detail.key]:detail.duration);
+        });
+        var bufferIndex=bufferKey?currentDetails.findIndex(function(detail){return detail.key===bufferKey}):-1;
+        var autoReduced=0,reductions=[],cutoffReduced=0,cutoffRemaining=0,cutoffInitialShortage=0;
+        var bagIndex=mode==="flight"&&checkedBag?currentDetails.findIndex(function(detail){return detail.key==="flight-bag"}):-1;
+        var bagDeadline=currentDeparture-BAG_CUTOFF_MINUTES;
+        function finishThrough(endIndex){var finish=current;for(var j=index;j<=endIndex;j++){if(typeof durations[j]==="number")finish+=durations[j]}return finish}
+        function compressFor(shortage,maxIndex){
+          var remaining=shortage;
+          compressionRules().forEach(function(rule){
+            if(remaining<=0)return;
+            var ruleIndex=currentDetails.findIndex(function(detail){return detail.key===rule.key});
+            if(ruleIndex<index||ruleIndex<0||ruleIndex>maxIndex||typeof durations[ruleIndex]!=="number")return;
+            var minimum=smartMinimum(rule.key),available=Math.max(0,durations[ruleIndex]-minimum),reduced=Math.min(available,remaining);
+            if(reduced>0){durations[ruleIndex]-=reduced;reductions[ruleIndex]=(reductions[ruleIndex]||0)+reduced;autoReduced+=reduced;remaining-=reduced}
+          });
+          return remaining;
+        }
+        if(bagIndex>=index){
+          cutoffInitialShortage=Math.max(0,finishThrough(bagIndex)-bagDeadline);
+          if(cutoffInitialShortage>0){
+            var reducedBeforeCutoff=autoReduced;
+            cutoffRemaining=compressFor(cutoffInitialShortage,bagIndex);
+            cutoffReduced=autoReduced-reducedBeforeCutoff;
+          }
+        }
+        var naturalFinish=finishThrough(currentDetails.length-1);
+        var autoAdded=bufferIndex>=index&&naturalFinish<currentDeparture?currentDeparture-naturalFinish:0;
+        if(autoAdded>0){
+          durations[bufferIndex]+=autoAdded;
+        }else{
+          compressFor(Math.max(0,naturalFinish-currentDeparture),currentDetails.length-1);
+        }
+        currentDetails.forEach(function(detail,i){
+          if(i<index){schedule[i]=detail;return;}
+          var duration=durations[i];
+          schedule[i]={start:cursor,end:detail.end===null?null:cursor+duration,duration:duration,autoAdded:i===bufferIndex?autoAdded:0,autoReduced:reductions[i]||0,smartMin:smartMinimum(detail.key)};
+          cursor+=duration;
+        });
+        $("breakdownTotal").textContent="余下 "+minutesToChineseDuration(cursor-current);
+        var difference=cursor-currentDeparture,status=$("liveStatus"),bagCompletion=bagIndex>=index&&schedule[bagIndex]?schedule[bagIndex].end:null;
+        if(cutoffRemaining>0){
+          status.className="live-status bad";
+          status.textContent="托运截止风险：预计 "+format(bagCompletion)+" 完成托运，超过 "+format(bagDeadline)+" 截止线 "+minutesToChineseDuration(cutoffRemaining)+"。已按最低值压缩 "+minutesToChineseDuration(autoReduced)+"，请立即联系航空公司或机场柜台";
+        }else if(difference>0){
+          status.className="live-status bad";
+          status.textContent=(cutoffInitialShortage>0?"托运预计可在 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）；但":"")+(autoReduced>0?"已智能压缩 "+minutesToChineseDuration(autoReduced)+"，":"时间不足，")+"仍差 "+minutesToChineseDuration(difference)+"｜预计 "+format(cursor)+" 完成；可修改下方其他项目分钟数";
+        }else if(cutoffReduced>0){
+          status.className="live-status good";
+          status.textContent="已智能压缩 "+minutesToChineseDuration(autoReduced)+"（其中为托运截止线优先压缩 "+minutesToChineseDuration(cutoffReduced)+"），托运预计 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）｜"+(autoAdded>0?"多出的 "+minutesToChineseDuration(autoAdded)+"已加入“"+bufferName+"”":"余下环节可衔接至"+currentTargetLabel);
+        }else if(autoAdded>0){
+          status.className="live-status good";
+          status.textContent="时间充足，多出的 "+minutesToChineseDuration(autoAdded)+"已全部加入“"+bufferName+"”｜余下环节将衔接至"+currentTargetLabel;
+        }else if(autoReduced>0){
+          status.className="live-status good";
+          status.textContent="时间紧张，已按优先级智能压缩 "+minutesToChineseDuration(autoReduced)+"｜预计刚好赶上"+currentTargetLabel;
+        }else if(difference<0){
+          status.className="live-status good";
+          status.textContent="时间充足，还剩 "+minutesToChineseDuration(Math.abs(difference))+"余量｜预计 "+format(cursor)+" 完成余下环节";
+        }else{
+          status.className="live-status neutral";
+          status.textContent="时间刚好｜预计 "+format(cursor)+" 完成余下环节，请立即继续";
+        }
+        $("breakdownList").innerHTML=rowsHTML(currentDetails,{index:index,schedule:schedule});attachLocateButtons();placeLivePanel();
+      }
+      function render(){
+        var departureRaw=$("departure").value,departureValid=/^\d{2}:\d{2}$/.test(departureRaw),departure=departureValid?toMinutes(departureRaw):null,road=getRoad(),access=getAccess(),prep=prepEnabled?number("prep"):0,waitInput=number("wait");
+        var isFlight=mode==="flight",isTrain=mode==="train",isDrive=mode==="drive";
+        var modeSelected=Boolean(mode),transportValid=modeSelected&&(isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0);
+        var usesTaxi=!isDrive&&airportTransport==="taxi",usesRail=!isDrive&&(airportTransport==="subway"||airportTransport==="mixed");
+        var traffic=road===null?null:(usesRail?15:getTrafficBuffer(road));
+        var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
+        var departText=isFlight?"起飞":isTrain?"发车":"计划到达";
+        var roadText=!modeSelected?"请先选择出行方式":isDrive?"开车路程所需时间":!transportValid?"请先选择去"+terminal+"的交通工具":usesTaxi?"打车到"+terminal+"，高德地图所显示预估时间":airportTransport==="subway"?"高德地图所显示地铁主体行程预估时间":"高德地图所显示地铁＋打车主体行程预估时间";
+        var advance=isFlight?(checkedBag?93:70):isTrain?55:0;
+        var minimum=isFlight?(checkedBag?83:65):isTrain?40:0;
+        var wait=usesTaxi?waitInput:0;
+        $("transportRow").style.display=!modeSelected||isDrive?"none":"block";
+        $("amapRouteBox").style.display=modeSelected?"block":"none";
+        $("roadTimeRow").style.display=modeSelected?"block":"none";
+        $("bagRow").style.display=isFlight?"flex":"none";
+        $("transportLabel").textContent="去"+terminal+"的交通工具（必选）";
+        $("transportHint").style.display=transportValid?"none":"block";
+        $("transportHint").textContent="必选：请选择去"+terminal+"的交通工具";
+        $("taxiTransportBtn").classList.toggle("active",usesTaxi);
+        $("subwayTransportBtn").classList.toggle("active",airportTransport==="subway");
+        $("mixedTransportBtn").classList.toggle("active",airportTransport==="mixed");
+        updateRouteFetchState();
+        $("routeStart").placeholder=(usesRail?"输入地铁主体路线起点／搭乘点":"输入起点")+"（从下拉选择）";
+        $("routeEnd").placeholder=(isFlight?"输入机场／出发层／航站楼":isTrain?"输入高铁站名称":"输入目的地")+"（从下拉选择）";
+        renderRouteClearButtons();
+        renderAmapConfirmation();
+        if(!modeSelected&&!routeBusy)setRouteStatus("请先选择飞机、高铁或开车","");
+        else if(!transportValid&&!routeBusy)setRouteStatus("选择交通工具后，请输入地点并点击高德下拉建议完成确认","");
+        $("transitAccessRow").style.display=usesRail?"block":"none";
+        $("access").disabled=!usesRail;
+        $("accessUnit").disabled=!usesRail;
+        $("access").setAttribute("aria-invalid",String(usesRail&&access===null));
+        $("accessHint").classList.toggle("ok",usesRail&&access!==null);
+        $("accessHint").textContent=usesRail?durationInputHint("access",access,"必填：请输入到地铁搭乘点所需时间"):"";
+        $("prepInputWrap").style.display=prepEnabled?"flex":"none";
+        $("prepOffText").style.display=prepEnabled?"none":"inline";
+        $("prep").disabled=!prepEnabled;
+        $("headlineAction").textContent=!modeSelected?"出发":prepEnabled?"起床":"出门";
+        $("departureLabel").textContent=!modeSelected?"起飞／发车／到达时间":isDrive?"计划到达时间":departText+"时间";
+        $("departure").disabled=!modeSelected;$("departure").placeholder=modeSelected?"请选择 00:00–23:59":"请先选择出行方式";
+        $("departure").setAttribute("aria-invalid",String(modeSelected&&!departureValid));
+        $("departureHint").classList.toggle("show",!modeSelected||!departureValid);
+        $("departureHint").textContent=!modeSelected?"必填：请先选择出行方式":"必填：请选择"+(isDrive?"计划到达时间":departText+"时间");
+        $("roadLabel").textContent=roadText;
+        $("road").disabled=!transportValid;
+        $("roadUnit").disabled=!transportValid;
+        roadPresets.forEach(function(minutes){$("road"+minutes).disabled=!transportValid});
+        $("waitTimeRow").style.display=usesTaxi?"flex":"none";
+        $("advanceRow").style.display=!modeSelected||isDrive?"none":"flex";
+        $("advanceLabel").textContent="建议提前到"+terminal;
+        $("advanceValue").textContent=minutesToChineseDuration(advance);
+        $("actionSummaryLabel").textContent=!modeSelected?"🚏 等待选择出行方式":isDrive?"🚗 建议出发":usesTaxi?"🚕 建议叫车":usesRail?"🚇 建议出发":"🚏 建议出发";
+        $("arrivalSummaryLabel").textContent=!modeSelected?"📍 等待选择出行方式":isDrive?"📍 计划到达目的地":"📍 建议到达"+terminal;
+        var riskBase=!modeSelected?"请先选择出行方式。":isDrive?"该时间不含路况余量，仅作紧急参考。":usesTaxi?"该时间不含等车与路况余量，仅作紧急参考。":usesRail?"该时间不含 15 分钟地铁冗余，仅作紧急参考。":"请先选择去"+terminal+"的交通工具。";
+        $("riskNote").textContent=(isFlight&&checkedBag?"托运按起飞前 45 分钟完成计算，具体截止时间以航空公司和机场规定为准；":"")+riskBase;
+        $("travelIcon").textContent=!modeSelected?"◷":isFlight?"✈":isTrain?"🚄":"🚗";
+        roadPresets.forEach(function(minutes){$("road"+minutes).classList.toggle("active",road===minutes)});
+        roadPresets.forEach(function(minutes){$("access"+minutes).classList.toggle("active",usesRail&&access===minutes)});
+        var routeAutoMatched=selectedRouteMinutes!==null&&road===selectedRouteMinutes;
+        $("road").setAttribute("aria-invalid",String(transportValid&&road===null));
+        $("road").classList.toggle("amap-filled",routeAutoMatched);$("roadUnit").classList.toggle("amap-filled",routeAutoMatched);
+        $("roadHint").classList.toggle("ok",transportValid&&road!==null);$("roadHint").classList.toggle("amap-match",routeAutoMatched);
+        $("roadHint").textContent=!transportValid?"请先选择交通工具":routeAutoMatched?minutesToChineseDuration(road)+"（高德自动匹配）":durationInputHint("road",road,"必填：请选择上方时间或手动输入");
+        $("bufferLabel").textContent=usesRail?"地铁冗余时间":"路况余量";
+        $("bufferHint").textContent=usesRail?"预留候车、换乘、临时步行及运营波动时间":"预留堵车、红绿灯、临时绕行等不确定时间";
+        $("trafficValue").classList.toggle("fixed",usesRail);
+        $("trafficValue").textContent=!transportValid?"等待选择":traffic===null?"等待路程":minutesToChineseDuration(traffic);
+        if(!modeSelected||!departureValid||!transportValid||road===null||(usesRail&&access===null)){
+          parkLivePanel();currentDetails=[];clearLive();$("livePanel").classList.remove("show");
+          $("arrivalSummary").textContent="--:--";
+          $("callSummary").textContent="--:--";
+          $("wakeHeadline").textContent="--:--";
+          $("criticalValue").textContent="--:--";
+          $("breakdownTotal").textContent=!modeSelected?"等待选择出行方式":!departureValid?"等待填写时间":!transportValid?"等待选择交通工具":road===null?"等待填写路程":"等待填写搭乘点时间";
+          var emptyMessage=!modeSelected?"请先选择飞机、高铁或开车":!departureValid?"请先填写"+(isDrive?"计划到达时间":departText+"时间"):!transportValid?"请先选择去"+terminal+"的交通工具":road===null?"请先选择或输入"+roadText:"请先输入到地铁搭乘点所需时间";
+          $("breakdownList").innerHTML='<div class="empty-plan">'+emptyMessage+'<br>填写后将自动生成完整规划</div>';
+          return;
+        }
+        var arrive=departure-advance;
+        var leave=arrive-road-traffic;
+        var call=usesTaxi?leave-wait:usesRail?leave-access:leave;
+        var wake=call-prep;
+        var prepEnd=wake+prep;
+        var details=[];
+        if(prepEnabled)details.push(makeDetail("prep","☕","起床准备",wake,prepEnd,prep));
+        if(usesTaxi)details.push(makeDetail("wait","🚕","开始呼叫打车",call,leave,wait));
+        if(usesRail)details.push(makeDetail("transit-access",airportTransport==="mixed"?"🚕":"🚶","步行／打车前往地铁搭乘点",call,leave,access,minutesToChineseDuration(access),1));
+        if(isDrive){
+          var driveRoad=makeDetail("road","🚗","开车前往目的地",leave,arrive,road+traffic,minutesToChineseDuration(road)+" + "+minutesToChineseDuration(traffic),road+3);
+          driveRoad.roadPart=road;
+          driveRoad.projectNote="（包含路况余量 "+minutesToChineseDuration(traffic)+"）";
+          details.push(driveRoad);
+        }else{
+          var arrivalName=usesTaxi?(isFlight?"上车出发机场":"上车出发高铁站"):airportTransport==="subway"?"乘坐地铁前往"+terminal:"乘坐地铁＋打车前往"+terminal;
+          var arrivalRoad=makeDetail("arrival-road",usesTaxi?"📍":"🚇",arrivalName,leave,arrive,road+traffic,minutesToChineseDuration(road)+" + "+minutesToChineseDuration(traffic),road+3);
+          arrivalRoad.roadPart=road;
+          arrivalRoad.projectNote=usesTaxi?"（包含路况余量 "+minutesToChineseDuration(traffic)+"）":"（包含地铁冗余时间 "+minutesToChineseDuration(traffic)+"）";
+          details.push(arrivalRoad);
+        }
+        var processAt=arrive;
+        if(isFlight){
+          if(checkedBag){
+            details.push(makeDetail("flight-bag-find","🔎","到达机场寻找托运点",processAt,processAt+3,3));
+            processAt+=3;
+            var bagDetail=makeDetail("flight-bag","🧳","开始办理行李托运",processAt,processAt+20,20);
+            bagDetail.projectNote="须在 "+format(departure-BAG_CUTOFF_MINUTES)+" 前完成（按起飞前 45 分钟截止计算）";
+            bagDetail.deadlineNote=true;
+            details.push(bagDetail);
+            processAt+=20;
+          }
+          details.push(makeDetail("flight-security-walk","🚶","通往安检点",processAt,processAt+5,5));
+          processAt+=5;
+          details.push(makeDetail("flight-security","🛂","开始机场安检",processAt,processAt+15,15,"15 分钟（通常 15–20）"));
+          processAt+=15;
+          details.push(makeDetail("flight-gate","🚶","前往登机口",processAt,processAt+15,15,"15 分钟（通常 10–15）"));
+          processAt+=15;
+          details.push(makeDetail("flight-boarding","🛫","候机准备登机",processAt,departure,departure-processAt));
+        }else if(isTrain){
+          details.push(makeDetail("train-security","🛂","到达高铁站进行安检",processAt,processAt+10,10,"10 分钟（一般）"));
+          processAt+=10;
+          details.push(makeDetail("train-gate","🔎","前往检票口",processAt,processAt+10,10));
+          processAt+=10;
+          details.push(makeDetail("train-wait","🚄","候车准备发车",processAt,departure,departure-processAt));
+        }
+        if(isFlight)details.push(makeDetail("flight-departure","✈","航班起飞",departure,null,0,"行程开始"));
+        else if(isTrain)details.push(makeDetail("train-departure","🚄","高铁发车",departure,null,0,"行程开始"));
+        else details.push(makeDetail("drive-arrival","🏁","到达目的地",departure,null,0,"抵达"));
+        details=applyCustomExtras(details,departure);
+        var roadDetail=details.find(function(item){return item.key===(isDrive?"road":"arrival-road")});
+        var waitDetail=details.find(function(item){return item.key==="wait"});
+        var accessDetail=details.find(function(item){return item.key==="transit-access"});
+        var firstProcessKey=isFlight?(checkedBag?"flight-bag-find":"flight-security-walk"):isTrain?"train-security":"drive-arrival";
+        var firstProcess=details.find(function(item){return item.key===firstProcessKey});
+        leave=roadDetail?roadDetail.start:departure;call=isDrive?leave:(waitDetail?waitDetail.start:accessDetail?accessDetail.start:leave);arrive=firstProcess?firstProcess.start:departure;
+        var wakeTime=prepEnabled&&details.length?details[0].start:(usesRail?call:leave);
+        var critical=(usesRail?call:leave)+(advance-minimum)+traffic;
+        $("arrivalSummary").textContent=format(arrive);
+        $("callSummary").textContent=format(call);
+        $("wakeHeadline").textContent=format(wakeTime);
+        $("criticalValue").textContent=format(critical);
+        currentPlanTotal=details.reduce(function(total,item){return total+(item.end===null?0:item.duration)},0);
+        $("breakdownTotal").textContent="合计 "+minutesToChineseDuration(currentPlanTotal);
+        currentDetails=details;currentDeparture=departure;currentTargetLabel=(isFlight?"原定起飞 ":isTrain?"原定发车 ":"计划到达 ")+format(departure);
+        renderLive();
+      }
+      var exportToastTimer=null,lastExportUrl="",lastExportBlob=null,lastExportName="";
+      function showExportToast(message){
+        var toast=$("exportToast");
+        toast.textContent=message;toast.classList.add("show");
+        clearTimeout(exportToastTimer);exportToastTimer=setTimeout(function(){toast.classList.remove("show")},3200);
+      }
+      function exportFileName(){
+        var d=new Date(),pad=function(value){return String(value).padStart(2,"0")};
+        return "出行时间规划-"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"-"+pad(d.getHours())+pad(d.getMinutes())+".jpg";
+      }
+      function canShareImage(blob,name){
+        if(!navigator.share||!navigator.canShare||typeof File==="undefined")return false;
+        try{return navigator.canShare({files:[new File([blob],name,{type:"image/jpeg"})]})}catch(error){return false}
+      }
+      function downloadImage(blob,name){
+        var url=URL.createObjectURL(blob),link=document.createElement("a");
+        link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();
+        setTimeout(function(){URL.revokeObjectURL(url)},3000);
+      }
+      function closeImagePreview(){
+        $("imagePreview").classList.remove("show");$("imagePreview").setAttribute("aria-hidden","true");
+        $("previewImage").removeAttribute("src");
+        if(lastExportUrl){URL.revokeObjectURL(lastExportUrl);lastExportUrl=""}
+      }
+      function openImagePreview(blob,name){
+        if(lastExportUrl)URL.revokeObjectURL(lastExportUrl);
+        lastExportBlob=blob;lastExportName=name;lastExportUrl=URL.createObjectURL(blob);
+        $("previewImage").src=lastExportUrl;
+        $("previewDownload").textContent=canShareImage(blob,name)?"保存到手机相册":"下载 JPG 图片";
+        $("imagePreview").classList.add("show");$("imagePreview").setAttribute("aria-hidden","false");
+      }
+      async function savePreviewImage(){
+        if(!lastExportBlob)return;
+        if(canShareImage(lastExportBlob,lastExportName)){
+          try{
+            var file=new File([lastExportBlob],lastExportName,{type:"image/jpeg"});
+            await navigator.share({files:[file],title:"出行时间规划"});
+            showExportToast("已打开系统菜单，请选择“存储图像”或“保存到照片”");
+            return;
+          }catch(error){if(error&&error.name==="AbortError")return}
+        }
+        downloadImage(lastExportBlob,lastExportName);showExportToast("JPG 已下载；也可以长按预览图保存到相册");
+      }
+      function useSafariCanvasExport(){
+        var agent=navigator.userAgent||"";
+        return /iP(?:hone|ad|od)/.test(agent)||(/Safari/.test(agent)&&!/Chrome|CriOS|FxiOS|EdgiOS|OPiOS/.test(agent));
+      }
+      function roundedCanvasRect(context,x,y,width,height,radius,color){
+        var r=Math.min(radius,width/2,height/2);context.beginPath();context.moveTo(x+r,y);context.lineTo(x+width-r,y);context.quadraticCurveTo(x+width,y,x+width,y+r);context.lineTo(x+width,y+height-r);context.quadraticCurveTo(x+width,y+height,x+width-r,y+height);context.lineTo(x+r,y+height);context.quadraticCurveTo(x,y+height,x,y+height-r);context.lineTo(x,y+r);context.quadraticCurveTo(x,y,x+r,y);context.closePath();context.fillStyle=color;context.fill();
+      }
+      function canvasLines(context,text,maxWidth){
+        var chars=Array.from(String(text||"")),lines=[],line="";
+        chars.forEach(function(char){var next=line+char;if(line&&context.measureText(next).width>maxWidth){lines.push(line);line=char}else line=next});
+        if(line||!lines.length)lines.push(line);return lines;
+      }
+      function drawCanvasLines(context,text,x,y,maxWidth,lineHeight,color,font){
+        context.font=font;context.fillStyle=color;var lines=canvasLines(context,text,maxWidth);
+        lines.forEach(function(line,index){context.fillText(line,x,y+index*lineHeight)});return lines.length*lineHeight;
+      }
+      function visibleDetailRows(){
+        return Array.from(document.querySelectorAll("#breakdownList .breakdown-row")).map(function(row){
+          var icon=row.querySelector(".project-icon"),name=row.querySelector(".project-copy > span"),projectStart=row.querySelector(".project-start"),customName=row.querySelector("[data-extra-name]"),note=row.querySelector(".project-note");
+          var times=row.querySelectorAll(".range > span"),next=row.querySelector(".next-step"),duration=row.querySelector(".duration > span"),durationInput=row.querySelector("[data-live-duration]");
+          var durationText=duration?duration.textContent.replace(/\s+/g," ").trim():"";
+          if(durationInput){
+            var extras=Array.from(duration.querySelectorAll("small")).map(function(item){return item.textContent.trim()}).join(" ");
+            durationText=minutesToChineseDuration(Number(durationInput.value)||0)+(extras?" "+extras:"");
+          }
+          var startLabel=projectStart?projectStart.textContent.trim():(times[0]?times[0].textContent.trim():"--:--"),nameText=customName?cleanExtraName(customName.value):(name?name.textContent.replace(/\s+/g," ").trim():"项目");
+          if(nameText.indexOf(startLabel)===0)nameText=nameText.slice(startLabel.length);
+          return {icon:icon?icon.textContent.trim():"•",name:nameText,note:note?note.textContent.trim():"",startLabel:startLabel,start:times[0]?times[0].textContent.trim():"--:--",end:times[1]?times[1].textContent.trim():"--:--",next:next?next.textContent.trim():"",duration:durationText};
+        });
+      }
+      function createCanvasReportJpg(){
+        return new Promise(function(resolve,reject){
+          try{
+            var width=1080,pad=56,contentWidth=width-pad*2,canvas=document.createElement("canvas"),context=canvas.getContext("2d");
+            if(!context)throw new Error("当前浏览器不支持图片绘制");
+            var modeName=mode==="flight"?"✈ 飞机":mode==="train"?"🚄 高铁":mode==="drive"?"🚗 开车":"未选择";
+            var transportName=airportTransport==="taxi"?"🚕 打车":airportTransport==="subway"?"🚇 地铁":airportTransport==="mixed"?"🚇＋🚕 地铁＋打车":"未选择";
+            var roadValue=getRoad(),settings=[["出行方式",modeName]];
+            if(mode==="flight"||mode==="train")settings.push(["去"+(mode==="flight"?"机场":"高铁站")+"的交通工具",transportName]);
+            if($("routeStart").value.trim())settings.push(["路线起点",$("routeStart").value.trim()]);
+            if($("routeEnd").value.trim())settings.push(["路线目的地",$("routeEnd").value.trim()]);
+            settings.push([$("departureLabel").textContent,$("departure").value||"未填写"]);
+            settings.push([$("roadLabel").textContent,roadValue===null?"未填写":minutesToChineseDuration(roadValue)]);
+            if(mode!=="drive"&&(airportTransport==="subway"||airportTransport==="mixed"))settings.push(["步行／打车到地铁搭乘点",getAccess()===null?"未填写":minutesToChineseDuration(getAccess())]);
+            if(mode==="flight")settings.push(["办理行李托运",checkedBag?"需要":"不需要"]);
+            var modeExtras=activeExtras(),extraTotal=modeExtras.reduce(function(total,item){return total+item.duration},0);
+            settings.push(["额外事项",modeExtras.length?modeExtras.length+" 项，共 "+minutesToChineseDuration(extraTotal):"未添加"]);
+            settings.push(["起床准备",prepEnabled?minutesToChineseDuration(number("prep")):"关闭"]);
+            if(airportTransport==="taxi")settings.push(["开始呼叫打车",minutesToChineseDuration(number("wait"))]);
+            settings.push([$("bufferLabel").textContent,$("trafficValue").textContent]);
+            if(mode!=="drive")settings.push([$("advanceLabel").textContent,$("advanceValue").textContent]);
+            var rows=visibleDetailRows();
+            context.font='24px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+            var settingsRows=settings.map(function(item){return Math.max(66,canvasLines(context,item[0],650).length*30+18)});
+            var settingsHeight=82+settingsRows.reduce(function(sum,value){return sum+value},0);
+            var detailHeights=rows.map(function(row){
+              context.font='700 31px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+              var nameLines=canvasLines(context,row.icon+"  "+row.startLabel+row.name,contentWidth-48).length;
+              context.font='24px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+              var durationLines=canvasLines(context,"用时 "+row.duration,contentWidth-48).length;
+              return 44+nameLines*38+(row.note?31:0)+42+durationLines*31+20;
+            });
+            var detailHeight=92+(rows.length?detailHeights.reduce(function(sum,value){return sum+value},0):150);
+            var exportWarningText="⚠ "+$("riskNote").textContent+" 机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。";
+            context.font='700 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+            var warningHeight=Math.max(104,48+canvasLines(context,exportWarningText,contentWidth-48).length*31);
+            var height=210+30+settingsHeight+30+330+30+detailHeight+warningHeight+66;
+            canvas.width=width;canvas.height=height;context=context=canvas.getContext("2d");
+            context.fillStyle="#eef1e9";context.fillRect(0,0,width,height);context.textBaseline="alphabetic";
+            roundedCanvasRect(context,0,0,width,210,0,"#17362d");
+            context.fillStyle="#d9ff78";context.font='900 52px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("出行时间规划",pad,82);
+            context.fillStyle="#b7cbc3";context.font='26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("完整出行方案 · "+modeName,pad,128);
+            context.fillStyle="#819b91";context.font='22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("导出时间："+new Date().toLocaleString("zh-CN",{hour12:false}),pad,168);
+            var y=240;roundedCanvasRect(context,pad,y,contentWidth,settingsHeight,28,"#ffffff");
+            context.fillStyle="#17362d";context.font='900 34px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("出行设置",pad+28,y+52);
+            var rowY=y+82;
+            settings.forEach(function(item,index){
+              var rowHeight=settingsRows[index];if(index){context.fillStyle="#e4e9e4";context.fillRect(pad+28,rowY,contentWidth-56,1)}
+              context.font='24px "PingFang SC","Microsoft YaHei",Arial,sans-serif';drawCanvasLines(context,item[0],pad+28,rowY+39,650,30,"#667a72",context.font);
+              context.fillStyle="#17362d";context.font='900 28px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.textAlign="right";context.fillText(item[1],width-pad-28,rowY+39);context.textAlign="left";rowY+=rowHeight;
+            });
+            y+=settingsHeight+30;roundedCanvasRect(context,pad,y,contentWidth,330,28,"#17362d");
+            context.fillStyle="#a9beb6";context.font='24px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("你的出发方案",pad+28,y+46);
+            context.fillStyle="#ffffff";context.font='900 43px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("建议在 ",pad+28,y+101);
+            var prefixWidth=context.measureText("建议在 ").width;context.fillStyle="#d9ff78";context.fillText($("wakeHeadline").textContent,pad+28+prefixWidth,y+101);
+            var wakeWidth=context.measureText($("wakeHeadline").textContent).width;context.fillStyle="#ffffff";context.fillText(" "+$("headlineAction").textContent,pad+28+prefixWidth+wakeWidth,y+101);
+            roundedCanvasRect(context,pad+28,y+130,440,112,20,"#d9ff78");roundedCanvasRect(context,pad+500,y+130,440,112,20,"#d9ff78");
+            context.fillStyle="#456158";context.font='22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText($("actionSummaryLabel").textContent,pad+48,y+166);context.fillText($("arrivalSummaryLabel").textContent,pad+520,y+166);
+            context.fillStyle="#17362d";context.font='900 43px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText($("callSummary").textContent,pad+48,y+218);context.fillText($("arrivalSummary").textContent,pad+520,y+218);
+            context.fillStyle="#ffcf8e";context.font='700 23px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("风险临界线：最晚不要超过 "+$("criticalValue").textContent+" 出门",pad+28,y+287);
+            y+=360;roundedCanvasRect(context,pad,y,contentWidth,detailHeight,28,"#ffffff");
+            context.fillStyle="#17362d";context.font='900 34px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("逐项耗时明细",pad+28,y+53);
+            roundedCanvasRect(context,width-pad-205,y+22,177,44,22,"#17362d");context.fillStyle="#d9ff78";context.font='800 21px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.textAlign="center";context.fillText($("breakdownTotal").textContent,width-pad-116,y+51);context.textAlign="left";
+            rowY=y+92;
+            if(!rows.length){drawCanvasLines(context,$("breakdownList").textContent.replace(/\s+/g," ").trim()||"暂无明细",pad+28,rowY+50,contentWidth-56,36,"#71847c",'26px "PingFang SC","Microsoft YaHei",Arial,sans-serif')}
+            rows.forEach(function(row,index){
+              var rowHeight=detailHeights[index];if(index){context.fillStyle="#e4e9e4";context.fillRect(pad+28,rowY,contentWidth-56,1)}
+              var textY=rowY+42;context.font='700 31px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillStyle="#17362d";var iconText=row.icon+"  ";context.fillText(iconText,pad+28,textY);var iconWidth=context.measureText(iconText).width;
+              context.fillStyle="#e96f98";context.font='900 31px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText(row.startLabel,pad+28+iconWidth,textY);var startWidth=context.measureText(row.startLabel).width;
+              context.fillStyle="#17362d";context.font='700 31px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText(row.name,pad+28+iconWidth+startWidth,textY);textY+=38;
+              if(row.note){drawCanvasLines(context,row.note,pad+28,textY,contentWidth-56,28,"#96a39e",'22px "PingFang SC","Microsoft YaHei",Arial,sans-serif');textY+=31}
+              context.font='700 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillStyle="#354d45";var first=row.start+" → ";context.fillText(first,pad+28,textY+7);var firstWidth=context.measureText(first).width;
+              context.fillStyle="#e96f98";context.font='900 26px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText(row.end,pad+28+firstWidth,textY+7);var endWidth=context.measureText(row.end).width;
+              context.fillStyle="#96a39e";context.font='22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("  "+row.next,pad+28+firstWidth+endWidth,textY+7);textY+=47;
+              drawCanvasLines(context,"用时 "+row.duration,pad+28,textY,contentWidth-56,31,"#527066",'800 24px "PingFang SC","Microsoft YaHei",Arial,sans-serif');rowY+=rowHeight;
+            });
+            y+=detailHeight+32;roundedCanvasRect(context,pad,y,contentWidth,warningHeight,22,"#fff5e8");
+            context.fillStyle="#a86335";context.font='700 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';drawCanvasLines(context,exportWarningText,pad+24,y+40,contentWidth-48,31,"#a86335",context.font);
+            canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error("Safari 图片编码失败"))},"image/jpeg",.93);
+          }catch(error){reject(error)}
+        });
+      }
+      function createPageJpg(){
+        return new Promise(function(resolve,reject){
+          try{
+            var source=document.querySelector(".shell"),width=Math.ceil(source.scrollWidth),height=Math.ceil(source.scrollHeight);
+            if(!width||!height)throw new Error("页面尺寸无效");
+            var clone=source.cloneNode(true),sourceInputs=source.querySelectorAll("input"),cloneInputs=clone.querySelectorAll("input");
+            sourceInputs.forEach(function(input,index){if(cloneInputs[index])cloneInputs[index].setAttribute("value",input.value)});
+            var exportButton=clone.querySelector("#exportBtn");if(exportButton)exportButton.remove();
+            clone.setAttribute("xmlns","http://www.w3.org/1999/xhtml");clone.style.width=width+"px";clone.style.maxWidth="none";clone.style.margin="0";
+            var css=Array.from(document.querySelectorAll("style")).map(function(style){return style.textContent}).join("\n");
+            var serialized=new XMLSerializer().serializeToString(clone);
+            var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+height+'"><foreignObject x="0" y="0" width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="width:'+width+'px;height:'+height+'px;background:#eef1e9;color:#10231d;overflow:hidden;font-family:&quot;PingFang SC&quot;,&quot;Microsoft YaHei&quot;,Arial,sans-serif;font-feature-settings:&quot;tnum&quot; 1"><style>'+css+'</style>'+serialized+'</div></foreignObject></svg>';
+            var svgUrl=URL.createObjectURL(new Blob([svg],{type:"image/svg+xml;charset=utf-8"})),image=new Image();
+            image.onload=function(){
+              try{
+                var maxPixels=15000000,maxSide=8192,preferred=Math.min(2,window.devicePixelRatio||1.5);
+                var scale=Math.min(preferred,maxSide/width,maxSide/height,Math.sqrt(maxPixels/(width*height)));
+                scale=Math.max(.2,scale);
+                var canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
+                var context=canvas.getContext("2d");context.fillStyle="#eef1e9";context.fillRect(0,0,canvas.width,canvas.height);
+                context.drawImage(image,0,0,canvas.width,canvas.height);URL.revokeObjectURL(svgUrl);
+                canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error("图片生成失败"))},"image/jpeg",.93);
+              }catch(error){URL.revokeObjectURL(svgUrl);reject(error)}
+            };
+            image.onerror=function(){URL.revokeObjectURL(svgUrl);reject(new Error("页面图像载入失败"))};image.src=svgUrl;
+          }catch(error){reject(error)}
+        });
+      }
+      async function exportFullPage(){
+        var button=$("exportBtn"),original=button.textContent;
+        button.disabled=true;button.textContent="正在生成长图…";showExportToast("正在生成整页 JPG，请稍候");
+        try{
+          var blob=useSafariCanvasExport()?await createCanvasReportJpg():await createPageJpg().catch(function(){return createCanvasReportJpg()}),name=exportFileName();
+          if(canShareImage(blob,name)){
+            try{
+              var file=new File([blob],name,{type:"image/jpeg"});
+              await navigator.share({files:[file],title:"出行时间规划"});
+              showExportToast("请在系统菜单中选择“存储图像”或“保存到照片”");
+            }catch(error){openImagePreview(blob,name);if(!error||error.name!=="AbortError")showExportToast("请点击“保存到手机相册”，或长按图片保存")}
+          }else{
+            openImagePreview(blob,name);showExportToast("长图已生成，可下载或长按保存到相册");
+          }
+        }catch(error){
+          showExportToast("导出失败，请稍后重试");
+        }finally{button.disabled=false;button.textContent=original}
+      }
+      function setMode(next){
+        if(mode!==next){airportTransport="";$("road").value="";$("access").value="";$("routeEnd").value="";amapPoints.end=null;setInputUnit("road","minute",false);setInputUnit("access","minute",false);clearRouteChoices();hideRouteSuggestions()}
+        mode=next;extraEditorBeforeKey=null;clearLive();
+        $("flightBtn").classList.toggle("active",mode==="flight");
+        $("trainBtn").classList.toggle("active",mode==="train");
+        $("driveBtn").classList.toggle("active",mode==="drive");
+        $("bagRow").style.display=mode==="flight"?"flex":"none";
+        render();if(mode==="drive")setRouteStatus("输入起点和目的地，将按高德驾车路线自动获取时间","");
+      }
+      function setAirportTransport(next){
+        if(airportTransport!==next){airportTransport=next;$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false);clearRouteChoices();hideRouteSuggestions();extraEditorBeforeKey=null;clearLive()}
+        render();setRouteStatus(next==="taxi"?"输入起点和目的地，将按高德驾车路线自动获取时间":"地铁类路线请将起点填写为主体路线起点／地铁搭乘点；接驳时间仍在下方单独填写","");
+      }
+      $("flightBtn").addEventListener("click",function(){setMode("flight")});
+      $("trainBtn").addEventListener("click",function(){setMode("train")});
+      $("driveBtn").addEventListener("click",function(){setMode("drive")});
+      $("tourBtn").addEventListener("click",function(){window.location.href="travel-planner.html"});
+      $("taxiTransportBtn").addEventListener("click",function(){setAirportTransport("taxi")});
+      $("subwayTransportBtn").addEventListener("click",function(){setAirportTransport("subway")});
+      $("mixedTransportBtn").addEventListener("click",function(){setAirportTransport("mixed")});
+      $("routeFetchBtn").addEventListener("click",fetchAmapDuration);
+      $("routeStart").addEventListener("input",function(){if(!amapPoints.start||amapPoints.start.label!==this.value)amapPoints.start=null;clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();requestAmapSuggestions("start","routeStart",false);if(this.value.trim())setRouteStatus("正在实时匹配起点，请点击下方准确地点","error")});
+      $("routeEnd").addEventListener("input",function(){if(!amapPoints.end||amapPoints.end.label!==this.value)amapPoints.end=null;clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();requestAmapSuggestions("end","routeEnd",false);if(this.value.trim())setRouteStatus("正在实时匹配目的地，请点击下方准确地点","error")});
+      $("routeStart").addEventListener("focus",function(){if(this.value.trim())requestAmapSuggestions("start","routeStart",true)});
+      $("routeEnd").addEventListener("focus",function(){if(this.value.trim())requestAmapSuggestions("end","routeEnd",true)});
+      $("routeStart").addEventListener("click",function(){if(this.value.trim()&&(routeSuggestTarget!=="start"||!$("routeSuggestions").classList.contains("show")))requestAmapSuggestions("start","routeStart",true)});
+      $("routeEnd").addEventListener("click",function(){if(this.value.trim()&&(routeSuggestTarget!=="end"||!$("routeSuggestions").classList.contains("show")))requestAmapSuggestions("end","routeEnd",true)});
+      $("routeStartClear").addEventListener("click",function(){clearAmapInput("start","routeStart")});
+      $("routeEndClear").addEventListener("click",function(){clearAmapInput("end","routeEnd")});
+      ["routeStart","routeEnd"].forEach(function(id){$(id).addEventListener("keydown",function(event){if(event.key==="Enter"){event.preventDefault();fetchAmapDuration()}})});
+      $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
+      $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
+      $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
+      $("departure").addEventListener("click",function(){openTimePicker("departure")});
+      $("liveTime").addEventListener("click",function(){openTimePicker("live")});
+      [["departure","departure"],["liveTime","live"]].forEach(function(item){$(item[0]).addEventListener("keydown",function(event){if(event.key==="Enter"||event.key===" "){event.preventDefault();openTimePicker(item[1])}})});
+      $("timePickerConfirm").addEventListener("click",confirmTimePicker);
+      $("timePickerCancel").addEventListener("click",closeTimePicker);
+      $("timePickerClose").addEventListener("click",closeTimePicker);
+      $("timePicker").addEventListener("click",function(event){if(event.target===this)closeTimePicker()});
+      document.addEventListener("keydown",function(event){if(event.key==="Escape"&&$("timePicker").classList.contains("show"))closeTimePicker()});
+      $("liveRemaining").addEventListener("input",function(){var value=Number(this.value);liveRemaining=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;renderLive()});
+      $("exportBtn").addEventListener("click",exportFullPage);
+      $("previewClose").addEventListener("click",closeImagePreview);
+      $("previewDownload").addEventListener("click",savePreviewImage);
+      $("imagePreview").addEventListener("click",function(event){if(event.target===this)closeImagePreview()});
+      roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){clearRouteChoices();setInputUnit("road","minute",false);$("road").value=String(minutes);render()})});
+      roadPresets.forEach(function(minutes){$("access"+minutes).addEventListener("click",function(){setInputUnit("access","minute",false);$("access").value=String(minutes);render()})});
+      ["road","access"].forEach(function(id){$(id+"Unit").addEventListener("change",function(){if(id==="road")clearRouteChoices();setInputUnit(id,this.value,true);render()})});
+      $("road").addEventListener("input",clearRouteChoices);
+      ["departure","road","access","prep","wait"].forEach(function(id){$(id).addEventListener("input",render)});
+      $("resetBtn").addEventListener("click",function(){
+        Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
+        mode="";checkedBag=true;prepEnabled=true;airportTransport="";customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
+        setInputUnit("road","minute",false);setInputUnit("access","minute",false);
+        $("routeStart").value="";$("routeEnd").value="";amapPoints={start:null,end:null};clearRouteChoices();hideRouteSuggestions();
+        $("flightBtn").classList.remove("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
+        $("bagRow").style.display="none";
+        $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
+        $("prepSwitch").classList.add("on");$("prepSwitch").setAttribute("aria-checked","true");render();
+      });
+      render();
+      loadAmap().catch(function(){setRouteStatus("高德服务暂时无法加载，请检查网络、Key类型和域名白名单；仍可手动填写时间","error")});
+    })();
+  </script>
+</body>
+</html>
