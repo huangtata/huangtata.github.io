@@ -67,7 +67,7 @@
     .route-status.error{color:#b05b4e}.route-status.success{color:#486b37}
     .route-options{display:none;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
     .route-options.show{display:grid}
-    .route-option{min-height:38px;padding:6px;border:1px solid rgba(23,54,45,.14);border-radius:10px;background:#fff;color:#526b62;font-size:11px;font-weight:850;line-height:1.25}
+    .route-option{min-height:38px;padding:6px 3px;border:1px solid rgba(23,54,45,.14);border-radius:10px;background:#fff;color:#526b62;font-size:10px;font-weight:850;line-height:1.25}
     .route-option.active{border-color:var(--green);background:var(--green);color:var(--lime)}
     .route-option small{display:block;margin-top:2px;font-size:8px;font-weight:700;opacity:.72}
     .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -291,7 +291,7 @@
             </div>
             <label class="detail-row" id="waitTimeRow">等车时间 <span class="mini"><input id="wait" type="number" min="0" max="600" value="8">分钟</span></label>
             <div class="detail-row"><span class="smart-copy"><span id="bufferLabel">路况余量</span><small id="bufferHint">预留堵车、红绿灯、临时绕行等不确定时间</small></span><span class="smart-value" id="trafficValue">等待路程</span></div>
-            <div class="detail-row" id="advanceRow"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">100 分钟</span></div>
+            <div class="detail-row" id="advanceRow"><span id="advanceLabel">建议提前到机场</span><span class="advance" id="advanceValue">1小时40分钟</span></div>
           </div>
         </section>
         <section class="result">
@@ -399,7 +399,7 @@
         if(convert&&parsed!==null)input.value=nextUnit==="hour"?minutesToHourEntry(parsed):String(parsed);
       }
       function durationInputHint(id,value,emptyText){
-        if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+minutesToChineseDuration(value):"已填入 "+value+" 分钟";
+        if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+minutesToChineseDuration(value):"已填入 "+minutesToChineseDuration(value);
         if($(id).value.trim()==="")return emptyText+(inputUnits[id]==="hour"?"；例如 1.25＝1小时25分，1.5＝1小时30分":"");
         return inputUnits[id]==="hour"?"小时格式错误：分钟部分只能为 00–60，例如 1.25、1.5、1.6":"请输入 1–600 的整数分钟";
       }
@@ -511,13 +511,13 @@
       }
       function clearRouteChoices(){routeChoices=[];selectedRouteMinutes=null;$("routeOptions").classList.remove("show");$("routeOptions").innerHTML=""}
       function applyRouteChoice(minutes,announce){
-        selectedRouteMinutes=minutes;setInputUnit("road","minute",false);$("road").value=String(minutes);render();
+        selectedRouteMinutes=minutes;setInputUnit("road",minutes>=60?"hour":"minute",false);$("road").value=minutes>=60?minutesToHourEntry(minutes):String(minutes);render();
         document.querySelectorAll("[data-route-minutes]").forEach(function(button){button.classList.toggle("active",Number(button.getAttribute("data-route-minutes"))===minutes)});
-        if(announce)setRouteStatus("已选择高德方案："+minutes+" 分钟，并已自动重新计算","success");
+        if(announce)setRouteStatus("已选择高德方案："+minutesToChineseDuration(minutes)+"，并已自动重新计算","success");
       }
       function showRouteChoices(options,transit){
         routeChoices=options.slice();selectedRouteMinutes=options[0].minutes;
-        $("routeOptions").innerHTML=options.map(function(option,index){return '<button class="route-option'+(index===0?' active':'')+'" type="button" data-route-minutes="'+option.minutes+'"><span>'+option.minutes+' 分钟</span><small>'+(index===0?(transit?'地铁优先 · 最快':'最快方案'):'备选方案 '+(index+1))+'</small></button>'}).join("");
+        $("routeOptions").innerHTML=options.map(function(option,index){return '<button class="route-option'+(index===0?' active':'')+'" type="button" data-route-minutes="'+option.minutes+'"><span>'+minutesToChineseDuration(option.minutes)+'</span><small>'+(index===0?(transit?'地铁优先 · 最快':'最快方案'):'备选方案 '+(index+1))+'</small></button>'}).join("");
         $("routeOptions").classList.add("show");
         document.querySelectorAll("[data-route-minutes]").forEach(function(button){button.addEventListener("click",function(){applyRouteChoice(Number(this.getAttribute("data-route-minutes")),true)})});
       }
@@ -550,7 +550,7 @@
           var transit=!isDrive&&(airportTransport==="subway"||airportTransport==="mixed");
           var options=await searchAmapRoute(AMap,points[0],points[1],transit);
           showRouteChoices(options,transit);applyRouteChoice(options[0].minutes,false);
-          setRouteStatus("已获取 "+options.length+" 条"+(transit?"地铁优先":"驾车")+"方案，默认采用最快的 "+options[0].minutes+" 分钟；也可选择其他时间","success");
+          setRouteStatus("已获取 "+options.length+" 条"+(transit?"地铁优先":"驾车")+"方案，默认采用最快的 "+minutesToChineseDuration(options[0].minutes)+"；也可选择其他时间","success");
         }catch(error){clearRouteChoices();setRouteStatus(error&&error.message?error.message:"获取路线失败，请手动填写时间","error")}
         finally{routeBusy=false;$("routeFetchBtn").textContent="自动获取预计时间";render()}
       }
@@ -576,7 +576,7 @@
         [-1,1].forEach(function(offset){var candidate=clock+(day+offset)*1440,gap=Math.abs(candidate-reference);if(gap<distance){best=candidate;distance=gap}});
         return best;
       }
-      function makeDetail(key,icon,name,start,end,duration,durationText,smartMin){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||duration+" 分钟",smartMin:smartMin}}
+      function makeDetail(key,icon,name,start,end,duration,durationText,smartMin){return {key:key,icon:icon,name:name,start:start,end:end,duration:duration,durationText:durationText||minutesToChineseDuration(duration),smartMin:smartMin}}
       function detailOrder(key){
         var maps={
           flight:{prep:0,wait:10,"transit-access":10,"arrival-road":20,"flight-bag-find":30,"flight-bag":40,"flight-security-walk":50,"flight-security":60,"flight-gate":70,"flight-boarding":80,"flight-departure":100},
@@ -591,7 +591,7 @@
         baseDetails.forEach(function(baseItem){
           var order=detailOrder(baseItem.key);
           while(pending.length&&pending[0].beforeOrder<=order){
-            var extra=pending.shift(),custom=makeDetail(extra.id,"✨",cleanExtraName(extra.name),0,0,extra.duration,extra.duration+" 分钟",1);
+            var extra=pending.shift(),custom=makeDetail(extra.id,"✨",cleanExtraName(extra.name),0,0,extra.duration,minutesToChineseDuration(extra.duration),1);
             custom.isCustomExtra=true;custom.extraId=extra.id;custom.projectNote="安排在“"+extra.beforeName+"”之前";sequence.push(custom);
           }
           sequence.push(Object.assign({},baseItem));
@@ -675,7 +675,7 @@
             else rowClass=" live-future";
             if(index>=live.index){
               timing=live.schedule[index];
-              durationText=item.end===null?item.durationText:Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart?item.roadPart+" + "+(timing.duration-item.roadPart)+" 分钟":timing.duration+" 分钟";
+              durationText=item.end===null?item.durationText:Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart?minutesToChineseDuration(item.roadPart)+" + "+minutesToChineseDuration(timing.duration-item.roadPart):minutesToChineseDuration(timing.duration);
             }
           }
           var endTime=timing.end===null?timing.start:timing.end;
@@ -684,9 +684,9 @@
           var active=live&&index===live.index?" active":"";
           var displayDuration=splitDurationText(durationText),referenceDuration=splitDurationText(item.durationText);
           var durationNote=referenceDuration.note?'<small class="duration-note">'+referenceDuration.note+'</small>':'';
-          if(timing.autoAdded)adjustmentNote='<small class="auto-buffer">已自动增加 '+timing.autoAdded+' 分钟</small>';
-          if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+timing.autoReduced+' 分钟，最低 '+timing.smartMin+' 分钟</small>';
-          if(Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart)splitNote='<small class="duration-split">'+item.roadPart+' + '+(timing.duration-item.roadPart)+' 分钟</small>';
+          if(timing.autoAdded)adjustmentNote='<small class="auto-buffer">已自动增加 '+minutesToChineseDuration(timing.autoAdded)+'</small>';
+          if(timing.autoReduced)adjustmentNote='<small class="auto-reduced">已智能压缩 '+minutesToChineseDuration(timing.autoReduced)+'，最低 '+minutesToChineseDuration(timing.smartMin)+'</small>';
+          if(Number.isFinite(item.roadPart)&&timing.duration>=item.roadPart)splitNote='<small class="duration-split">'+minutesToChineseDuration(item.roadPart)+' + '+minutesToChineseDuration(timing.duration-item.roadPart)+'</small>';
           if(live&&index>live.index&&item.end!==null){
             durationMarkup='<span><label class="live-duration-edit"><input type="number" min="'+smartMinimum(item.key)+'" max="600" value="'+timing.duration+'" data-live-duration="'+item.key+'" aria-label="修改'+escapeHTML(item.name)+'所需时间">分钟</label>'+splitNote+durationNote+adjustmentNote+'</span>';
           }else if(live&&index===live.index&&item.end!==null){
@@ -707,7 +707,7 @@
         var index=currentDetails.findIndex(function(x){return x.key===liveKey});
         if(index<0){
           clearLive();$("livePanel").classList.remove("show");
-          $("breakdownTotal").textContent="合计 "+currentPlanTotal+" 分钟";
+          $("breakdownTotal").textContent="合计 "+minutesToChineseDuration(currentPlanTotal);
           $("breakdownList").innerHTML=rowsHTML(currentDetails,null);attachLocateButtons();return;
         }
         var item=currentDetails[index],current=alignClock(liveClock,item.start);
@@ -764,26 +764,26 @@
           schedule[i]={start:cursor,end:detail.end===null?null:cursor+duration,duration:duration,autoAdded:i===bufferIndex?autoAdded:0,autoReduced:reductions[i]||0,smartMin:smartMinimum(detail.key)};
           cursor+=duration;
         });
-        $("breakdownTotal").textContent="余下 "+(cursor-current)+" 分钟";
+        $("breakdownTotal").textContent="余下 "+minutesToChineseDuration(cursor-current);
         var difference=cursor-currentDeparture,status=$("liveStatus"),bagCompletion=bagIndex>=index&&schedule[bagIndex]?schedule[bagIndex].end:null;
         if(cutoffRemaining>0){
           status.className="live-status bad";
-          status.textContent="托运截止风险：预计 "+format(bagCompletion)+" 完成托运，超过 "+format(bagDeadline)+" 截止线 "+cutoffRemaining+" 分钟。已按最低值压缩 "+autoReduced+" 分钟，请立即联系航空公司或机场柜台";
+          status.textContent="托运截止风险：预计 "+format(bagCompletion)+" 完成托运，超过 "+format(bagDeadline)+" 截止线 "+minutesToChineseDuration(cutoffRemaining)+"。已按最低值压缩 "+minutesToChineseDuration(autoReduced)+"，请立即联系航空公司或机场柜台";
         }else if(difference>0){
           status.className="live-status bad";
-          status.textContent=(cutoffInitialShortage>0?"托运预计可在 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）；但":"")+(autoReduced>0?"已智能压缩 "+autoReduced+" 分钟，":"时间不足，")+"仍差 "+difference+" 分钟｜预计 "+format(cursor)+" 完成；可修改下方其他项目分钟数";
+          status.textContent=(cutoffInitialShortage>0?"托运预计可在 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）；但":"")+(autoReduced>0?"已智能压缩 "+minutesToChineseDuration(autoReduced)+"，":"时间不足，")+"仍差 "+minutesToChineseDuration(difference)+"｜预计 "+format(cursor)+" 完成；可修改下方其他项目分钟数";
         }else if(cutoffReduced>0){
           status.className="live-status good";
-          status.textContent="已智能压缩 "+autoReduced+" 分钟（其中为托运截止线优先压缩 "+cutoffReduced+" 分钟），托运预计 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）｜"+(autoAdded>0?"多出的 "+autoAdded+" 分钟已加入“"+bufferName+"”":"余下环节可衔接至"+currentTargetLabel);
+          status.textContent="已智能压缩 "+minutesToChineseDuration(autoReduced)+"（其中为托运截止线优先压缩 "+minutesToChineseDuration(cutoffReduced)+"），托运预计 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）｜"+(autoAdded>0?"多出的 "+minutesToChineseDuration(autoAdded)+"已加入“"+bufferName+"”":"余下环节可衔接至"+currentTargetLabel);
         }else if(autoAdded>0){
           status.className="live-status good";
-          status.textContent="时间充足，多出的 "+autoAdded+" 分钟已全部加入“"+bufferName+"”｜余下环节将衔接至"+currentTargetLabel;
+          status.textContent="时间充足，多出的 "+minutesToChineseDuration(autoAdded)+"已全部加入“"+bufferName+"”｜余下环节将衔接至"+currentTargetLabel;
         }else if(autoReduced>0){
           status.className="live-status good";
-          status.textContent="时间紧张，已按优先级智能压缩 "+autoReduced+" 分钟｜预计刚好赶上"+currentTargetLabel;
+          status.textContent="时间紧张，已按优先级智能压缩 "+minutesToChineseDuration(autoReduced)+"｜预计刚好赶上"+currentTargetLabel;
         }else if(difference<0){
           status.className="live-status good";
-          status.textContent="时间充足，还剩 "+Math.abs(difference)+" 分钟余量｜预计 "+format(cursor)+" 完成余下环节";
+          status.textContent="时间充足，还剩 "+minutesToChineseDuration(Math.abs(difference))+"余量｜预计 "+format(cursor)+" 完成余下环节";
         }else{
           status.className="live-status neutral";
           status.textContent="时间刚好｜预计 "+format(cursor)+" 完成余下环节，请立即继续";
@@ -836,7 +836,7 @@
         $("waitTimeRow").style.display=usesTaxi?"flex":"none";
         $("advanceRow").style.display=isDrive?"none":"flex";
         $("advanceLabel").textContent="建议提前到"+terminal;
-        $("advanceValue").textContent=advance+" 分钟";
+        $("advanceValue").textContent=minutesToChineseDuration(advance);
         $("actionSummaryLabel").textContent=isDrive?"🚗 建议出发":usesTaxi?"🚕 建议叫车":usesRail?"🚇 建议出发":"🚏 建议出发";
         $("arrivalSummaryLabel").textContent=isDrive?"📍 计划到达目的地":"📍 建议到达"+terminal;
         var riskBase=isDrive?"该时间不含路况余量，仅作紧急参考。":usesTaxi?"该时间不含等车与路况余量，仅作紧急参考。":usesRail?"该时间不含 15 分钟地铁冗余，仅作紧急参考。":"请先选择去"+terminal+"的交通工具。";
@@ -850,7 +850,7 @@
         $("bufferLabel").textContent=usesRail?"地铁冗余时间":"路况余量";
         $("bufferHint").textContent=usesRail?"预留候车、换乘、临时步行及运营波动时间":"预留堵车、红绿灯、临时绕行等不确定时间";
         $("trafficValue").classList.toggle("fixed",usesRail);
-        $("trafficValue").textContent=!transportValid?"等待选择":traffic===null?"等待路程":traffic+" 分钟";
+        $("trafficValue").textContent=!transportValid?"等待选择":traffic===null?"等待路程":minutesToChineseDuration(traffic);
         if(!departureValid||!transportValid||road===null||(usesRail&&access===null)){
           parkLivePanel();currentDetails=[];clearLive();$("livePanel").classList.remove("show");
           $("arrivalSummary").textContent="--:--";
@@ -870,17 +870,17 @@
         var details=[];
         if(prepEnabled)details.push(makeDetail("prep","☕","起床准备",wake,prepEnd,prep));
         if(usesTaxi)details.push(makeDetail("wait","🚕","开始呼叫打车",call,leave,wait));
-        if(usesRail)details.push(makeDetail("transit-access",airportTransport==="mixed"?"🚕":"🚶","步行／打车前往地铁搭乘点",call,leave,access,access+" 分钟",1));
+        if(usesRail)details.push(makeDetail("transit-access",airportTransport==="mixed"?"🚕":"🚶","步行／打车前往地铁搭乘点",call,leave,access,minutesToChineseDuration(access),1));
         if(isDrive){
-          var driveRoad=makeDetail("road","🚗","开车前往目的地",leave,arrive,road+traffic,road+" + "+traffic+" 分钟",road+3);
+          var driveRoad=makeDetail("road","🚗","开车前往目的地",leave,arrive,road+traffic,minutesToChineseDuration(road)+" + "+minutesToChineseDuration(traffic),road+3);
           driveRoad.roadPart=road;
-          driveRoad.projectNote="（包含路况余量 "+traffic+" 分钟）";
+          driveRoad.projectNote="（包含路况余量 "+minutesToChineseDuration(traffic)+"）";
           details.push(driveRoad);
         }else{
           var arrivalName=usesTaxi?(isFlight?"上车出发机场":"上车出发高铁站"):airportTransport==="subway"?"乘坐地铁前往"+terminal:"乘坐地铁＋打车前往"+terminal;
-          var arrivalRoad=makeDetail("arrival-road",usesTaxi?"📍":"🚇",arrivalName,leave,arrive,road+traffic,road+" + "+traffic+" 分钟",road+3);
+          var arrivalRoad=makeDetail("arrival-road",usesTaxi?"📍":"🚇",arrivalName,leave,arrive,road+traffic,minutesToChineseDuration(road)+" + "+minutesToChineseDuration(traffic),road+3);
           arrivalRoad.roadPart=road;
-          arrivalRoad.projectNote=usesTaxi?"（包含路况余量 "+traffic+" 分钟）":"（包含地铁冗余时间 "+traffic+" 分钟）";
+          arrivalRoad.projectNote=usesTaxi?"（包含路况余量 "+minutesToChineseDuration(traffic)+"）":"（包含地铁冗余时间 "+minutesToChineseDuration(traffic)+"）";
           details.push(arrivalRoad);
         }
         var processAt=arrive;
@@ -925,7 +925,7 @@
         $("wakeHeadline").textContent=format(wakeTime);
         $("criticalValue").textContent=format(critical);
         currentPlanTotal=details.reduce(function(total,item){return total+(item.end===null?0:item.duration)},0);
-        $("breakdownTotal").textContent="合计 "+currentPlanTotal+" 分钟";
+        $("breakdownTotal").textContent="合计 "+minutesToChineseDuration(currentPlanTotal);
         currentDetails=details;currentDeparture=departure;currentTargetLabel=(isFlight?"原定起飞 ":isTrain?"原定发车 ":"计划到达 ")+format(departure);
         renderLive();
       }
@@ -995,7 +995,7 @@
           var durationText=duration?duration.textContent.replace(/\s+/g," ").trim():"";
           if(durationInput){
             var extras=Array.from(duration.querySelectorAll("small")).map(function(item){return item.textContent.trim()}).join(" ");
-            durationText=durationInput.value+" 分钟"+(extras?" "+extras:"");
+            durationText=minutesToChineseDuration(Number(durationInput.value)||0)+(extras?" "+extras:"");
           }
           var startLabel=projectStart?projectStart.textContent.trim():(times[0]?times[0].textContent.trim():"--:--"),nameText=customName?cleanExtraName(customName.value):(name?name.textContent.replace(/\s+/g," ").trim():"项目");
           if(nameText.indexOf(startLabel)===0)nameText=nameText.slice(startLabel.length);
@@ -1014,13 +1014,13 @@
             if($("routeStart").value.trim())settings.push(["路线起点",$("routeStart").value.trim()]);
             if($("routeEnd").value.trim())settings.push(["路线目的地",$("routeEnd").value.trim()]);
             settings.push([$("departureLabel").textContent,$("departure").value||"未填写"]);
-            settings.push([$("roadLabel").textContent,roadValue===null?"未填写":roadValue+" 分钟"]);
-            if(mode!=="drive"&&(airportTransport==="subway"||airportTransport==="mixed"))settings.push(["步行／打车到地铁搭乘点",getAccess()===null?"未填写":getAccess()+" 分钟"]);
+            settings.push([$("roadLabel").textContent,roadValue===null?"未填写":minutesToChineseDuration(roadValue)]);
+            if(mode!=="drive"&&(airportTransport==="subway"||airportTransport==="mixed"))settings.push(["步行／打车到地铁搭乘点",getAccess()===null?"未填写":minutesToChineseDuration(getAccess())]);
             if(mode==="flight")settings.push(["办理行李托运",checkedBag?"需要":"不需要"]);
             var modeExtras=activeExtras(),extraTotal=modeExtras.reduce(function(total,item){return total+item.duration},0);
-            settings.push(["额外事项",modeExtras.length?modeExtras.length+" 项，共 "+extraTotal+" 分钟":"未添加"]);
-            settings.push(["起床准备",prepEnabled?number("prep")+" 分钟":"关闭"]);
-            if(airportTransport==="taxi")settings.push(["开始呼叫打车",number("wait")+" 分钟"]);
+            settings.push(["额外事项",modeExtras.length?modeExtras.length+" 项，共 "+minutesToChineseDuration(extraTotal):"未添加"]);
+            settings.push(["起床准备",prepEnabled?minutesToChineseDuration(number("prep")):"关闭"]);
+            if(airportTransport==="taxi")settings.push(["开始呼叫打车",minutesToChineseDuration(number("wait"))]);
             settings.push([$("bufferLabel").textContent,$("trafficValue").textContent]);
             if(mode!=="drive")settings.push([$("advanceLabel").textContent,$("advanceValue").textContent]);
             var rows=visibleDetailRows();
