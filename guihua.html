@@ -36,6 +36,16 @@
     .transport-choice button{min-height:42px;padding:6px 8px;border:1px solid rgba(23,54,45,.14);border-radius:12px;background:white;color:#536b62;font-size:12px;font-weight:800;line-height:1.25}
     .transport-choice button.active{border-color:var(--green);background:var(--green);color:var(--lime);box-shadow:0 5px 14px rgba(23,54,45,.14)}
     .transport-hint{display:block;margin-top:7px;color:#b05b4e;font-size:10px;font-weight:700}
+    .amap-route{margin-bottom:22px;padding:14px;border:1px solid rgba(23,54,45,.12);border-radius:17px;background:#eef0e6}
+    .amap-route-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .amap-route-head strong{font-size:13px}
+    .amap-badge{padding:4px 7px;border-radius:7px;background:#fff;color:#527066;font-size:9px;font-weight:850}
+    .route-place-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .route-place{height:44px;min-width:0;padding:0 11px;border:1px solid rgba(23,54,45,.14);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+    .route-fetch{width:100%;height:40px;margin-top:9px;border:0;border-radius:11px;background:var(--green);color:var(--lime);font-size:12px;font-weight:850}
+    .route-fetch:disabled{cursor:not-allowed;opacity:.5}
+    .route-status{display:block;margin-top:8px;color:#647970;font-size:10px;font-weight:650;line-height:1.5}
+    .route-status.error{color:#b05b4e}.route-status.success{color:#486b37}
     .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .input-wrap{position:relative}
     input[type="time"],input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
@@ -171,7 +181,7 @@
     .preview-download{flex:0 0 auto;height:42px;margin-top:10px;border:0;border-radius:13px;background:var(--green);color:var(--lime);font-size:13px;font-weight:850}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
-    @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn,.extra-add-btn,.extra-delete-btn{padding:5px 7px}.extra-add-btn{min-width:88px;white-space:nowrap}.extra-editor-row{align-items:flex-start;flex-direction:column;gap:9px;padding:12px}.extra-editor-actions{display:grid;grid-template-columns:minmax(100px,1fr) 60px 60px;width:100%;gap:8px}.extra-editor-actions input.extra-editor-name{grid-column:1/-1;width:100%;height:38px}.extra-editor-actions label{display:grid;grid-template-columns:minmax(0,1fr) auto;width:100%;gap:5px}.extra-editor-actions label input{width:100%;height:38px}.extra-editor-confirm,.extra-editor-cancel{height:38px;min-width:0;padding:0 8px}}
+    @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.route-place-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn,.extra-add-btn,.extra-delete-btn{padding:5px 7px}.extra-add-btn{min-width:88px;white-space:nowrap}.extra-editor-row{align-items:flex-start;flex-direction:column;gap:9px;padding:12px}.extra-editor-actions{display:grid;grid-template-columns:minmax(100px,1fr) 60px 60px;width:100%;gap:8px}.extra-editor-actions input.extra-editor-name{grid-column:1/-1;width:100%;height:38px}.extra-editor-actions label{display:grid;grid-template-columns:minmax(0,1fr) auto;width:100%;gap:5px}.extra-editor-actions label input{width:100%;height:38px}.extra-editor-confirm,.extra-editor-cancel{height:38px;min-width:0;padding:0 8px}}
     @media print{.shell{padding:0}.app{box-shadow:none}.reset,.export-btn,.image-preview,.export-toast{display:none!important}}
   </style>
 </head>
@@ -184,7 +194,7 @@
           <div><p class="eyebrow">Ready to go</p><h1>出行时间规划</h1></div>
         </div>
         <div class="header-actions">
-          <div class="privacy">✓ 所有计算仅在本机完成</div>
+          <div class="privacy">✓ 时间计算在本机完成 · 路线由高德提供</div>
           <button class="export-btn" id="exportBtn" type="button">↓ 导出整页 JPG</button>
         </div>
       </header>
@@ -206,6 +216,15 @@
               <button id="mixedTransportBtn" type="button">🚇＋🚕<br>地铁＋打车</button>
             </div>
             <span class="transport-hint" id="transportHint">必选：请选择去机场的交通工具</span>
+          </div>
+          <div class="amap-route" id="amapRouteBox">
+            <div class="amap-route-head"><strong>📍 高德自动获取路程时间</strong><span class="amap-badge">AMAP</span></div>
+            <div class="route-place-grid">
+              <input class="route-place" id="routeStart" type="text" autocomplete="off" placeholder="输入起点" aria-label="路线起点">
+              <input class="route-place" id="routeEnd" type="text" autocomplete="off" placeholder="输入目的地" aria-label="路线目的地">
+            </div>
+            <button class="route-fetch" id="routeFetchBtn" type="button">自动获取预计时间</button>
+            <span class="route-status" id="routeStatus">选择交通工具后，输入起点和目的地即可自动填入时间</span>
           </div>
           <div class="input-grid field">
             <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" type="time" value="" required aria-required="true" aria-invalid="true"><span class="time-hint show" id="departureHint">必填：请选择起飞时间</span></label>
@@ -294,6 +313,8 @@
       <button class="preview-download" id="previewDownload" type="button">下载 JPG 图片</button>
     </div>
   </div>
+  <script>window._AMapSecurityConfig={securityJsCode:"a4effe4ebd82ca7d44f781269f071274"};</script>
+  <script src="https://webapi.amap.com/loader.js"></script>
   <script>
     (function(){
       var mode="flight", checkedBag=true, prepEnabled=true,airportTransport="";
@@ -301,6 +322,8 @@
       var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
       var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
       var inputUnits={road:"minute",access:"minute"};
+      var amapPromise=null,amapPoints={start:null,end:null},routeBusy=false;
+      var AMAP_WEB_KEY="bba9f294c10c663b5ea6d593c08ea4a3";
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
       var defaults={departure:"",road:"",access:"",prep:45,wait:8};
@@ -344,6 +367,77 @@
         if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+value+" 分钟":"已填入 "+value+" 分钟";
         if($(id).value.trim()==="")return emptyText+(inputUnits[id]==="hour"?"；例如 1.25＝1小时25分，1.5＝1小时30分":"");
         return inputUnits[id]==="hour"?"小时格式错误：分钟部分只能为 00–60，例如 1.25、1.5、1.6":"请输入 1–600 的整数分钟";
+      }
+      function setRouteStatus(message,type){var status=$("routeStatus");status.textContent=message;status.className="route-status"+(type?" "+type:"")}
+      function firstText(value){return Array.isArray(value)?String(value[0]||""):String(value||"")}
+      function normalizeAmapPoint(poi,label){
+        if(!poi||!poi.location)return null;
+        return {location:poi.location,city:firstText(poi.cityname||poi.city||poi.citycode||poi.adcode||poi.pname),adcode:firstText(poi.adcode),label:String(label||poi.name||"")};
+      }
+      function loadAmap(){
+        if(amapPromise)return amapPromise;
+        if(!window.AMapLoader)return Promise.reject(new Error("高德地图加载器不可用"));
+        amapPromise=window.AMapLoader.load({key:AMAP_WEB_KEY,version:"2.0",plugins:["AMap.AutoComplete","AMap.Geocoder","AMap.Driving","AMap.Transfer"]}).then(function(AMap){
+          [["routeStart","start"],["routeEnd","end"]].forEach(function(pair){
+            var autocomplete=new AMap.AutoComplete({input:pair[0]});
+            autocomplete.on("select",function(event){amapPoints[pair[1]]=normalizeAmapPoint(event.poi,$(pair[0]).value)});
+          });
+          return AMap;
+        }).catch(function(error){amapPromise=null;throw error});
+        return amapPromise;
+      }
+      function resolveAmapPlace(AMap,id,stored){
+        var keyword=$(id).value.trim();
+        if(stored&&stored.location&&stored.label===keyword)return Promise.resolve(stored);
+        return new Promise(function(resolve,reject){
+          var geocoder=new AMap.Geocoder();
+          geocoder.getLocation(keyword,function(status,result){
+            var geocode=status==="complete"&&result&&result.geocodes&&result.geocodes[0];
+            if(!geocode||!geocode.location){reject(new Error("无法识别“"+keyword+"”，请从地址建议中选择更准确的地点"));return}
+            resolve(normalizeAmapPoint(geocode,keyword));
+          });
+        });
+      }
+      function routeSeconds(result,transit){
+        var routes=transit?(result&&result.plans):(result&&result.routes),first=routes&&routes[0];
+        var seconds=first&&Number(first.time!==undefined?first.time:first.duration);
+        if(!Number.isFinite(seconds)&&result&&result.route){
+          var alternatives=transit?result.route.transits:result.route.paths,alternative=alternatives&&alternatives[0];
+          seconds=alternative&&Number(alternative.duration);
+        }
+        return Number.isFinite(seconds)&&seconds>0?seconds:null;
+      }
+      function searchAmapRoute(AMap,start,end,transit){
+        return new Promise(function(resolve,reject){
+          var service;
+          if(transit){
+            var startCity=start.city||start.adcode,endCity=end.city||end.adcode,options={city:startCity||"全国",policy:0};
+            if(endCity&&endCity!==startCity)options.cityd=endCity;
+            service=new AMap.Transfer(options);
+          }else service=new AMap.Driving({policy:0});
+          service.search(start.location,end.location,function(status,result){
+            if(status!=="complete"){reject(new Error(status==="no_data"?"未找到合适路线，请更换地点或手动填写时间":"高德路线查询失败，请稍后重试"));return}
+            var seconds=routeSeconds(result,transit);
+            if(seconds===null){reject(new Error("高德已返回路线，但没有可用的预计时间"));return}
+            resolve(Math.ceil(seconds/60));
+          });
+        });
+      }
+      async function fetchAmapDuration(){
+        var startValue=$("routeStart").value.trim(),endValue=$("routeEnd").value.trim(),isDrive=mode==="drive",transportValid=isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0;
+        if(!transportValid){setRouteStatus("请先选择去机场／高铁站的交通工具","error");return}
+        if(!startValue||!endValue){setRouteStatus("请完整填写起点和目的地","error");return}
+        routeBusy=true;$("routeFetchBtn").disabled=true;$("routeFetchBtn").textContent="正在查询路线…";setRouteStatus("正在识别地点并获取高德预计时间…","");
+        try{
+          var AMap=await loadAmap();
+          var points=await Promise.all([resolveAmapPlace(AMap,"routeStart",amapPoints.start),resolveAmapPlace(AMap,"routeEnd",amapPoints.end)]);
+          amapPoints.start=points[0];amapPoints.end=points[1];
+          var transit=!isDrive&&(airportTransport==="subway"||airportTransport==="mixed");
+          var minutes=await searchAmapRoute(AMap,points[0],points[1],transit);
+          setInputUnit("road","minute",false);$("road").value=String(minutes);render();
+          setRouteStatus("已获取高德"+(transit?"地铁／公交":"驾车")+"预计时间："+minutes+" 分钟，并已自动重新计算","success");
+        }catch(error){setRouteStatus(error&&error.message?error.message:"获取路线失败，请手动填写时间","error")}
+        finally{routeBusy=false;$("routeFetchBtn").textContent="自动获取预计时间";render()}
       }
       function getTrafficBuffer(road){
         if(road<20)return 10;
@@ -600,6 +694,10 @@
         $("taxiTransportBtn").classList.toggle("active",usesTaxi);
         $("subwayTransportBtn").classList.toggle("active",airportTransport==="subway");
         $("mixedTransportBtn").classList.toggle("active",airportTransport==="mixed");
+        $("routeFetchBtn").disabled=routeBusy||!transportValid;
+        $("routeStart").placeholder=usesRail?"输入地铁主体路线起点／搭乘点":"输入起点";
+        $("routeEnd").placeholder=isFlight?"输入机场名称":isTrain?"输入高铁站名称":"输入目的地";
+        if(!transportValid&&!routeBusy)setRouteStatus("选择交通工具后，输入起点和目的地即可自动填入时间","");
         $("transitAccessRow").style.display=usesRail?"block":"none";
         $("access").disabled=!usesRail;
         $("accessUnit").disabled=!usesRail;
@@ -795,6 +893,8 @@
             var transportName=airportTransport==="taxi"?"🚕 打车":airportTransport==="subway"?"🚇 地铁":airportTransport==="mixed"?"🚇＋🚕 地铁＋打车":"未选择";
             var roadValue=getRoad(),settings=[["出行方式",modeName]];
             if(mode!=="drive")settings.push(["去"+(mode==="flight"?"机场":"高铁站")+"的交通工具",transportName]);
+            if($("routeStart").value.trim())settings.push(["路线起点",$("routeStart").value.trim()]);
+            if($("routeEnd").value.trim())settings.push(["路线目的地",$("routeEnd").value.trim()]);
             settings.push([$("departureLabel").textContent,$("departure").value||"未填写"]);
             settings.push([$("roadLabel").textContent,roadValue===null?"未填写":roadValue+" 分钟"]);
             if(mode!=="drive"&&(airportTransport==="subway"||airportTransport==="mixed"))settings.push(["步行／打车到地铁搭乘点",getAccess()===null?"未填写":getAccess()+" 分钟"]);
@@ -913,17 +1013,17 @@
         }finally{button.disabled=false;button.textContent=original}
       }
       function setMode(next){
-        if(mode!==next){airportTransport="";$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false)}
+        if(mode!==next){airportTransport="";$("road").value="";$("access").value="";$("routeEnd").value="";amapPoints.end=null;setInputUnit("road","minute",false);setInputUnit("access","minute",false)}
         mode=next;extraEditorBeforeKey=null;clearLive();
         $("flightBtn").classList.toggle("active",mode==="flight");
         $("trainBtn").classList.toggle("active",mode==="train");
         $("driveBtn").classList.toggle("active",mode==="drive");
         $("bagRow").style.display=mode==="flight"?"flex":"none";
-        render();
+        render();if(mode==="drive")setRouteStatus("输入起点和目的地，将按高德驾车路线自动获取时间","");
       }
       function setAirportTransport(next){
         if(airportTransport!==next){airportTransport=next;$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false);extraEditorBeforeKey=null;clearLive()}
-        render();
+        render();setRouteStatus(next==="taxi"?"输入起点和目的地，将按高德驾车路线自动获取时间":"地铁类路线请将起点填写为主体路线起点／地铁搭乘点；接驳时间仍在下方单独填写","");
       }
       $("flightBtn").addEventListener("click",function(){setMode("flight")});
       $("trainBtn").addEventListener("click",function(){setMode("train")});
@@ -931,6 +1031,10 @@
       $("taxiTransportBtn").addEventListener("click",function(){setAirportTransport("taxi")});
       $("subwayTransportBtn").addEventListener("click",function(){setAirportTransport("subway")});
       $("mixedTransportBtn").addEventListener("click",function(){setAirportTransport("mixed")});
+      $("routeFetchBtn").addEventListener("click",fetchAmapDuration);
+      $("routeStart").addEventListener("input",function(){if(!amapPoints.start||amapPoints.start.label!==this.value)amapPoints.start=null});
+      $("routeEnd").addEventListener("input",function(){if(!amapPoints.end||amapPoints.end.label!==this.value)amapPoints.end=null});
+      ["routeStart","routeEnd"].forEach(function(id){$(id).addEventListener("keydown",function(event){if(event.key==="Enter"){event.preventDefault();fetchAmapDuration()}})});
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
       $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
@@ -947,12 +1051,14 @@
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
         mode="flight";checkedBag=true;prepEnabled=true;airportTransport="";customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
         setInputUnit("road","minute",false);setInputUnit("access","minute",false);
+        $("routeStart").value="";$("routeEnd").value="";amapPoints={start:null,end:null};
         $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
         $("bagRow").style.display="flex";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
         $("prepSwitch").classList.add("on");$("prepSwitch").setAttribute("aria-checked","true");render();
       });
       render();
+      loadAmap().catch(function(){setRouteStatus("高德服务暂时无法加载，请检查网络、Key类型和域名白名单；仍可手动填写时间","error")});
     })();
   </script>
 </body>
