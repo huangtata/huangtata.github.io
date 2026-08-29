@@ -374,13 +374,17 @@
         if(minutes===30)return hours+".5";
         return hours+"."+String(minutes).padStart(2,"0");
       }
+      function minutesToChineseDuration(total){
+        var hours=Math.floor(total/60),minutes=total%60;
+        return hours>0?hours+"小时"+minutes+"分钟":minutes+"分钟";
+      }
       function setInputUnit(id,nextUnit,convert){
         var previous=inputUnits[id],input=$(id),parsed=parseDurationRaw(input.value,previous);
         inputUnits[id]=nextUnit;$(id+"Unit").value=nextUnit;
         if(convert&&parsed!==null)input.value=nextUnit==="hour"?minutesToHourEntry(parsed):String(parsed);
       }
       function durationInputHint(id,value,emptyText){
-        if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+value+" 分钟":"已填入 "+value+" 分钟";
+        if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+minutesToChineseDuration(value):"已填入 "+value+" 分钟";
         if($(id).value.trim()==="")return emptyText+(inputUnits[id]==="hour"?"；例如 1.25＝1小时25分，1.5＝1小时30分":"");
         return inputUnits[id]==="hour"?"小时格式错误：分钟部分只能为 00–60，例如 1.25、1.5、1.6":"请输入 1–600 的整数分钟";
       }
