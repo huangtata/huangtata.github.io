@@ -41,7 +41,20 @@
     .amap-route-head strong{font-size:13px}
     .amap-badge{padding:4px 7px;border-radius:7px;background:#fff;color:#527066;font-size:9px;font-weight:850}
     .route-place-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .route-place{height:44px;min-width:0;padding:0 11px;border:1px solid rgba(23,54,45,.14);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+    .route-place-wrap{position:relative;min-width:0}
+    .route-place{width:100%;height:44px;min-width:0;padding:0 34px 0 11px;border:1px solid rgba(23,54,45,.14);border-radius:11px;background:#fff;color:var(--ink);font-size:13px;font-weight:700}
+    .route-clear{display:none;position:absolute;right:7px;top:50%;width:26px;height:26px;padding:0;transform:translateY(-50%);border:0;border-radius:50%;background:#e6e9e2;color:#657970;font-size:16px;font-weight:800;line-height:26px}
+    .route-clear.show{display:block}
+    .route-suggestions{display:none;margin-top:8px;border:1px solid rgba(23,54,45,.14);border-radius:11px;background:#fff;box-shadow:0 7px 18px rgba(23,54,45,.11);overflow:hidden}
+    .route-suggestions.show{display:block}
+    .route-suggest-head{padding:7px 10px;background:#f0f2eb;color:#61776e;font-size:9px;font-weight:800}
+    .route-suggest-list{max-height:244px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .route-suggest-item{display:block;width:100%;padding:9px 10px;border:0;border-top:1px solid rgba(23,54,45,.08);background:#fff;text-align:left;color:var(--ink)}
+    .route-suggest-item:first-child{border-top:0}
+    .route-suggest-item:active{background:#eef1e7}
+    .route-suggest-item span{display:block;font-size:11px;font-weight:800;line-height:1.35}
+    .route-suggest-item small{display:block;margin-top:3px;color:#71847d;font-size:9px;font-weight:600;line-height:1.4}
+    .route-suggest-empty{padding:13px 10px;color:#7a8c85;font-size:10px;text-align:center}
     .route-confirm{display:none;margin-top:8px;padding:8px 10px;border:1px solid rgba(23,54,45,.1);border-radius:10px;background:rgba(255,255,255,.72)}
     .route-confirm.show{display:block}
     .route-confirm-row{display:grid;grid-template-columns:40px 1fr;gap:7px;align-items:start;color:#71847d;font-size:9px;line-height:1.45}
@@ -231,9 +244,10 @@
           <div class="amap-route" id="amapRouteBox">
             <div class="amap-route-head"><strong>📍 高德自动获取路程时间</strong><span class="amap-badge">AMAP</span></div>
             <div class="route-place-grid">
-              <input class="route-place" id="routeStart" type="text" autocomplete="off" placeholder="输入起点（从下拉选择）" aria-label="路线起点">
-              <input class="route-place" id="routeEnd" type="text" autocomplete="off" placeholder="输入目的地（从下拉选择）" aria-label="路线目的地">
+              <div class="route-place-wrap"><input class="route-place" id="routeStart" type="text" autocomplete="off" placeholder="输入起点（从下拉选择）" aria-label="路线起点"><button class="route-clear" id="routeStartClear" type="button" aria-label="清空起点">×</button></div>
+              <div class="route-place-wrap"><input class="route-place" id="routeEnd" type="text" autocomplete="off" placeholder="输入目的地（从下拉选择）" aria-label="路线目的地"><button class="route-clear" id="routeEndClear" type="button" aria-label="清空目的地">×</button></div>
             </div>
+            <div class="route-suggestions" id="routeSuggestions" aria-live="polite"></div>
             <div class="route-confirm" id="routeConfirm" aria-live="polite">
               <div class="route-confirm-row"><span>起点</span><strong id="routeStartConfirmed">未确认</strong></div>
               <div class="route-confirm-row"><span>目的地</span><strong id="routeEndConfirmed">未确认</strong></div>
@@ -338,7 +352,8 @@
       var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
       var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
       var inputUnits={road:"minute",access:"minute"};
-      var amapPromise=null,amapPoints={start:null,end:null},routeBusy=false,routeChoices=[],selectedRouteMinutes=null;
+      var amapPromise=null,amapAutocomplete=null,amapPoints={start:null,end:null},routeBusy=false,routeChoices=[],selectedRouteMinutes=null;
+      var routeSuggestTarget=null,routeSuggestTimer=null,routeSuggestSequence=0;
       var AMAP_WEB_KEY="bba9f294c10c663b5ea6d593c08ea4a3";
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
@@ -407,6 +422,49 @@
         $("routeConfirm").classList.toggle("show",Boolean(hasText||start||end));
         [["routeStartConfirmed",start],["routeEndConfirmed",end]].forEach(function(item){$(item[0]).textContent=pointDescription(item[1]);$(item[0]).classList.toggle("unconfirmed",!item[1])});
       }
+      function renderRouteClearButtons(){
+        [["routeStart","routeStartClear"],["routeEnd","routeEndClear"]].forEach(function(item){$(item[1]).classList.toggle("show",Boolean($(item[0]).value.trim()))});
+      }
+      function hideRouteSuggestions(){
+        routeSuggestTarget=null;routeSuggestSequence++;clearTimeout(routeSuggestTimer);$("routeSuggestions").classList.remove("show");$("routeSuggestions").innerHTML="";
+      }
+      function selectAmapSuggestion(which,id,tip){
+        var input=$(id),name=firstText(tip.name).trim();
+        input.value=name;amapPoints[which]=normalizeAmapPoint(tip,name);
+        clearRouteChoices();hideRouteSuggestions();renderRouteClearButtons();renderAmapConfirmation();updateRouteFetchState();
+        setRouteStatus("地点已确认；请核对下方高德识别结果，确认无误后获取路线","success");
+      }
+      function renderAmapSuggestions(which,id,tips){
+        var box=$("routeSuggestions"),valid=(tips||[]).filter(function(tip){return tip&&tip.location&&firstText(tip.name).trim()}).slice(0,10);
+        box.innerHTML="";box.classList.add("show");
+        var head=document.createElement("div");head.className="route-suggest-head";head.textContent=(which==="start"?"起点":"目的地")+"高德匹配结果 · 点击一项确认";box.appendChild(head);
+        var list=document.createElement("div");list.className="route-suggest-list";box.appendChild(list);
+        if(!valid.length){var empty=document.createElement("div");empty.className="route-suggest-empty";empty.textContent="暂未匹配到准确地点，请补充城市、车站或航站楼名称";list.appendChild(empty);return}
+        valid.forEach(function(tip){
+          var button=document.createElement("button"),name=document.createElement("span"),meta=document.createElement("small"),district=firstText(tip.district||tip.adname).trim(),address=firstText(tip.address).trim();
+          button.type="button";button.className="route-suggest-item";name.textContent=firstText(tip.name).trim();meta.textContent=[district,address].filter(function(value,index,array){return value&&array.indexOf(value)===index}).join(" · ")||"高德地点";
+          button.appendChild(name);button.appendChild(meta);button.addEventListener("click",function(){selectAmapSuggestion(which,id,tip)});list.appendChild(button);
+        });
+      }
+      function requestAmapSuggestions(which,id,immediate){
+        var keyword=$(id).value.trim();
+        renderRouteClearButtons();clearTimeout(routeSuggestTimer);routeSuggestTarget=which;
+        if(!keyword){hideRouteSuggestions();return}
+        var run=function(){
+          var sequence=++routeSuggestSequence;
+          $("routeSuggestions").classList.add("show");$("routeSuggestions").innerHTML='<div class="route-suggest-empty">正在实时匹配高德地点…</div>';
+          loadAmap().then(function(){
+            amapAutocomplete.search(keyword,function(status,result){
+              if(sequence!==routeSuggestSequence||routeSuggestTarget!==which||$(id).value.trim()!==keyword)return;
+              renderAmapSuggestions(which,id,status==="complete"&&result?result.tips:[]);
+            });
+          }).catch(function(){if(sequence===routeSuggestSequence)setRouteStatus("高德地点匹配暂时无法加载，请稍后重试","error")});
+        };
+        if(immediate)run();else routeSuggestTimer=setTimeout(run,180);
+      }
+      function clearAmapInput(which,id){
+        $(id).value="";amapPoints[which]=null;clearRouteChoices();hideRouteSuggestions();renderRouteClearButtons();renderAmapConfirmation();updateRouteFetchState();setRouteStatus("已清空，请重新输入并从高德匹配结果中选择","");$(id).focus();
+      }
       function updateRouteFetchState(){
         var transportValid=mode==="drive"||["taxi","subway","mixed"].indexOf(airportTransport)>=0;
         $("routeFetchBtn").disabled=routeBusy||!transportValid||!confirmedPoint("start","routeStart")||!confirmedPoint("end","routeEnd");
@@ -419,16 +477,7 @@
         if(amapPromise)return amapPromise;
         if(!window.AMapLoader)return Promise.reject(new Error("高德地图加载器不可用"));
         amapPromise=window.AMapLoader.load({key:AMAP_WEB_KEY,version:"2.0",plugins:["AMap.AutoComplete","AMap.Driving","AMap.Transfer"]}).then(function(AMap){
-          [["routeStart","start"],["routeEnd","end"]].forEach(function(pair){
-            var autocomplete=new AMap.AutoComplete({input:pair[0]});
-            autocomplete.on("select",function(event){
-              var input=$(pair[0]),poi=event&&event.poi;
-              if(poi&&poi.name)input.value=firstText(poi.name).trim();
-              amapPoints[pair[1]]=normalizeAmapPoint(poi,input.value);
-              clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();
-              setRouteStatus("地点已确认；请核对下方高德识别结果，确认无误后获取路线","success");
-            });
-          });
+          amapAutocomplete=new AMap.AutoComplete({});
           return AMap;
         }).catch(function(error){amapPromise=null;throw error});
         return amapPromise;
@@ -456,7 +505,7 @@
           var seconds=Number(route&&route.time!==undefined?route.time:route&&route.duration);
           return Number.isFinite(seconds)&&seconds>0?{minutes:Math.ceil(seconds/60),subway:transit&&planHasSubway(route&&route.segments?route.segments:route),sourceIndex:index}:null;
         }).filter(Boolean);
-        if(transit&&options.some(function(option){return option.subway}))options=options.filter(function(option){return option.subway});
+        if(transit)options=options.filter(function(option){return option.subway});
         options.sort(function(a,b){return a.minutes-b.minutes||a.sourceIndex-b.sourceIndex});
         var used={};return options.filter(function(option){if(used[option.minutes])return false;used[option.minutes]=true;return true}).slice(0,6);
       }
@@ -483,7 +532,7 @@
           service.search(start.location,end.location,function(status,result){
             if(status!=="complete"){reject(new Error(status==="no_data"?"未找到合适路线，请更换地点或手动填写时间":"高德路线查询失败，请稍后重试"));return}
             var options=routeOptionsFromResult(result,transit);
-            if(!options.length){reject(new Error("高德已返回路线，但没有可用的预计时间"));return}
+            if(!options.length){reject(new Error(transit?"高德暂未返回包含地铁的路线，请检查地点是否选择准确":"高德已返回路线，但没有可用的预计时间"));return}
             resolve(options);
           });
         });
@@ -763,6 +812,7 @@
         updateRouteFetchState();
         $("routeStart").placeholder=(usesRail?"输入地铁主体路线起点／搭乘点":"输入起点")+"（从下拉选择）";
         $("routeEnd").placeholder=(isFlight?"输入具体航站楼／机场地铁站":isTrain?"输入高铁站名称":"输入目的地")+"（从下拉选择）";
+        renderRouteClearButtons();
         renderAmapConfirmation();
         if(!transportValid&&!routeBusy)setRouteStatus("选择交通工具后，请输入地点并点击高德下拉建议完成确认","");
         $("transitAccessRow").style.display=usesRail?"block":"none";
@@ -1081,7 +1131,7 @@
         }finally{button.disabled=false;button.textContent=original}
       }
       function setMode(next){
-        if(mode!==next){airportTransport="";$("road").value="";$("access").value="";$("routeEnd").value="";amapPoints.end=null;setInputUnit("road","minute",false);setInputUnit("access","minute",false);clearRouteChoices()}
+        if(mode!==next){airportTransport="";$("road").value="";$("access").value="";$("routeEnd").value="";amapPoints.end=null;setInputUnit("road","minute",false);setInputUnit("access","minute",false);clearRouteChoices();hideRouteSuggestions()}
         mode=next;extraEditorBeforeKey=null;clearLive();
         $("flightBtn").classList.toggle("active",mode==="flight");
         $("trainBtn").classList.toggle("active",mode==="train");
@@ -1090,7 +1140,7 @@
         render();if(mode==="drive")setRouteStatus("输入起点和目的地，将按高德驾车路线自动获取时间","");
       }
       function setAirportTransport(next){
-        if(airportTransport!==next){airportTransport=next;$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false);clearRouteChoices();extraEditorBeforeKey=null;clearLive()}
+        if(airportTransport!==next){airportTransport=next;$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false);clearRouteChoices();hideRouteSuggestions();extraEditorBeforeKey=null;clearLive()}
         render();setRouteStatus(next==="taxi"?"输入起点和目的地，将按高德驾车路线自动获取时间":"地铁类路线请将起点填写为主体路线起点／地铁搭乘点；接驳时间仍在下方单独填写","");
       }
       $("flightBtn").addEventListener("click",function(){setMode("flight")});
@@ -1100,8 +1150,14 @@
       $("subwayTransportBtn").addEventListener("click",function(){setAirportTransport("subway")});
       $("mixedTransportBtn").addEventListener("click",function(){setAirportTransport("mixed")});
       $("routeFetchBtn").addEventListener("click",fetchAmapDuration);
-      $("routeStart").addEventListener("input",function(){if(!amapPoints.start||amapPoints.start.label!==this.value)amapPoints.start=null;clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();if(this.value.trim())setRouteStatus("请点击高德下拉建议，确认准确的起点","error")});
-      $("routeEnd").addEventListener("input",function(){if(!amapPoints.end||amapPoints.end.label!==this.value)amapPoints.end=null;clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();if(this.value.trim())setRouteStatus("请点击高德下拉建议，确认准确的目的地","error")});
+      $("routeStart").addEventListener("input",function(){if(!amapPoints.start||amapPoints.start.label!==this.value)amapPoints.start=null;clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();requestAmapSuggestions("start","routeStart",false);if(this.value.trim())setRouteStatus("正在实时匹配起点，请点击下方准确地点","error")});
+      $("routeEnd").addEventListener("input",function(){if(!amapPoints.end||amapPoints.end.label!==this.value)amapPoints.end=null;clearRouteChoices();renderAmapConfirmation();updateRouteFetchState();requestAmapSuggestions("end","routeEnd",false);if(this.value.trim())setRouteStatus("正在实时匹配目的地，请点击下方准确地点","error")});
+      $("routeStart").addEventListener("focus",function(){if(this.value.trim())requestAmapSuggestions("start","routeStart",true)});
+      $("routeEnd").addEventListener("focus",function(){if(this.value.trim())requestAmapSuggestions("end","routeEnd",true)});
+      $("routeStart").addEventListener("click",function(){if(this.value.trim()&&(routeSuggestTarget!=="start"||!$("routeSuggestions").classList.contains("show")))requestAmapSuggestions("start","routeStart",true)});
+      $("routeEnd").addEventListener("click",function(){if(this.value.trim()&&(routeSuggestTarget!=="end"||!$("routeSuggestions").classList.contains("show")))requestAmapSuggestions("end","routeEnd",true)});
+      $("routeStartClear").addEventListener("click",function(){clearAmapInput("start","routeStart")});
+      $("routeEndClear").addEventListener("click",function(){clearAmapInput("end","routeEnd")});
       ["routeStart","routeEnd"].forEach(function(id){$(id).addEventListener("keydown",function(event){if(event.key==="Enter"){event.preventDefault();fetchAmapDuration()}})});
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
@@ -1121,7 +1177,7 @@
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
         mode="flight";checkedBag=true;prepEnabled=true;airportTransport="";customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
         setInputUnit("road","minute",false);setInputUnit("access","minute",false);
-        $("routeStart").value="";$("routeEnd").value="";amapPoints={start:null,end:null};clearRouteChoices();
+        $("routeStart").value="";$("routeEnd").value="";amapPoints={start:null,end:null};clearRouteChoices();hideRouteSuggestions();
         $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
         $("bagRow").style.display="flex";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
