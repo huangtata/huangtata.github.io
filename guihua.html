@@ -41,7 +41,7 @@
     input[type="time"],input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
     input[type="time"]{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850}
     input[type="time"][aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
-    .road-input{height:56px;padding:0 58px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
+    .road-input{height:56px;padding:0 82px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
     .road-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
     .road-input:disabled,.quick-pick:disabled{cursor:not-allowed;opacity:.5}
     .quick-picks{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:8px}
@@ -53,6 +53,7 @@
     .time-hint.show{display:block}
     input:focus{border-color:#527066;box-shadow:0 0 0 3px rgba(82,112,102,.14)}
     .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#62776f;font-size:12px;font-weight:700;pointer-events:none}
+    .unit-select{position:absolute;right:8px;top:50%;width:68px;height:38px;padding:0 5px;border:0;border-radius:10px;outline:0;background:#eef1e9;color:#526b62;font-size:12px;font-weight:800;transform:translateY(-50%)}
     .bag{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding:14px 16px;border:1px solid var(--line);border-radius:17px;background:#eef0e6}
     .bag-copy{display:flex;align-items:center;gap:12px;min-width:0}
     .bag-copy>div:last-child{min-width:0}
@@ -218,12 +219,12 @@
                 <button class="quick-pick" id="road45" type="button">45</button>
                 <button class="quick-pick" id="road60" type="button">60</button>
               </div>
-              <label class="input-wrap"><input id="road" class="road-input" type="number" min="1" max="600" step="1" value="" placeholder="请输入" required aria-required="true"><span class="unit">分钟</span></label>
+              <label class="input-wrap"><input id="road" class="road-input" type="text" inputmode="decimal" value="" placeholder="请输入" required aria-required="true"><select id="roadUnit" class="unit-select" aria-label="路程时间单位"><option value="minute" selected>分钟</option><option value="hour">小时</option></select></label>
               <span class="road-hint" id="roadHint">必填：请选择上方时间或手动输入</span>
             </div>
           </div>
           <div class="field" id="transitAccessRow" style="display:none">
-            <label><span class="label">步行／打车到地铁搭乘点所需时间</span><span class="input-wrap"><input id="access" class="road-input" type="number" min="1" max="600" step="1" value="" placeholder="请输入" aria-required="true"><span class="unit">分钟</span></span><span class="road-hint" id="accessHint">必填：请输入到地铁搭乘点所需时间</span></label>
+            <label><span class="label">步行／打车到地铁搭乘点所需时间</span><span class="input-wrap"><input id="access" class="road-input" type="text" inputmode="decimal" value="" placeholder="请输入" aria-required="true"><select id="accessUnit" class="unit-select" aria-label="到地铁搭乘点时间单位"><option value="minute" selected>分钟</option><option value="hour">小时</option></select></span><span class="road-hint" id="accessHint">必填：请输入到地铁搭乘点所需时间</span></label>
           </div>
           <div class="bag" id="bagRow">
             <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后多预留 23 分钟，并按起飞前 45 分钟完成托运计算</small></div></div>
@@ -299,17 +300,50 @@
       var BAG_CUTOFF_MINUTES=45;
       var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
       var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
+      var inputUnits={road:"minute",access:"minute"};
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
       var defaults={departure:"",road:"",access:"",prep:45,wait:8};
       function number(id){var v=Number($(id).value);return Number.isFinite(v)?Math.max(0,Math.min(600,Math.round(v))):0}
-      function getRoad(){
-        var raw=$("road").value.trim(),value=Number(raw);
-        return raw!==""&&Number.isInteger(value)&&value>=1&&value<=600?value:null;
+      function parseDurationRaw(raw,unit){
+        var value=String(raw||"").trim();
+        if(value==="")return null;
+        if(unit==="minute"){
+          var minuteValue=Number(value);
+          return Number.isInteger(minuteValue)&&minuteValue>=1&&minuteValue<=600?minuteValue:null;
+        }
+        var match=value.match(/^(\d+)(?:\.(\d{1,2}))?$/);
+        if(!match)return null;
+        var hours=Number(match[1]),fraction=match[2]||"",minutes=0;
+        if(fraction.length===1){
+          var digit=Number(fraction);
+          if(digit>=7)return null;
+          minutes=digit===5?30:digit===6?60:digit*10;
+        }else if(fraction.length===2){
+          minutes=Number(fraction);
+          if(minutes>60)return null;
+        }
+        var total=hours*60+minutes;
+        return total>=1&&total<=600?total:null;
       }
-      function getAccess(){
-        var raw=$("access").value.trim(),value=Number(raw);
-        return raw!==""&&Number.isInteger(value)&&value>=1&&value<=600?value:null;
+      function getDurationInput(id){return parseDurationRaw($(id).value,inputUnits[id])}
+      function getRoad(){return getDurationInput("road")}
+      function getAccess(){return getDurationInput("access")}
+      function minutesToHourEntry(total){
+        var hours=Math.floor(total/60),minutes=total%60;
+        if(minutes===0)return String(hours);
+        if(minutes===30)return hours+".5";
+        return hours+"."+String(minutes).padStart(2,"0");
+      }
+      function setInputUnit(id,nextUnit,convert){
+        var previous=inputUnits[id],input=$(id),parsed=parseDurationRaw(input.value,previous);
+        inputUnits[id]=nextUnit;$(id+"Unit").value=nextUnit;
+        if(convert&&parsed!==null)input.value=nextUnit==="hour"?minutesToHourEntry(parsed):String(parsed);
+      }
+      function durationInputHint(id,value,emptyText){
+        if(value!==null)return inputUnits[id]==="hour"?"已换算为 "+value+" 分钟":"已填入 "+value+" 分钟";
+        if($(id).value.trim()==="")return emptyText+(inputUnits[id]==="hour"?"；例如 1.25＝1小时25分，1.5＝1小时30分":"");
+        return inputUnits[id]==="hour"?"小时格式错误：分钟部分只能为 00–60，例如 1.25、1.5、1.6":"请输入 1–600 的整数分钟";
       }
       function getTrafficBuffer(road){
         if(road<20)return 10;
@@ -568,9 +602,10 @@
         $("mixedTransportBtn").classList.toggle("active",airportTransport==="mixed");
         $("transitAccessRow").style.display=usesRail?"block":"none";
         $("access").disabled=!usesRail;
+        $("accessUnit").disabled=!usesRail;
         $("access").setAttribute("aria-invalid",String(usesRail&&access===null));
         $("accessHint").classList.toggle("ok",usesRail&&access!==null);
-        $("accessHint").textContent=usesRail?(access===null?($("access").value.trim()===""?"必填：请输入到地铁搭乘点所需时间":"请输入 1–600 的整数分钟"):"已填入 "+access+" 分钟"):"";
+        $("accessHint").textContent=usesRail?durationInputHint("access",access,"必填：请输入到地铁搭乘点所需时间"):"";
         $("prepInputWrap").style.display=prepEnabled?"flex":"none";
         $("prepOffText").style.display=prepEnabled?"none":"inline";
         $("prep").disabled=!prepEnabled;
@@ -581,6 +616,7 @@
         $("departureHint").textContent="必填：请选择"+(isDrive?"计划到达时间":departText+"时间");
         $("roadLabel").textContent=roadText;
         $("road").disabled=!transportValid;
+        $("roadUnit").disabled=!transportValid;
         roadPresets.forEach(function(minutes){$("road"+minutes).disabled=!transportValid});
         $("waitTimeRow").style.display=usesTaxi?"flex":"none";
         $("advanceRow").style.display=isDrive?"none":"flex";
@@ -594,7 +630,7 @@
         roadPresets.forEach(function(minutes){$("road"+minutes).classList.toggle("active",road===minutes)});
         $("road").setAttribute("aria-invalid",String(transportValid&&road===null));
         $("roadHint").classList.toggle("ok",transportValid&&road!==null);
-        $("roadHint").textContent=!transportValid?"请先选择交通工具":road===null?($("road").value.trim()===""?"必填：请选择上方时间或手动输入":"请输入 1–600 的整数分钟"):"已填入 "+road+" 分钟";
+        $("roadHint").textContent=!transportValid?"请先选择交通工具":durationInputHint("road",road,"必填：请选择上方时间或手动输入");
         $("bufferLabel").textContent=usesRail?"地铁冗余时间":"路况余量";
         $("bufferHint").textContent=usesRail?"预留候车、换乘、临时步行及运营波动时间":"预留堵车、红绿灯、临时绕行等不确定时间";
         $("trafficValue").classList.toggle("fixed",usesRail);
@@ -877,7 +913,7 @@
         }finally{button.disabled=false;button.textContent=original}
       }
       function setMode(next){
-        if(mode!==next){airportTransport="";$("road").value="";$("access").value=""}
+        if(mode!==next){airportTransport="";$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false)}
         mode=next;extraEditorBeforeKey=null;clearLive();
         $("flightBtn").classList.toggle("active",mode==="flight");
         $("trainBtn").classList.toggle("active",mode==="train");
@@ -886,7 +922,7 @@
         render();
       }
       function setAirportTransport(next){
-        if(airportTransport!==next){airportTransport=next;$("road").value="";$("access").value="";extraEditorBeforeKey=null;clearLive()}
+        if(airportTransport!==next){airportTransport=next;$("road").value="";$("access").value="";setInputUnit("road","minute",false);setInputUnit("access","minute",false);extraEditorBeforeKey=null;clearLive()}
         render();
       }
       $("flightBtn").addEventListener("click",function(){setMode("flight")});
@@ -904,11 +940,13 @@
       $("previewClose").addEventListener("click",closeImagePreview);
       $("previewDownload").addEventListener("click",savePreviewImage);
       $("imagePreview").addEventListener("click",function(event){if(event.target===this)closeImagePreview()});
-      roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){$("road").value=String(minutes);render()})});
+      roadPresets.forEach(function(minutes){$("road"+minutes).addEventListener("click",function(){setInputUnit("road","minute",false);$("road").value=String(minutes);render()})});
+      ["road","access"].forEach(function(id){$(id+"Unit").addEventListener("change",function(){setInputUnit(id,this.value,true);render()})});
       ["departure","road","access","prep","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
         mode="flight";checkedBag=true;prepEnabled=true;airportTransport="";customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
+        setInputUnit("road","minute",false);setInputUnit("access","minute",false);
         $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
         $("bagRow").style.display="flex";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
