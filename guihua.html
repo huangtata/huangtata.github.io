@@ -49,7 +49,9 @@
     input:focus{border-color:#527066;box-shadow:0 0 0 3px rgba(82,112,102,.14)}
     .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#62776f;font-size:12px;font-weight:700;pointer-events:none}
     .bag{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding:14px 16px;border:1px solid var(--line);border-radius:17px;background:#eef0e6}
-    .bag-copy{display:flex;align-items:center;gap:12px}
+    .bag-copy{display:flex;align-items:center;gap:12px;min-width:0}
+    .bag-copy>div:last-child{min-width:0}
+    .bag .switch{flex:0 0 auto}
     .bag-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:white;font-size:19px}
     .bag strong{display:block;font-size:14px}
     .bag small{display:block;margin-top:4px;color:#6b7e76;font-size:11px}
@@ -118,6 +120,7 @@
     .project-copy{display:block;min-width:0}
     .project-start{color:#e96f98;font-weight:900}
     .project-note{display:block;margin-top:3px;color:#96a39e;font-size:9px;font-weight:600;line-height:1.25}
+    .project-note.deadline-note{color:#b35a42;font-weight:800}
     .project-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#eef1e9;font-size:13px}
     .range{color:#354d45;font-size:13px;font-weight:700}
     .range-end{color:#e96f98;font-weight:900}
@@ -205,7 +208,7 @@
             </div>
           </div>
           <div class="bag" id="bagRow">
-            <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后自动多预留 23 分钟</small></div></div>
+            <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后多预留 23 分钟，并按起飞前 45 分钟完成托运计算</small></div></div>
             <button id="bagSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否需要办理托运"></button>
           </div>
           <div class="detail-head"><span class="label">时间细节</span><button class="reset" id="resetBtn" type="button">↻ 恢复默认</button></div>
@@ -275,6 +278,7 @@
   <script>
     (function(){
       var mode="flight", checkedBag=true, prepEnabled=true;
+      var BAG_CUTOFF_MINUTES=45;
       var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
       var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
       var $=function(id){return document.getElementById(id)};
@@ -424,7 +428,7 @@
           }else if(item.isCustomExtra){
             durationMarkup='<span><label class="extra-duration-edit"><input type="number" min="1" max="600" value="'+item.duration+'" data-extra-duration="'+item.extraId+'" aria-label="修改额外事项时间">分钟</label></span>';
           }else durationMarkup='<span>'+displayDuration.main+durationNote+'</span>';
-          var projectNote=item.projectNote?'<small class="project-note">'+escapeHTML(item.projectNote)+'</small>':'';
+          var projectNote=item.projectNote?'<small class="project-note'+(item.deadlineNote?' deadline-note':'')+'">'+escapeHTML(item.projectNote)+'</small>':'';
           var projectTitle=item.isCustomExtra?'<span class="project-start">'+format(timing.start)+'</span><input class="extra-name-input" type="text" maxlength="20" value="'+escapeHTML(item.name)+'" data-extra-name="'+item.extraId+'" aria-label="修改额外事项名称">'+tag:'<span class="project-start">'+format(timing.start)+'</span>'+escapeHTML(item.name)+tag;
           rowAction=item.isCustomExtra?'<button class="extra-delete-btn" type="button" data-extra-delete="'+item.extraId+'">删除</button>':'<button class="extra-add-btn" type="button" data-add-before="'+item.key+'">＋途中新事项</button>';
           if(extraEditorBeforeKey===item.key)editorHTML='<div class="extra-editor-row"><div class="extra-editor-copy">在“'+escapeHTML(item.name)+'”之前增加途中新事项</div><div class="extra-editor-actions"><input class="extra-editor-name" id="extraEditorName" type="text" maxlength="20" value="额外事项" placeholder="事项名称" aria-label="额外事项名称"><label><input id="extraEditorMinutes" type="number" min="1" max="600" value="20" aria-label="额外事项所需时间">分钟</label><button class="extra-editor-confirm" type="button" data-extra-confirm="'+item.key+'">添加</button><button class="extra-editor-cancel" type="button" data-extra-cancel>取消</button></div></div>';
@@ -457,21 +461,36 @@
           if(i<index)return;
           durations[i]=i===index?liveRemaining:(Object.prototype.hasOwnProperty.call(liveOverrides,detail.key)?liveOverrides[detail.key]:detail.duration);
         });
-        var naturalFinish=current;
-        durations.forEach(function(duration){if(typeof duration==="number")naturalFinish+=duration});
         var bufferIndex=bufferKey?currentDetails.findIndex(function(detail){return detail.key===bufferKey}):-1;
+        var autoReduced=0,reductions=[],cutoffReduced=0,cutoffRemaining=0,cutoffInitialShortage=0;
+        var bagIndex=mode==="flight"&&checkedBag?currentDetails.findIndex(function(detail){return detail.key==="flight-bag"}):-1;
+        var bagDeadline=currentDeparture-BAG_CUTOFF_MINUTES;
+        function finishThrough(endIndex){var finish=current;for(var j=index;j<=endIndex;j++){if(typeof durations[j]==="number")finish+=durations[j]}return finish}
+        function compressFor(shortage,maxIndex){
+          var remaining=shortage;
+          compressionRules().forEach(function(rule){
+            if(remaining<=0)return;
+            var ruleIndex=currentDetails.findIndex(function(detail){return detail.key===rule.key});
+            if(ruleIndex<index||ruleIndex<0||ruleIndex>maxIndex||typeof durations[ruleIndex]!=="number")return;
+            var minimum=smartMinimum(rule.key),available=Math.max(0,durations[ruleIndex]-minimum),reduced=Math.min(available,remaining);
+            if(reduced>0){durations[ruleIndex]-=reduced;reductions[ruleIndex]=(reductions[ruleIndex]||0)+reduced;autoReduced+=reduced;remaining-=reduced}
+          });
+          return remaining;
+        }
+        if(bagIndex>=index){
+          cutoffInitialShortage=Math.max(0,finishThrough(bagIndex)-bagDeadline);
+          if(cutoffInitialShortage>0){
+            var reducedBeforeCutoff=autoReduced;
+            cutoffRemaining=compressFor(cutoffInitialShortage,bagIndex);
+            cutoffReduced=autoReduced-reducedBeforeCutoff;
+          }
+        }
+        var naturalFinish=finishThrough(currentDetails.length-1);
         var autoAdded=bufferIndex>=index&&naturalFinish<currentDeparture?currentDeparture-naturalFinish:0;
-        var originalShortage=Math.max(0,naturalFinish-currentDeparture),remainingShortage=originalShortage,autoReduced=0,reductions=[];
         if(autoAdded>0){
           durations[bufferIndex]+=autoAdded;
-        }else if(remainingShortage>0){
-          compressionRules().forEach(function(rule){
-            if(remainingShortage<=0)return;
-            var ruleIndex=currentDetails.findIndex(function(detail){return detail.key===rule.key});
-            if(ruleIndex<index||ruleIndex<0||typeof durations[ruleIndex]!=="number")return;
-            var minimum=smartMinimum(rule.key),available=Math.max(0,durations[ruleIndex]-minimum),reduced=Math.min(available,remainingShortage);
-            if(reduced>0){durations[ruleIndex]-=reduced;reductions[ruleIndex]=reduced;autoReduced+=reduced;remainingShortage-=reduced}
-          });
+        }else{
+          compressFor(Math.max(0,naturalFinish-currentDeparture),currentDetails.length-1);
         }
         currentDetails.forEach(function(detail,i){
           if(i<index){schedule[i]=detail;return;}
@@ -480,13 +499,19 @@
           cursor+=duration;
         });
         $("breakdownTotal").textContent="余下 "+(cursor-current)+" 分钟";
-        var difference=cursor-currentDeparture,status=$("liveStatus");
-        if(autoAdded>0){
-          status.className="live-status good";
-          status.textContent="时间充足，多出的 "+autoAdded+" 分钟已全部加入“"+bufferName+"”｜余下环节将衔接至"+currentTargetLabel;
+        var difference=cursor-currentDeparture,status=$("liveStatus"),bagCompletion=bagIndex>=index&&schedule[bagIndex]?schedule[bagIndex].end:null;
+        if(cutoffRemaining>0){
+          status.className="live-status bad";
+          status.textContent="托运截止风险：预计 "+format(bagCompletion)+" 完成托运，超过 "+format(bagDeadline)+" 截止线 "+cutoffRemaining+" 分钟。已按最低值压缩 "+autoReduced+" 分钟，请立即联系航空公司或机场柜台";
         }else if(difference>0){
           status.className="live-status bad";
-          status.textContent=(autoReduced>0?"已智能压缩 "+autoReduced+" 分钟，":"时间不足，")+"仍差 "+difference+" 分钟｜预计 "+format(cursor)+" 完成；可修改下方其他项目分钟数";
+          status.textContent=(cutoffInitialShortage>0?"托运预计可在 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）；但":"")+(autoReduced>0?"已智能压缩 "+autoReduced+" 分钟，":"时间不足，")+"仍差 "+difference+" 分钟｜预计 "+format(cursor)+" 完成；可修改下方其他项目分钟数";
+        }else if(cutoffReduced>0){
+          status.className="live-status good";
+          status.textContent="已智能压缩 "+autoReduced+" 分钟（其中为托运截止线优先压缩 "+cutoffReduced+" 分钟），托运预计 "+format(bagCompletion)+" 完成（截止 "+format(bagDeadline)+"）｜"+(autoAdded>0?"多出的 "+autoAdded+" 分钟已加入“"+bufferName+"”":"余下环节可衔接至"+currentTargetLabel);
+        }else if(autoAdded>0){
+          status.className="live-status good";
+          status.textContent="时间充足，多出的 "+autoAdded+" 分钟已全部加入“"+bufferName+"”｜余下环节将衔接至"+currentTargetLabel;
         }else if(autoReduced>0){
           status.className="live-status good";
           status.textContent="时间紧张，已按优先级智能压缩 "+autoReduced+" 分钟｜预计刚好赶上"+currentTargetLabel;
@@ -524,7 +549,7 @@
         $("advanceValue").textContent=advance+" 分钟";
         $("actionSummaryLabel").textContent=isDrive?"🚗 建议出发":"🚕 建议叫车";
         $("arrivalSummaryLabel").textContent=isDrive?"📍 计划到达目的地":"📍 建议到达"+terminal;
-        $("riskNote").textContent=isDrive?"该时间不含路况余量，仅作紧急参考。":"该时间不含等车与路况余量，仅作紧急参考。";
+        $("riskNote").textContent=isFlight&&checkedBag?"托运按起飞前 45 分钟完成计算，具体截止时间以航空公司和机场规定为准；该时间不含等车与路况余量，仅作紧急参考。":isDrive?"该时间不含路况余量，仅作紧急参考。":"该时间不含等车与路况余量，仅作紧急参考。";
         $("travelIcon").textContent=isFlight?"✈":isTrain?"🚄":"🚗";
         roadPresets.forEach(function(minutes){$("road"+minutes).classList.toggle("active",road===minutes)});
         $("road").setAttribute("aria-invalid",String(road===null));
@@ -566,7 +591,10 @@
           if(checkedBag){
             details.push(makeDetail("flight-bag-find","🔎","到达机场寻找托运点",processAt,processAt+3,3));
             processAt+=3;
-            details.push(makeDetail("flight-bag","🧳","开始办理行李托运",processAt,processAt+20,20));
+            var bagDetail=makeDetail("flight-bag","🧳","开始办理行李托运",processAt,processAt+20,20);
+            bagDetail.projectNote="须在 "+format(departure-BAG_CUTOFF_MINUTES)+" 前完成（按起飞前 45 分钟截止计算）";
+            bagDetail.deadlineNote=true;
+            details.push(bagDetail);
             processAt+=20;
           }
           details.push(makeDetail("flight-security-walk","🚶","通往安检点",processAt,processAt+5,5));
@@ -706,7 +734,10 @@
               return 44+nameLines*38+(row.note?31:0)+42+durationLines*31+20;
             });
             var detailHeight=92+(rows.length?detailHeights.reduce(function(sum,value){return sum+value},0):150);
-            var height=210+30+settingsHeight+30+330+30+detailHeight+170;
+            var exportWarningText="⚠ "+$("riskNote").textContent+" 机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。";
+            context.font='700 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+            var warningHeight=Math.max(104,48+canvasLines(context,exportWarningText,contentWidth-48).length*31);
+            var height=210+30+settingsHeight+30+330+30+detailHeight+warningHeight+66;
             canvas.width=width;canvas.height=height;context=context=canvas.getContext("2d");
             context.fillStyle="#eef1e9";context.fillRect(0,0,width,height);context.textBaseline="alphabetic";
             roundedCanvasRect(context,0,0,width,210,0,"#17362d");
@@ -746,8 +777,8 @@
               context.fillStyle="#96a39e";context.font='22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';context.fillText("  "+row.next,pad+28+firstWidth+endWidth,textY+7);textY+=47;
               drawCanvasLines(context,"用时 "+row.duration,pad+28,textY,contentWidth-56,31,"#527066",'800 24px "PingFang SC","Microsoft YaHei",Arial,sans-serif');rowY+=rowHeight;
             });
-            y+=detailHeight+32;roundedCanvasRect(context,pad,y,contentWidth,104,22,"#fff5e8");
-            context.fillStyle="#a86335";context.font='700 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';drawCanvasLines(context,"⚠ "+$("riskNote").textContent+" 机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。",pad+24,y+40,contentWidth-48,31,"#a86335",context.font);
+            y+=detailHeight+32;roundedCanvasRect(context,pad,y,contentWidth,warningHeight,22,"#fff5e8");
+            context.fillStyle="#a86335";context.font='700 22px "PingFang SC","Microsoft YaHei",Arial,sans-serif';drawCanvasLines(context,exportWarningText,pad+24,y+40,contentWidth-48,31,"#a86335",context.font);
             canvas.toBlob(function(blob){blob?resolve(blob):reject(new Error("Safari 图片编码失败"))},"image/jpeg",.93);
           }catch(error){reject(error)}
         });
