@@ -252,12 +252,15 @@
           <div class="field">
             <span class="label">出行方式</span>
             <div class="mode">
-              <button id="flightBtn" class="active" type="button">✈ 飞机</button>
+              <button id="flightBtn" type="button">✈ 飞机</button>
               <button id="trainBtn" type="button">🚄 高铁</button>
               <button id="driveBtn" type="button">🚗 开车</button>
             </div>
           </div>
-          <div class="field" id="transportRow">
+          <div class="field" id="departureRow">
+            <label><span class="label" id="departureLabel">起飞／发车／到达时间</span><input id="departure" class="time-input" type="text" value="" placeholder="请先选择出行方式" readonly inputmode="none" disabled required aria-required="true" aria-invalid="false" aria-haspopup="dialog"><span class="time-hint show" id="departureHint">必填：请先选择出行方式</span></label>
+          </div>
+          <div class="field" id="transportRow" style="display:none">
             <span class="label" id="transportLabel">去机场的交通工具（必选）</span>
             <div class="transport-choice" role="group" aria-label="选择去机场或高铁站的交通工具">
               <button id="taxiTransportBtn" type="button">🚕 打车</button>
@@ -266,7 +269,7 @@
             </div>
             <span class="transport-hint" id="transportHint">必选：请选择去机场的交通工具</span>
           </div>
-          <div class="amap-route" id="amapRouteBox">
+          <div class="amap-route" id="amapRouteBox" style="display:none">
             <div class="amap-route-head"><strong>📍 高德自动获取路程时间</strong><span class="amap-badge">AMAP</span></div>
             <div class="route-place-grid">
               <div class="route-place-wrap"><input class="route-place" id="routeStart" type="text" autocomplete="off" placeholder="输入起点（从下拉选择）" aria-label="路线起点"><button class="route-clear" id="routeStartClear" type="button" aria-label="清空起点">×</button></div>
@@ -281,8 +284,7 @@
             <span class="route-status" id="routeStatus">选择交通工具后，请输入地点并点击高德下拉建议完成确认</span>
             <div class="route-options" id="routeOptions" aria-label="高德路线时间方案"></div>
           </div>
-          <div class="input-grid field">
-            <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" class="time-input" type="text" value="" placeholder="请选择 00:00–23:59" readonly inputmode="none" required aria-required="true" aria-invalid="true" aria-haspopup="dialog"><span class="time-hint show" id="departureHint">必填：请选择起飞时间</span></label>
+          <div class="field" id="roadTimeRow" style="display:none">
             <div>
               <span class="label" id="roadLabel">打车到机场，高德地图所显示预估时间</span>
               <div class="quick-picks" aria-label="路程时间快捷选择">
@@ -300,7 +302,7 @@
           <div class="field" id="transitAccessRow" style="display:none">
             <label><span class="label">步行／打车到地铁搭乘点所需时间</span><span class="quick-picks" aria-label="到地铁搭乘点时间快捷选择"><button class="quick-pick" id="access10" type="button">10</button><button class="quick-pick" id="access15" type="button">15</button><button class="quick-pick" id="access25" type="button">25</button><button class="quick-pick" id="access35" type="button">35</button><button class="quick-pick" id="access45" type="button">45</button><button class="quick-pick" id="access60" type="button">60</button></span><span class="input-wrap"><input id="access" class="road-input" type="text" inputmode="decimal" value="" placeholder="请输入" aria-required="true"><select id="accessUnit" class="unit-select" aria-label="到地铁搭乘点时间单位"><option value="minute" selected>分钟</option><option value="hour">小时</option></select></span><span class="road-hint" id="accessHint">必填：请输入到地铁搭乘点所需时间</span></label>
           </div>
-          <div class="bag" id="bagRow">
+          <div class="bag" id="bagRow" style="display:none">
             <div class="bag-copy"><div class="bag-icon">🧳</div><div><strong>需要办理托运</strong><small>开启后多预留 23 分钟，并按起飞前 45 分钟完成托运计算</small></div></div>
             <button id="bagSwitch" class="switch on" type="button" role="switch" aria-checked="true" aria-label="是否需要办理托运"></button>
           </div>
@@ -385,7 +387,7 @@
   <script src="https://webapi.amap.com/loader.js"></script>
   <script>
     (function(){
-      var mode="flight", checkedBag=true, prepEnabled=true,airportTransport="";
+      var mode="", checkedBag=true, prepEnabled=true,airportTransport="";
       var BAG_CUTOFF_MINUTES=45;
       var liveKey=null,liveClock="",liveRemaining=0,liveOverrides={},currentDetails=[],currentDeparture=0,currentTargetLabel="",currentPlanTotal=0;
       var customExtras=[],nextExtraId=1,extraEditorBeforeKey=null;
@@ -505,7 +507,7 @@
         $(id).value="";amapPoints[which]=null;clearRouteChoices();hideRouteSuggestions();renderRouteClearButtons();renderAmapConfirmation();updateRouteFetchState();setRouteStatus("已清空，请重新输入并从高德匹配结果中选择","");$(id).focus();
       }
       function updateRouteFetchState(){
-        var transportValid=mode==="drive"||["taxi","subway","mixed"].indexOf(airportTransport)>=0;
+        var transportValid=Boolean(mode)&&(mode==="drive"||["taxi","subway","mixed"].indexOf(airportTransport)>=0);
         $("routeFetchBtn").disabled=routeBusy||!transportValid||!confirmedPoint("start","routeStart")||!confirmedPoint("end","routeEnd");
       }
       function loadAmap(){
@@ -573,7 +575,7 @@
         });
       }
       async function fetchAmapDuration(){
-        var startValue=$("routeStart").value.trim(),endValue=$("routeEnd").value.trim(),isDrive=mode==="drive",transportValid=isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0;
+        var startValue=$("routeStart").value.trim(),endValue=$("routeEnd").value.trim(),isDrive=mode==="drive",transportValid=Boolean(mode)&&(isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0);
         if(!transportValid){setRouteStatus("请先选择去机场／高铁站的交通工具","error");return}
         if(!startValue||!endValue){setRouteStatus("请完整填写起点和目的地","error");return}
         routeBusy=true;$("routeFetchBtn").disabled=true;$("routeFetchBtn").textContent="正在查询路线…";setRouteStatus("正在识别地点并获取高德预计时间…","");
@@ -657,7 +659,7 @@
           train:{prep:0,wait:10,"transit-access":10,"arrival-road":20,"train-security":30,"train-gate":40,"train-wait":50,"train-departure":100},
           drive:{prep:0,road:20,traffic:30,"drive-arrival":100}
         };
-        return Object.prototype.hasOwnProperty.call(maps[mode],key)?maps[mode][key]:999;
+        var modeMap=maps[mode]||{};return Object.prototype.hasOwnProperty.call(modeMap,key)?modeMap[key]:999;
       }
       function activeExtras(){return customExtras.filter(function(item){return item.mode===mode})}
       function applyCustomExtras(baseDetails,departure){
@@ -867,16 +869,19 @@
       function render(){
         var departureRaw=$("departure").value,departureValid=/^\d{2}:\d{2}$/.test(departureRaw),departure=departureValid?toMinutes(departureRaw):null,road=getRoad(),access=getAccess(),prep=prepEnabled?number("prep"):0,waitInput=number("wait");
         var isFlight=mode==="flight",isTrain=mode==="train",isDrive=mode==="drive";
-        var transportValid=isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0;
+        var modeSelected=Boolean(mode),transportValid=modeSelected&&(isDrive||["taxi","subway","mixed"].indexOf(airportTransport)>=0);
         var usesTaxi=!isDrive&&airportTransport==="taxi",usesRail=!isDrive&&(airportTransport==="subway"||airportTransport==="mixed");
         var traffic=road===null?null:(usesRail?15:getTrafficBuffer(road));
         var terminal=isFlight?"机场":isTrain?"高铁站":"目的地";
         var departText=isFlight?"起飞":isTrain?"发车":"计划到达";
-        var roadText=isDrive?"开车路程所需时间":!transportValid?"请先选择去"+terminal+"的交通工具":usesTaxi?"打车到"+terminal+"，高德地图所显示预估时间":airportTransport==="subway"?"高德地图所显示地铁主体行程预估时间":"高德地图所显示地铁＋打车主体行程预估时间";
+        var roadText=!modeSelected?"请先选择出行方式":isDrive?"开车路程所需时间":!transportValid?"请先选择去"+terminal+"的交通工具":usesTaxi?"打车到"+terminal+"，高德地图所显示预估时间":airportTransport==="subway"?"高德地图所显示地铁主体行程预估时间":"高德地图所显示地铁＋打车主体行程预估时间";
         var advance=isFlight?(checkedBag?93:70):isTrain?55:0;
         var minimum=isFlight?(checkedBag?83:65):isTrain?40:0;
         var wait=usesTaxi?waitInput:0;
-        $("transportRow").style.display=isDrive?"none":"block";
+        $("transportRow").style.display=!modeSelected||isDrive?"none":"block";
+        $("amapRouteBox").style.display=modeSelected?"block":"none";
+        $("roadTimeRow").style.display=modeSelected?"block":"none";
+        $("bagRow").style.display=isFlight?"flex":"none";
         $("transportLabel").textContent="去"+terminal+"的交通工具（必选）";
         $("transportHint").style.display=transportValid?"none":"block";
         $("transportHint").textContent="必选：请选择去"+terminal+"的交通工具";
@@ -888,7 +893,8 @@
         $("routeEnd").placeholder=(isFlight?"输入机场／出发层／航站楼":isTrain?"输入高铁站名称":"输入目的地")+"（从下拉选择）";
         renderRouteClearButtons();
         renderAmapConfirmation();
-        if(!transportValid&&!routeBusy)setRouteStatus("选择交通工具后，请输入地点并点击高德下拉建议完成确认","");
+        if(!modeSelected&&!routeBusy)setRouteStatus("请先选择飞机、高铁或开车","");
+        else if(!transportValid&&!routeBusy)setRouteStatus("选择交通工具后，请输入地点并点击高德下拉建议完成确认","");
         $("transitAccessRow").style.display=usesRail?"block":"none";
         $("access").disabled=!usesRail;
         $("accessUnit").disabled=!usesRail;
@@ -898,24 +904,25 @@
         $("prepInputWrap").style.display=prepEnabled?"flex":"none";
         $("prepOffText").style.display=prepEnabled?"none":"inline";
         $("prep").disabled=!prepEnabled;
-        $("headlineAction").textContent=prepEnabled?"起床":"出门";
-        $("departureLabel").textContent=isDrive?"计划到达时间":departText+"时间";
-        $("departure").setAttribute("aria-invalid",String(!departureValid));
-        $("departureHint").classList.toggle("show",!departureValid);
-        $("departureHint").textContent="必填：请选择"+(isDrive?"计划到达时间":departText+"时间");
+        $("headlineAction").textContent=!modeSelected?"出发":prepEnabled?"起床":"出门";
+        $("departureLabel").textContent=!modeSelected?"起飞／发车／到达时间":isDrive?"计划到达时间":departText+"时间";
+        $("departure").disabled=!modeSelected;$("departure").placeholder=modeSelected?"请选择 00:00–23:59":"请先选择出行方式";
+        $("departure").setAttribute("aria-invalid",String(modeSelected&&!departureValid));
+        $("departureHint").classList.toggle("show",!modeSelected||!departureValid);
+        $("departureHint").textContent=!modeSelected?"必填：请先选择出行方式":"必填：请选择"+(isDrive?"计划到达时间":departText+"时间");
         $("roadLabel").textContent=roadText;
         $("road").disabled=!transportValid;
         $("roadUnit").disabled=!transportValid;
         roadPresets.forEach(function(minutes){$("road"+minutes).disabled=!transportValid});
         $("waitTimeRow").style.display=usesTaxi?"flex":"none";
-        $("advanceRow").style.display=isDrive?"none":"flex";
+        $("advanceRow").style.display=!modeSelected||isDrive?"none":"flex";
         $("advanceLabel").textContent="建议提前到"+terminal;
         $("advanceValue").textContent=minutesToChineseDuration(advance);
-        $("actionSummaryLabel").textContent=isDrive?"🚗 建议出发":usesTaxi?"🚕 建议叫车":usesRail?"🚇 建议出发":"🚏 建议出发";
-        $("arrivalSummaryLabel").textContent=isDrive?"📍 计划到达目的地":"📍 建议到达"+terminal;
-        var riskBase=isDrive?"该时间不含路况余量，仅作紧急参考。":usesTaxi?"该时间不含等车与路况余量，仅作紧急参考。":usesRail?"该时间不含 15 分钟地铁冗余，仅作紧急参考。":"请先选择去"+terminal+"的交通工具。";
+        $("actionSummaryLabel").textContent=!modeSelected?"🚏 等待选择出行方式":isDrive?"🚗 建议出发":usesTaxi?"🚕 建议叫车":usesRail?"🚇 建议出发":"🚏 建议出发";
+        $("arrivalSummaryLabel").textContent=!modeSelected?"📍 等待选择出行方式":isDrive?"📍 计划到达目的地":"📍 建议到达"+terminal;
+        var riskBase=!modeSelected?"请先选择出行方式。":isDrive?"该时间不含路况余量，仅作紧急参考。":usesTaxi?"该时间不含等车与路况余量，仅作紧急参考。":usesRail?"该时间不含 15 分钟地铁冗余，仅作紧急参考。":"请先选择去"+terminal+"的交通工具。";
         $("riskNote").textContent=(isFlight&&checkedBag?"托运按起飞前 45 分钟完成计算，具体截止时间以航空公司和机场规定为准；":"")+riskBase;
-        $("travelIcon").textContent=isFlight?"✈":isTrain?"🚄":"🚗";
+        $("travelIcon").textContent=!modeSelected?"◷":isFlight?"✈":isTrain?"🚄":"🚗";
         roadPresets.forEach(function(minutes){$("road"+minutes).classList.toggle("active",road===minutes)});
         roadPresets.forEach(function(minutes){$("access"+minutes).classList.toggle("active",usesRail&&access===minutes)});
         var routeAutoMatched=selectedRouteMinutes!==null&&road===selectedRouteMinutes;
@@ -927,14 +934,14 @@
         $("bufferHint").textContent=usesRail?"预留候车、换乘、临时步行及运营波动时间":"预留堵车、红绿灯、临时绕行等不确定时间";
         $("trafficValue").classList.toggle("fixed",usesRail);
         $("trafficValue").textContent=!transportValid?"等待选择":traffic===null?"等待路程":minutesToChineseDuration(traffic);
-        if(!departureValid||!transportValid||road===null||(usesRail&&access===null)){
+        if(!modeSelected||!departureValid||!transportValid||road===null||(usesRail&&access===null)){
           parkLivePanel();currentDetails=[];clearLive();$("livePanel").classList.remove("show");
           $("arrivalSummary").textContent="--:--";
           $("callSummary").textContent="--:--";
           $("wakeHeadline").textContent="--:--";
           $("criticalValue").textContent="--:--";
-          $("breakdownTotal").textContent=!departureValid?"等待填写时间":!transportValid?"等待选择交通工具":road===null?"等待填写路程":"等待填写搭乘点时间";
-          var emptyMessage=!departureValid?"请先填写"+(isDrive?"计划到达时间":departText+"时间"):!transportValid?"请先选择去"+terminal+"的交通工具":road===null?"请先选择或输入"+roadText:"请先输入到地铁搭乘点所需时间";
+          $("breakdownTotal").textContent=!modeSelected?"等待选择出行方式":!departureValid?"等待填写时间":!transportValid?"等待选择交通工具":road===null?"等待填写路程":"等待填写搭乘点时间";
+          var emptyMessage=!modeSelected?"请先选择飞机、高铁或开车":!departureValid?"请先填写"+(isDrive?"计划到达时间":departText+"时间"):!transportValid?"请先选择去"+terminal+"的交通工具":road===null?"请先选择或输入"+roadText:"请先输入到地铁搭乘点所需时间";
           $("breakdownList").innerHTML='<div class="empty-plan">'+emptyMessage+'<br>填写后将自动生成完整规划</div>';
           return;
         }
@@ -1083,10 +1090,10 @@
           try{
             var width=1080,pad=56,contentWidth=width-pad*2,canvas=document.createElement("canvas"),context=canvas.getContext("2d");
             if(!context)throw new Error("当前浏览器不支持图片绘制");
-            var modeName=mode==="flight"?"✈ 飞机":mode==="train"?"🚄 高铁":"🚗 开车";
+            var modeName=mode==="flight"?"✈ 飞机":mode==="train"?"🚄 高铁":mode==="drive"?"🚗 开车":"未选择";
             var transportName=airportTransport==="taxi"?"🚕 打车":airportTransport==="subway"?"🚇 地铁":airportTransport==="mixed"?"🚇＋🚕 地铁＋打车":"未选择";
             var roadValue=getRoad(),settings=[["出行方式",modeName]];
-            if(mode!=="drive")settings.push(["去"+(mode==="flight"?"机场":"高铁站")+"的交通工具",transportName]);
+            if(mode==="flight"||mode==="train")settings.push(["去"+(mode==="flight"?"机场":"高铁站")+"的交通工具",transportName]);
             if($("routeStart").value.trim())settings.push(["路线起点",$("routeStart").value.trim()]);
             if($("routeEnd").value.trim())settings.push(["路线目的地",$("routeEnd").value.trim()]);
             settings.push([$("departureLabel").textContent,$("departure").value||"未填写"]);
@@ -1258,11 +1265,11 @@
       ["departure","road","access","prep","wait"].forEach(function(id){$(id).addEventListener("input",render)});
       $("resetBtn").addEventListener("click",function(){
         Object.keys(defaults).forEach(function(key){$(key).value=defaults[key]});
-        mode="flight";checkedBag=true;prepEnabled=true;airportTransport="";customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
+        mode="";checkedBag=true;prepEnabled=true;airportTransport="";customExtras=[];nextExtraId=1;extraEditorBeforeKey=null;clearLive();
         setInputUnit("road","minute",false);setInputUnit("access","minute",false);
         $("routeStart").value="";$("routeEnd").value="";amapPoints={start:null,end:null};clearRouteChoices();hideRouteSuggestions();
-        $("flightBtn").classList.add("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
-        $("bagRow").style.display="flex";
+        $("flightBtn").classList.remove("active");$("trainBtn").classList.remove("active");$("driveBtn").classList.remove("active");
+        $("bagRow").style.display="none";
         $("bagSwitch").classList.add("on");$("bagSwitch").setAttribute("aria-checked","true");
         $("prepSwitch").classList.add("on");$("prepSwitch").setAttribute("aria-checked","true");render();
       });
