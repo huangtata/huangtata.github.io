@@ -213,12 +213,14 @@
     .time-picker-close{width:31px;height:31px;padding:0;border:0;border-radius:10px;background:#e6eadf;color:#62776f;font-size:19px;line-height:1}
     .time-picker-preview{margin-bottom:12px;color:var(--green);text-align:center;font-size:30px;font-weight:900;letter-spacing:.04em}
     .time-picker-caption{display:block;margin-top:-6px;color:#81928b;text-align:center;font-size:9px;font-weight:700}
-    .time-picker-wheels{display:grid;grid-template-columns:1fr 28px 1fr;align-items:center;gap:7px;margin-top:11px}
-    .time-wheel-wrap{min-width:0}
-    .time-wheel-wrap label{display:block;margin-bottom:5px;color:#6c8178;text-align:center;font-size:10px;font-weight:800}
-    .time-wheel{width:100%;height:202px;padding:2px;border:1px solid rgba(23,54,45,.13);border-radius:14px;outline:0;background:white;color:var(--green);font-size:18px;font-weight:850;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
-    .time-wheel option{min-height:38px;padding:8px 4px;text-align:center}
-    .time-picker-colon{padding-top:18px;color:var(--green);text-align:center;font-size:28px;font-weight:900}
+    .time-picker-wheels{position:relative;display:grid;grid-template-columns:1fr 30px 1fr;align-items:center;height:220px;margin-top:11px;border:1px solid rgba(23,54,45,.12);border-radius:17px;background:white;overflow:hidden}
+    .time-picker-wheels:before{content:"";position:absolute;left:12px;right:12px;top:50%;z-index:1;height:44px;border-top:1px solid #d9e0d4;border-bottom:1px solid #d9e0d4;border-radius:9px;background:#eef1e9;transform:translateY(-50%);pointer-events:none}
+    .time-picker-wheels:after{content:"";position:absolute;inset:0;z-index:4;background:linear-gradient(to bottom,#fff 0,rgba(255,255,255,.82) 16%,rgba(255,255,255,0) 38%,rgba(255,255,255,0) 62%,rgba(255,255,255,.82) 84%,#fff 100%);pointer-events:none}
+    .time-wheel{position:relative;z-index:2;height:220px;padding:88px 0;outline:0;background:transparent;overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .time-wheel::-webkit-scrollbar{display:none}
+    .time-wheel-item{display:block;width:100%;height:44px;padding:0;border:0;background:transparent;color:#8b9a94;text-align:center;font-size:18px;font-weight:750;line-height:44px;scroll-snap-align:center;scroll-snap-stop:always;transition:color .12s,font-size .12s,opacity .12s;opacity:.5}
+    .time-wheel-item.selected{color:var(--green);font-size:24px;font-weight:900;opacity:1}
+    .time-picker-colon{position:relative;z-index:5;color:var(--green);text-align:center;font-size:28px;font-weight:900;pointer-events:none}
     .time-picker-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:9px;margin-top:14px}
     .time-picker-actions button{height:43px;border:0;border-radius:13px;font-size:13px;font-weight:850}
     .time-picker-cancel{background:#e6eadf;color:#62776f}
@@ -357,11 +359,11 @@
     <div class="time-picker-card" role="dialog" aria-modal="true" aria-labelledby="timePickerTitle">
       <div class="time-picker-head"><strong id="timePickerTitle">选择时间</strong><button class="time-picker-close" id="timePickerClose" type="button" aria-label="关闭时间选择器">×</button></div>
       <div class="time-picker-preview" id="timePickerPreview">00:00</div>
-      <span class="time-picker-caption">24小时制 · 00:00–23:59</span>
+      <span class="time-picker-caption">24小时制 · 左侧小时，右侧分钟</span>
       <div class="time-picker-wheels">
-        <div class="time-wheel-wrap"><label for="timePickerHour">小时</label><select class="time-wheel" id="timePickerHour" size="5" aria-label="小时，00到23"></select></div>
+        <div class="time-wheel" id="timePickerHour" role="listbox" tabindex="0" aria-label="小时，00到23"></div>
         <div class="time-picker-colon">:</div>
-        <div class="time-wheel-wrap"><label for="timePickerMinute">分钟</label><select class="time-wheel" id="timePickerMinute" size="5" aria-label="分钟，00到59"></select></div>
+        <div class="time-wheel" id="timePickerMinute" role="listbox" tabindex="0" aria-label="分钟，00到59"></div>
       </div>
       <div class="time-picker-actions"><button class="time-picker-cancel" id="timePickerCancel" type="button">取消</button><button class="time-picker-confirm" id="timePickerConfirm" type="button">完成并重新计算</button></div>
     </div>
@@ -599,28 +601,38 @@
       function buildTimePicker(){
         if(timePickerBuilt)return;
         [["timePickerHour",24],["timePickerMinute",60]].forEach(function(config){
-          var select=$(config[0]),fragment=document.createDocumentFragment();
-          for(var i=0;i<config[1];i++){var option=document.createElement("option");option.value=String(i).padStart(2,"0");option.textContent=option.value;fragment.appendChild(option)}
-          select.appendChild(fragment);
+          var wheel=$(config[0]),fragment=document.createDocumentFragment();
+          for(var i=0;i<config[1];i++){
+            var item=document.createElement("button");item.type="button";item.className="time-wheel-item";item.setAttribute("role","option");item.setAttribute("aria-selected","false");item.dataset.value=String(i).padStart(2,"0");item.dataset.index=String(i);item.textContent=item.dataset.value;
+            item.addEventListener("click",function(){wheel.scrollTo({top:Number(this.dataset.index)*44,behavior:"smooth"})});fragment.appendChild(item);
+          }
+          wheel.appendChild(fragment);wheel.dataset.value="00";
+          wheel.addEventListener("scroll",function(){var current=this;cancelAnimationFrame(current._timeWheelFrame);current._timeWheelFrame=requestAnimationFrame(function(){syncTimeWheel(current)})},{passive:true});
         });
         timePickerBuilt=true;
       }
-      function updateTimePickerPreview(){$("timePickerPreview").textContent=$("timePickerHour").value+":"+$("timePickerMinute").value}
+      function syncTimeWheel(wheel){
+        var index=Math.max(0,Math.min(wheel.children.length-1,Math.round(wheel.scrollTop/44))),value=String(index).padStart(2,"0");
+        wheel.dataset.value=value;Array.from(wheel.children).forEach(function(item,itemIndex){var selected=itemIndex===index;item.classList.toggle("selected",selected);item.setAttribute("aria-selected",String(selected))});updateTimePickerPreview();
+      }
+      function setTimeWheelValue(id,value){var wheel=$(id),index=Math.max(0,Math.min(wheel.children.length-1,Number(value)||0));wheel.scrollTop=index*44;syncTimeWheel(wheel)}
+      function updateTimePickerPreview(){$("timePickerPreview").textContent=($("timePickerHour").dataset.value||"00")+":"+($("timePickerMinute").dataset.value||"00")}
       function openTimePicker(target){
         buildTimePicker();timePickerTarget=target;
         var value=target==="departure"?$("departure").value:(liveClock||$("liveTime").value),valid=/^\d{2}:\d{2}$/.test(value||"");
         if(!valid)value=nowClock();
-        var parts=value.split(":");$("timePickerHour").value=parts[0];$("timePickerMinute").value=parts[1];
+        var parts=value.split(":");
         $("timePickerTitle").textContent=target==="departure"?"选择"+$("departureLabel").textContent:"设置定位当前时间";
-        updateTimePickerPreview();$("timePicker").classList.add("show");$("timePicker").setAttribute("aria-hidden","false");document.body.classList.add("time-picker-open");
-        requestAnimationFrame(function(){$("timePickerHour").focus()});
+        $("timePicker").classList.add("show");$("timePicker").setAttribute("aria-hidden","false");document.body.classList.add("time-picker-open");
+        requestAnimationFrame(function(){setTimeWheelValue("timePickerHour",parts[0]);setTimeWheelValue("timePickerMinute",parts[1]);$("timePickerHour").focus({preventScroll:true})});
       }
       function closeTimePicker(){
         timePickerTarget=null;$("timePicker").classList.remove("show");$("timePicker").setAttribute("aria-hidden","true");document.body.classList.remove("time-picker-open");
       }
       function confirmTimePicker(){
         if(!timePickerTarget)return;
-        var target=timePickerTarget,value=$("timePickerHour").value+":"+$("timePickerMinute").value;
+        syncTimeWheel($("timePickerHour"));syncTimeWheel($("timePickerMinute"));
+        var target=timePickerTarget,value=$("timePickerHour").dataset.value+":"+$("timePickerMinute").dataset.value;
         closeTimePicker();
         if(target==="departure"){$("departure").value=value;$("departure").dispatchEvent(new Event("input",{bubbles:true}))}
         else{liveClock=value;$("liveTime").value=value;renderLive()}
@@ -1228,10 +1240,6 @@
       $("departure").addEventListener("click",function(){openTimePicker("departure")});
       $("liveTime").addEventListener("click",function(){openTimePicker("live")});
       [["departure","departure"],["liveTime","live"]].forEach(function(item){$(item[0]).addEventListener("keydown",function(event){if(event.key==="Enter"||event.key===" "){event.preventDefault();openTimePicker(item[1])}})});
-      $("timePickerHour").addEventListener("input",updateTimePickerPreview);
-      $("timePickerMinute").addEventListener("input",updateTimePickerPreview);
-      $("timePickerHour").addEventListener("change",updateTimePickerPreview);
-      $("timePickerMinute").addEventListener("change",updateTimePickerPreview);
       $("timePickerConfirm").addEventListener("click",confirmTimePicker);
       $("timePickerCancel").addEventListener("click",closeTimePicker);
       $("timePickerClose").addEventListener("click",closeTimePicker);
