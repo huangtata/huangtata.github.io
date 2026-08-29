@@ -78,17 +78,20 @@
     .time-input::placeholder{color:#9aa9a3}
     .road-input{height:56px;padding:0 82px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
     .road-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
+    .road-input.amap-filled{border-color:#78a66d;background:#f5faee;color:#3f7d39;box-shadow:0 0 0 3px rgba(89,137,72,.1)}
     .road-input:disabled,.quick-pick:disabled{cursor:not-allowed;opacity:.5}
     .quick-picks{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:8px}
     .quick-pick{height:27px;padding:0;border:1px solid rgba(23,54,45,.13);border-radius:8px;background:white;color:#527066;font-size:11px;font-weight:800;transition:.15s}
     .quick-pick:hover,.quick-pick.active{border-color:var(--green);background:var(--green);color:var(--lime)}
     .road-hint{display:block;margin-top:6px;color:#b05b4e;font-size:10px;font-weight:650}
     .road-hint.ok{color:#527066}
+    .road-hint.amap-match{color:#3f7d39;font-weight:850}
     .time-hint{display:none;margin-top:6px;color:#b05b4e;font-size:10px;font-weight:650}
     .time-hint.show{display:block}
     input:focus{border-color:#527066;box-shadow:0 0 0 3px rgba(82,112,102,.14)}
     .unit{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#62776f;font-size:12px;font-weight:700;pointer-events:none}
     .unit-select{position:absolute;right:8px;top:50%;width:68px;height:38px;padding:0 5px;border:0;border-radius:10px;outline:0;background:#eef1e9;color:#526b62;font-size:12px;font-weight:800;transform:translateY(-50%)}
+    .unit-select.amap-filled{background:#e6f1dc;color:#3f7d39}
     .bag{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding:14px 16px;border:1px solid var(--line);border-radius:17px;background:#eef0e6}
     .bag-copy{display:flex;align-items:center;gap:12px;min-width:0}
     .bag-copy>div:last-child{min-width:0}
@@ -593,6 +596,7 @@
       }
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
       function nowClock(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+      function clockValue(total){var value=((Math.round(total)%1440)+1440)%1440;return String(Math.floor(value/60)).padStart(2,"0")+":"+String(value%60).padStart(2,"0")}
       function buildTimePicker(){
         if(timePickerBuilt)return;
         [["timePickerHour",24],["timePickerMinute",60]].forEach(function(config){
@@ -697,7 +701,7 @@
           button.addEventListener("click",function(){
             var key=this.getAttribute("data-live-key"),item=currentDetails.find(function(x){return x.key===key});
             if(!item)return;
-            liveKey=key;liveClock=nowClock();liveRemaining=item.duration;liveOverrides={};renderLive();
+            liveKey=key;liveClock=clockValue(item.start);liveRemaining=item.duration;liveOverrides={};renderLive();
           });
         });
         document.querySelectorAll("[data-live-duration]").forEach(function(input){
@@ -914,9 +918,11 @@
         $("travelIcon").textContent=isFlight?"✈":isTrain?"🚄":"🚗";
         roadPresets.forEach(function(minutes){$("road"+minutes).classList.toggle("active",road===minutes)});
         roadPresets.forEach(function(minutes){$("access"+minutes).classList.toggle("active",usesRail&&access===minutes)});
+        var routeAutoMatched=selectedRouteMinutes!==null&&road===selectedRouteMinutes;
         $("road").setAttribute("aria-invalid",String(transportValid&&road===null));
-        $("roadHint").classList.toggle("ok",transportValid&&road!==null);
-        $("roadHint").textContent=!transportValid?"请先选择交通工具":durationInputHint("road",road,"必填：请选择上方时间或手动输入");
+        $("road").classList.toggle("amap-filled",routeAutoMatched);$("roadUnit").classList.toggle("amap-filled",routeAutoMatched);
+        $("roadHint").classList.toggle("ok",transportValid&&road!==null);$("roadHint").classList.toggle("amap-match",routeAutoMatched);
+        $("roadHint").textContent=!transportValid?"请先选择交通工具":routeAutoMatched?minutesToChineseDuration(road)+"（高德自动匹配）":durationInputHint("road",road,"必填：请选择上方时间或手动输入");
         $("bufferLabel").textContent=usesRail?"地铁冗余时间":"路况余量";
         $("bufferHint").textContent=usesRail?"预留候车、换乘、临时步行及运营波动时间":"预留堵车、红绿灯、临时绕行等不确定时间";
         $("trafficValue").classList.toggle("fixed",usesRail);
