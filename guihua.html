@@ -350,6 +350,7 @@
           {key:"train-gate",min:8},
           {key:"train-security",min:8}
         ];
+        if(mode==="drive")return [{key:"road",min:3}];
         return [];
       }
       function smartMinimum(key){var detail=currentDetails.find(function(x){return x.key===key});if(detail&&Number.isFinite(detail.smartMin))return detail.smartMin;var rule=compressionRules().find(function(x){return x.key===key});return rule?rule.min:0}
@@ -573,13 +574,14 @@
         var call=isDrive?leave:leave-wait;
         var wake=call-prep;
         var prepEnd=wake+prep;
-        var roadEnd=leave+road;
         var details=[];
         if(prepEnabled)details.push(makeDetail("prep","☕","起床准备",wake,prepEnd,prep));
         if(!isDrive)details.push(makeDetail("wait","🚕","开始呼叫打车",call,leave,wait));
         if(isDrive){
-          details.push(makeDetail("road","🚗",roadText,leave,roadEnd,road));
-          details.push(makeDetail("traffic","⏱","路况余量",roadEnd,arrive,traffic));
+          var driveRoad=makeDetail("road","🚗","开车前往目的地",leave,arrive,road+traffic,road+" + "+traffic+" 分钟",road+3);
+          driveRoad.roadPart=road;
+          driveRoad.projectNote="（包含路况余量 "+traffic+" 分钟）";
+          details.push(driveRoad);
         }else{
           var arrivalRoad=makeDetail("arrival-road","📍",isFlight?"上车出发机场":"上车出发高铁站",leave,arrive,road+traffic,road+" + "+traffic+" 分钟",road+3);
           arrivalRoad.roadPart=road;
