@@ -505,10 +505,6 @@
         var transportValid=mode==="drive"||["taxi","subway","mixed"].indexOf(airportTransport)>=0;
         $("routeFetchBtn").disabled=routeBusy||!transportValid||!confirmedPoint("start","routeStart")||!confirmedPoint("end","routeEnd");
       }
-      function validateAmapPoints(start,end){
-        var destination=(end.name+" "+end.address).trim();
-        if(mode==="flight"&&/机场/.test(destination)&&!/(航站楼|机场南|机场北|T\s*[123])/i.test(destination))throw new Error("目的地过于笼统：请从下拉建议中选择具体航站楼，或机场南／机场北地铁站");
-      }
       function loadAmap(){
         if(amapPromise)return amapPromise;
         if(!window.AMapLoader)return Promise.reject(new Error("高德地图加载器不可用"));
@@ -582,7 +578,6 @@
           var AMap=await loadAmap();
           var points=await Promise.all([resolveAmapPlace(AMap,"routeStart",amapPoints.start),resolveAmapPlace(AMap,"routeEnd",amapPoints.end)]);
           amapPoints.start=points[0];amapPoints.end=points[1];
-          validateAmapPoints(points[0],points[1]);
           var transit=!isDrive&&(airportTransport==="subway"||airportTransport==="mixed");
           var options=await searchAmapRoute(AMap,points[0],points[1],transit);
           showRouteChoices(options,transit);applyRouteChoice(options[0].minutes,false);
@@ -886,7 +881,7 @@
         $("mixedTransportBtn").classList.toggle("active",airportTransport==="mixed");
         updateRouteFetchState();
         $("routeStart").placeholder=(usesRail?"输入地铁主体路线起点／搭乘点":"输入起点")+"（从下拉选择）";
-        $("routeEnd").placeholder=(isFlight?"输入具体航站楼／机场地铁站":isTrain?"输入高铁站名称":"输入目的地")+"（从下拉选择）";
+        $("routeEnd").placeholder=(isFlight?"输入机场／出发层／航站楼":isTrain?"输入高铁站名称":"输入目的地")+"（从下拉选择）";
         renderRouteClearButtons();
         renderAmapConfirmation();
         if(!transportValid&&!routeBusy)setRouteStatus("选择交通工具后，请输入地点并点击高德下拉建议完成确认","");
