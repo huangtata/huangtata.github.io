@@ -72,9 +72,10 @@
     .route-option small{display:block;margin-top:2px;font-size:8px;font-weight:700;opacity:.72}
     .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .input-wrap{position:relative}
-    input[type="time"],input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
-    input[type="time"]{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850}
-    input[type="time"][aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
+    .time-input,input[type="number"]{width:100%;border:1px solid rgba(23,54,45,.16);outline:0;background:white;color:var(--ink)}
+    .time-input{height:56px;padding:0 14px;border-radius:16px;font-size:20px;font-weight:850;cursor:pointer;caret-color:transparent}
+    .time-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
+    .time-input::placeholder{color:#9aa9a3}
     .road-input{height:56px;padding:0 82px 0 14px;border-radius:16px;font-size:20px;font-weight:850}
     .road-input[aria-invalid="true"]{border-color:#d06c5c;background:#fffaf8;box-shadow:0 0 0 3px rgba(208,108,92,.12)}
     .road-input:disabled,.quick-pick:disabled{cursor:not-allowed;opacity:.5}
@@ -203,10 +204,29 @@
     .preview-image-wrap{overflow:auto;min-height:0;border:1px solid var(--line);border-radius:13px;background:var(--mist);text-align:center;-webkit-overflow-scrolling:touch}
     .preview-image{display:block;width:100%;height:auto}
     .preview-download{flex:0 0 auto;height:42px;margin-top:10px;border:0;border-radius:13px;background:var(--green);color:var(--lime);font-size:13px;font-weight:850}
+    body.time-picker-open{overflow:hidden}
+    .time-picker-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:flex-end;justify-content:center;padding:18px;background:rgba(7,20,16,.58);backdrop-filter:blur(5px)}
+    .time-picker-overlay.show{display:flex}
+    .time-picker-card{width:min(420px,100%);padding:16px;border-radius:22px;background:#f8faf4;box-shadow:0 24px 70px rgba(0,0,0,.32)}
+    .time-picker-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .time-picker-head strong{color:var(--green);font-size:15px}
+    .time-picker-close{width:31px;height:31px;padding:0;border:0;border-radius:10px;background:#e6eadf;color:#62776f;font-size:19px;line-height:1}
+    .time-picker-preview{margin-bottom:12px;color:var(--green);text-align:center;font-size:30px;font-weight:900;letter-spacing:.04em}
+    .time-picker-caption{display:block;margin-top:-6px;color:#81928b;text-align:center;font-size:9px;font-weight:700}
+    .time-picker-wheels{display:grid;grid-template-columns:1fr 28px 1fr;align-items:center;gap:7px;margin-top:11px}
+    .time-wheel-wrap{min-width:0}
+    .time-wheel-wrap label{display:block;margin-bottom:5px;color:#6c8178;text-align:center;font-size:10px;font-weight:800}
+    .time-wheel{width:100%;height:202px;padding:2px;border:1px solid rgba(23,54,45,.13);border-radius:14px;outline:0;background:white;color:var(--green);font-size:18px;font-weight:850;text-align:center;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .time-wheel option{min-height:38px;padding:8px 4px;text-align:center}
+    .time-picker-colon{padding-top:18px;color:var(--green);text-align:center;font-size:28px;font-weight:900}
+    .time-picker-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:9px;margin-top:14px}
+    .time-picker-actions button{height:43px;border:0;border-radius:13px;font-size:13px;font-weight:850}
+    .time-picker-cancel{background:#e6eadf;color:#62776f}
+    .time-picker-confirm{background:var(--green);color:var(--lime)}
     footer{padding:14px 20px;color:#6e8179;text-align:center;font-size:10px;line-height:1.7}
     @media(max-width:900px){.shell{padding:10px}.layout{grid-template-columns:1fr}.controls{border-right:0;border-bottom:1px solid var(--line)}.result{padding:30px}.privacy{display:none}}
     @media(max-width:540px){header{height:62px;padding:0 14px}.brand{gap:8px}.brand-icon{width:36px;height:36px}.brand h1{font-size:17px}.brand .eyebrow{display:none}.export-btn{height:34px;padding:0 11px;font-size:11px}.controls,.result{padding:19px 17px}.input-grid{grid-template-columns:1fr}.route-place-grid{grid-template-columns:1fr}.summary-time{font-size:23px}.result h2{font-size:24px}.app{border-radius:22px}.breakdown{padding:17px}.breakdown-title{align-items:flex-start;flex-direction:column}.live-fields{grid-template-columns:1fr}.breakdown-row{grid-template-columns:1fr auto;gap:4px 10px;padding:11px 12px}.breakdown-row.head{display:none}.range{grid-column:1/2;padding-left:37px;font-size:11px;color:#6b7e76}.duration{grid-column:2;grid-row:1/3;flex-direction:column;align-items:flex-end;gap:5px}.locate-btn,.extra-add-btn,.extra-delete-btn{padding:5px 7px}.extra-add-btn{min-width:88px;white-space:nowrap}.extra-editor-row{align-items:flex-start;flex-direction:column;gap:9px;padding:12px}.extra-editor-actions{display:grid;grid-template-columns:minmax(100px,1fr) 60px 60px;width:100%;gap:8px}.extra-editor-actions input.extra-editor-name{grid-column:1/-1;width:100%;height:38px}.extra-editor-actions label{display:grid;grid-template-columns:minmax(0,1fr) auto;width:100%;gap:5px}.extra-editor-actions label input{width:100%;height:38px}.extra-editor-confirm,.extra-editor-cancel{height:38px;min-width:0;padding:0 8px}}
-    @media print{.shell{padding:0}.app{box-shadow:none}.reset,.export-btn,.image-preview,.export-toast{display:none!important}}
+    @media print{.shell{padding:0}.app{box-shadow:none}.reset,.export-btn,.image-preview,.export-toast,.time-picker-overlay{display:none!important}}
   </style>
 </head>
 <body>
@@ -257,7 +277,7 @@
             <div class="route-options" id="routeOptions" aria-label="高德路线时间方案"></div>
           </div>
           <div class="input-grid field">
-            <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" type="time" value="" required aria-required="true" aria-invalid="true"><span class="time-hint show" id="departureHint">必填：请选择起飞时间</span></label>
+            <label><span class="label" id="departureLabel">起飞时间</span><input id="departure" class="time-input" type="text" value="" placeholder="请选择 00:00–23:59" readonly inputmode="none" required aria-required="true" aria-invalid="true" aria-haspopup="dialog"><span class="time-hint show" id="departureHint">必填：请选择起飞时间</span></label>
             <div>
               <span class="label" id="roadLabel">打车到机场，高德地图所显示预估时间</span>
               <div class="quick-picks" aria-label="路程时间快捷选择">
@@ -313,7 +333,7 @@
                 <div class="live-panel" id="livePanel">
                   <div class="live-head"><div class="live-title">📍 当前位于：<span id="liveProject">--</span></div><button class="live-close" id="liveClose" type="button" aria-label="退出实时推算">×</button></div>
                   <div class="live-fields">
-                    <label class="live-field">现在时间 <input id="liveTime" type="time" aria-label="当前时间"></label>
+                    <label class="live-field">现在时间 <input id="liveTime" class="time-input" type="text" readonly inputmode="none" aria-label="当前时间，24小时制" aria-haspopup="dialog"></label>
                     <label class="live-field" id="liveRemainingWrap">本项还需 <span><input id="liveRemaining" type="number" min="0" max="600" value="0" aria-label="当前项目剩余时间"> 分钟</span></label>
                   </div>
                   <div class="live-status neutral" id="liveStatus">请选择当前时间</div>
@@ -333,6 +353,19 @@
     <footer>提示：机场与车站规定、天气及节假日客流会影响实际耗时，请以承运方通知为准。</footer>
   </div>
   <div class="export-toast" id="exportToast" role="status" aria-live="polite"></div>
+  <div class="time-picker-overlay" id="timePicker" aria-hidden="true">
+    <div class="time-picker-card" role="dialog" aria-modal="true" aria-labelledby="timePickerTitle">
+      <div class="time-picker-head"><strong id="timePickerTitle">选择时间</strong><button class="time-picker-close" id="timePickerClose" type="button" aria-label="关闭时间选择器">×</button></div>
+      <div class="time-picker-preview" id="timePickerPreview">00:00</div>
+      <span class="time-picker-caption">24小时制 · 00:00–23:59</span>
+      <div class="time-picker-wheels">
+        <div class="time-wheel-wrap"><label for="timePickerHour">小时</label><select class="time-wheel" id="timePickerHour" size="5" aria-label="小时，00到23"></select></div>
+        <div class="time-picker-colon">:</div>
+        <div class="time-wheel-wrap"><label for="timePickerMinute">分钟</label><select class="time-wheel" id="timePickerMinute" size="5" aria-label="分钟，00到59"></select></div>
+      </div>
+      <div class="time-picker-actions"><button class="time-picker-cancel" id="timePickerCancel" type="button">取消</button><button class="time-picker-confirm" id="timePickerConfirm" type="button">完成并重新计算</button></div>
+    </div>
+  </div>
   <div class="image-preview" id="imagePreview" aria-hidden="true">
     <div class="preview-card" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
       <div class="preview-head">
@@ -354,6 +387,7 @@
       var inputUnits={road:"minute",access:"minute"};
       var amapPromise=null,amapAutocomplete=null,amapPoints={start:null,end:null},routeBusy=false,routeChoices=[],selectedRouteMinutes=null;
       var routeSuggestTarget=null,routeSuggestTimer=null,routeSuggestSequence=0;
+      var timePickerTarget=null,timePickerBuilt=false;
       var AMAP_WEB_KEY="bba9f294c10c663b5ea6d593c08ea4a3";
       var $=function(id){return document.getElementById(id)};
       var roadPresets=[10,15,25,35,45,60];
@@ -562,6 +596,35 @@
       }
       function toMinutes(value){var p=(value||"09:00").split(":").map(Number);return p[0]*60+p[1]}
       function nowClock(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
+      function buildTimePicker(){
+        if(timePickerBuilt)return;
+        [["timePickerHour",24],["timePickerMinute",60]].forEach(function(config){
+          var select=$(config[0]),fragment=document.createDocumentFragment();
+          for(var i=0;i<config[1];i++){var option=document.createElement("option");option.value=String(i).padStart(2,"0");option.textContent=option.value;fragment.appendChild(option)}
+          select.appendChild(fragment);
+        });
+        timePickerBuilt=true;
+      }
+      function updateTimePickerPreview(){$("timePickerPreview").textContent=$("timePickerHour").value+":"+$("timePickerMinute").value}
+      function openTimePicker(target){
+        buildTimePicker();timePickerTarget=target;
+        var value=target==="departure"?$("departure").value:(liveClock||$("liveTime").value),valid=/^\d{2}:\d{2}$/.test(value||"");
+        if(!valid)value=nowClock();
+        var parts=value.split(":");$("timePickerHour").value=parts[0];$("timePickerMinute").value=parts[1];
+        $("timePickerTitle").textContent=target==="departure"?"选择"+$("departureLabel").textContent:"设置定位当前时间";
+        updateTimePickerPreview();$("timePicker").classList.add("show");$("timePicker").setAttribute("aria-hidden","false");document.body.classList.add("time-picker-open");
+        requestAnimationFrame(function(){$("timePickerHour").focus()});
+      }
+      function closeTimePicker(){
+        timePickerTarget=null;$("timePicker").classList.remove("show");$("timePicker").setAttribute("aria-hidden","true");document.body.classList.remove("time-picker-open");
+      }
+      function confirmTimePicker(){
+        if(!timePickerTarget)return;
+        var target=timePickerTarget,value=$("timePickerHour").value+":"+$("timePickerMinute").value;
+        closeTimePicker();
+        if(target==="departure"){$("departure").value=value;$("departure").dispatchEvent(new Event("input",{bubbles:true}))}
+        else{liveClock=value;$("liveTime").value=value;renderLive()}
+      }
       function format(total){
         var day=Math.floor(total/1440),n=((total%1440)+1440)%1440,h=Math.floor(n/60),m=n%60,t=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
         if(day===-1)return "前一天 "+t;
@@ -1162,7 +1225,18 @@
       $("bagSwitch").addEventListener("click",function(){checkedBag=!checkedBag;this.classList.toggle("on",checkedBag);this.setAttribute("aria-checked",String(checkedBag));render()});
       $("prepSwitch").addEventListener("click",function(){prepEnabled=!prepEnabled;this.classList.toggle("on",prepEnabled);this.setAttribute("aria-checked",String(prepEnabled));render()});
       $("liveClose").addEventListener("click",function(){clearLive();renderLive()});
-      $("liveTime").addEventListener("input",function(){liveClock=this.value;renderLive()});
+      $("departure").addEventListener("click",function(){openTimePicker("departure")});
+      $("liveTime").addEventListener("click",function(){openTimePicker("live")});
+      [["departure","departure"],["liveTime","live"]].forEach(function(item){$(item[0]).addEventListener("keydown",function(event){if(event.key==="Enter"||event.key===" "){event.preventDefault();openTimePicker(item[1])}})});
+      $("timePickerHour").addEventListener("input",updateTimePickerPreview);
+      $("timePickerMinute").addEventListener("input",updateTimePickerPreview);
+      $("timePickerHour").addEventListener("change",updateTimePickerPreview);
+      $("timePickerMinute").addEventListener("change",updateTimePickerPreview);
+      $("timePickerConfirm").addEventListener("click",confirmTimePicker);
+      $("timePickerCancel").addEventListener("click",closeTimePicker);
+      $("timePickerClose").addEventListener("click",closeTimePicker);
+      $("timePicker").addEventListener("click",function(event){if(event.target===this)closeTimePicker()});
+      document.addEventListener("keydown",function(event){if(event.key==="Escape"&&$("timePicker").classList.contains("show"))closeTimePicker()});
       $("liveRemaining").addEventListener("input",function(){var value=Number(this.value);liveRemaining=Number.isFinite(value)?Math.max(0,Math.min(600,Math.round(value))):0;renderLive()});
       $("exportBtn").addEventListener("click",exportFullPage);
       $("previewClose").addEventListener("click",closeImagePreview);
