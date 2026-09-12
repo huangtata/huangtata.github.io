@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>大乐透 / 双色球逐球随机选号器 V1.7 · 竖式概率分数</title>
+<title>大乐透 / 双色球逐球随机选号器 V1.8 · 真正逐球抽取</title>
 <style>
   /* 数字专用字体：仅 0-9 使用本机苹方粗体；其他文字保持原有字重。 */
   @font-face{
@@ -84,6 +84,7 @@
   .system-pool-row{display:grid;grid-template-columns:52px minmax(0,1fr);gap:8px;align-items:start;margin-top:7px}
   .system-pool-label{font-size:11px;color:#64748b;font-weight:800;padding-top:6px}
   .system-ticket .ball{width:27px;height:27px;font-size:11px}
+  .system-draw-order{margin-top:7px;padding-top:7px;border-top:1px dashed #e2ebe8;color:#7b8b86;font-size:10px;line-height:1.55}
   .auto-live-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#ecf8f2;border:1px solid #cce9dc;color:#176b55;font-size:11px;font-weight:800;white-space:nowrap}
   .auto-live-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:#2fa36b;box-shadow:0 0 0 3px rgba(47,163,107,.12)}
   .live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px rgba(23,107,85,.10)}
@@ -123,6 +124,10 @@
   .prob-status{margin:-3px 0 10px;padding:9px 11px;border:1px dashed #d7dce3;border-radius:10px;background:#fbfcfd;color:#64748b;font-size:11px;line-height:1.55}
   .audit-status{margin:0 0 14px;padding:9px 11px;border-radius:10px;background:#f8fcfa;border:1px solid #dfe8e4;color:#46635a;font-size:11px;line-height:1.55;overflow-wrap:anywhere}
   .audit-status.bad{background:#fff5f5;border-color:#f1c6c6;color:#9b2c2c}
+  .draw-audit{margin:-2px 0 12px;padding:10px 12px;border:1px solid #cfe2dc;border-radius:11px;background:#f8fcfa;color:#46635a;font-size:11px;line-height:1.65;overflow-wrap:anywhere}
+  .draw-audit b{color:var(--primary2)}
+  .draw-audit-line{display:block}
+  .draw-audit-arrow{color:#94a3b8;padding:0 2px}
   .table-wrap{border:1px solid var(--line);border-radius:13px;overflow:auto;max-height:640px;background:white;width:100%;max-width:100%;min-width:0;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
   table{border-collapse:collapse;width:100%;min-width:730px}
   th{position:sticky;top:0;background:#f8fafc;z-index:2;font-size:12px;color:#64748b;text-align:left;padding:11px;border-bottom:1px solid var(--line)}
@@ -178,10 +183,10 @@
 <div class="wrap">
   <div class="hero">
     <div>
-      <h1>彩票逐球随机选号器 <span style="font-size:14px;color:#176b55;vertical-align:middle">V1.7</span></h1>
+      <h1>彩票逐球随机选号器 <span style="font-size:14px;color:#176b55;vertical-align:middle">V1.8</span></h1>
       <div class="sub">每一组都从完整球池重新开始，像摇奖机一样逐球抽取：抽出一个、从剩余球中继续抽，直到本组完成。组与组之间互不照顾，不做均匀撒网、冷热号、分区配额、号码分散或“避免集中”优化。奖金估算器可独立填写购买与命中的前区、后区号码数量。</div>
     </div>
-    <div class="badge">V1.7 · 竖式概率分数 · 离线可用</div>
+    <div class="badge">V1.8 · 一球一抽 · 离线可用</div>
   </div>
 
   <div class="panel">
@@ -334,6 +339,7 @@
               </div>
             </details>
           </div>
+          <div class="draw-audit" id="drawAudit"><b>逐球抽取：</b>生成后会显示首组的实际出球顺序与球池缩减过程。</div>
           <div class="stats">
             <div class="stat"><div class="k">实际金额</div><div class="v" id="statCost">¥0</div><div class="s" id="statCostSub">—</div></div>
             <div class="stat"><div class="k">投注子注数</div><div class="v" id="statLines">0</div><div class="s" id="statLinesSub">—</div></div>
@@ -517,16 +523,26 @@
     }
     return makeChaCha20Rng(key,nonce,1);
   }
-  // 逐球无放回：每组重新建立完整球池，随机取出一球后立刻从本组候选池删除。
-  // 组与组互相独立，不根据之前出现次数、重合度或号码形态调整下一组。
-  function drawBalls(poolMax,pick,rng){
-    const pool=Array.from({length:poolMax},(_,i)=>i+1),drawn=[];
-    for(let i=0;i<pick;i++){
-      const index=rng.int(pool.length);
-      drawn.push(pool[index]);
-      pool.splice(index,1);
+  // 唯一的“抽一球”原子步骤：只在当前剩余池中随机一次，并立即删除这一球。
+  // 后续每一抽必须重新调用本函数，因此下一抽面对的候选池一定已经少 1 个。
+  function drawOneBall(pool,rng,drawNo){
+    if(!Array.isArray(pool)||pool.length<1)throw new Error('球池已空，不能继续抽球');
+    const poolSizeBefore=pool.length;
+    const index=rng.int(poolSizeBefore);
+    const ball=pool.splice(index,1)[0];
+    return {drawNo,ball,index,poolSizeBefore,poolSizeAfter:pool.length};
+  }
+  // 每组都重建完整球池；按“抽一球→删一球→再从剩余池抽下一球”循环到数量足够。
+  // 展示号码只在全部抽完以后另行排序，不会改变真实出球顺序，也没有洗牌或批量抽样。
+  function drawBallsOneByOne(poolMax,pick,rng){
+    if(!Number.isInteger(poolMax)||!Number.isInteger(pick)||pick<1||pick>poolMax)throw new Error('逐球抽取参数非法');
+    const pool=Array.from({length:poolMax},(_,i)=>i+1),drawOrder=[],steps=[];
+    for(let drawNo=1;drawNo<=pick;drawNo++){
+      const step=drawOneBall(pool,rng,drawNo);
+      drawOrder.push(step.ball);
+      steps.push(step);
     }
-    return drawn.sort((a,b)=>a-b);
+    return {numbers:drawOrder.slice().sort((a,b)=>a-b),drawOrder,steps,initialPoolSize:poolMax};
   }
   function pad(n){return String(n).padStart(2,'0');}
   function comb(n,k){let r=1;for(let i=1;i<=k;i++)r=r*(n-k+i)/i;return r;}
@@ -966,6 +982,16 @@
   }
 
   // 生成结果硬校验：任何一项不满足就拒绝展示，防止“优化器正确但生成结果偏离配置”。
+  function validateOneByOneRecord(numbers,drawOrder,steps,poolMax,pick,label){
+    if(!Array.isArray(drawOrder)||drawOrder.length!==pick||new Set(drawOrder).size!==pick)throw new Error(`${label}逐球顺序校验失败`);
+    if(!Array.isArray(steps)||steps.length!==pick)throw new Error(`${label}逐球步骤校验失败`);
+    const sorted=drawOrder.slice().sort((a,b)=>a-b);
+    if(JSON.stringify(sorted)!==JSON.stringify(numbers))throw new Error(`${label}出球顺序与展示号码不一致`);
+    for(let i=0;i<steps.length;i++){
+      const s=steps[i],before=poolMax-i,after=before-1;
+      if(s.drawNo!==i+1||s.ball!==drawOrder[i]||s.poolSizeBefore!==before||s.poolSizeAfter!==after||s.index<0||s.index>=before)throw new Error(`${label}第 ${i+1} 球未按剩余球池抽取`);
+    }
+  }
   function validateGeneratedRows(rng){
     if(!rng||rng.cryptoSecure!==true)throw new Error('随机源未通过密码学安全标记校验');
     if(!rows.length)throw new Error('生成结果为空');
@@ -976,6 +1002,10 @@
       const fMax=game==='dlt'?35:33, fPick=game==='dlt'?5:6, bMax=game==='dlt'?12:16, bPick=game==='dlt'?2:1;
       if(!Array.isArray(r.front)||r.front.length!==fPick||new Set(r.front).size!==fPick||r.front.some(n=>!Number.isInteger(n)||n<1||n>fMax))throw new Error('前区/红球号码合法性校验失败');
       if(!Array.isArray(r.back)||r.back.length!==bPick||new Set(r.back).size!==bPick||r.back.some(n=>!Number.isInteger(n)||n<1||n>bMax))throw new Error('后区/蓝球号码合法性校验失败');
+      if(!system){
+        validateOneByOneRecord(r.front,r.frontDrawOrder,r.frontDrawSteps,fMax,fPick,game==='dlt'?'前区':'红球');
+        validateOneByOneRecord(r.back,r.backDrawOrder,r.backDrawSteps,bMax,bPick,game==='dlt'?'后区':'蓝球');
+      }
       actualCost+=Number(r.cost)||0;
       if(game==='dlt'){
         if(r.type==='基本')basic++;else if(r.type==='追加')add++;else throw new Error('大乐透投注类型异常');
@@ -986,6 +1016,10 @@
     if(actualCost>budget||actualCost>1000)throw new Error('生成结果金额超过预算');
     if(game==='dlt'&&system){
       if(!systemInfo||actualCost!==systemInfo.totalCost||rows.length!==systemInfo.totalLines||actualCost!==budget)throw new Error('复式预算/展开注数一致性校验失败');
+      for(const g of systemInfo.groups){
+        validateOneByOneRecord(g.frontPool,g.frontDrawOrder,g.frontDrawSteps,35,g.frontCount,'复式前区');
+        validateOneByOneRecord(g.backPool,g.backDrawOrder,g.backDrawSteps,12,g.backCount,'复式后区');
+      }
     }else if(game==='dlt'&&$('strategy').value!=='custom'){
       const expected=optimizeDLTAllocation(budget,$('strategy').value);
       if(basic!==expected.b||add!==expected.a||actualCost!==expected.cost)throw new Error('大乐透优化分配与实际生成结果不一致');
@@ -1203,12 +1237,14 @@
         const groups=[];let no=0;
         for(let gi=0;gi<plan.configs.length;gi++){
           const gc=plan.configs[gi];
-          const frontPool=drawBalls(35,gc.frontCount,rng),backPool=drawBalls(12,gc.backCount,rng);
+          const frontDraw=drawBallsOneByOne(35,gc.frontCount,rng);
+          const backDraw=drawBallsOneByOne(12,gc.backCount,rng);
+          const frontPool=frontDraw.numbers,backPool=backDraw.numbers;
           const fronts=combinations(frontPool,5),backs=combinations(backPool,2),candidate=[];
           for(const front of fronts)for(const back of backs)candidate.push({front,back});
           const type=gc.isAdd?'追加':'基本';
           for(const item of candidate)rows.push({no:++no,type,front:item.front,back:item.back,cost:gc.unitCost,isSystem:true,systemGroup:gi+1});
-          groups.push({...gc,groupNo:gi+1,frontPool,backPool});
+          groups.push({...gc,groupNo:gi+1,frontPool,backPool,frontDrawOrder:frontDraw.drawOrder,backDrawOrder:backDraw.drawOrder,frontDrawSteps:frontDraw.steps,backDrawSteps:backDraw.steps});
         }
         systemInfo={frontCount:cfg.frontCount,backCount:cfg.backCount,betMode:cfg.betMode,isAdd:cfg.betMode==='add',unitCost:cfg.unitCost,budget:plan.budget,totalCost:plan.totalCost,totalLines:plan.totalLines,basicLines:plan.basicLines,addLines:plan.addLines,basicCost:plan.basicCost,addCost:plan.addCost,mainCount:plan.mainCount,basicMainCount:plan.basicMainCount,addMainCount:plan.addMainCount,supplementCount:plan.supplementCount,singleLikeCount:plan.singleLikeCount,groups};
       }else{
@@ -1216,25 +1252,33 @@
       if(n<1)return toast('请至少生成 1 注');
       if(cost>1000)return toast('投注金额不能超过 1000 元');
       if(cost>budget)return toast('当前注数超过你设置的预算');
-      const fronts=Array.from({length:n},()=>drawBalls(35,5,rng)), backs=Array.from({length:n},()=>drawBalls(12,2,rng));
       // 为方便实体打单，基本投注与追加投注严格分组，不再混排。
       const types=[...Array(b).fill('基本'),...Array(a).fill('追加')];
-      rows=fronts.map((front,i)=>({no:i+1,type:types[i],front,back:backs[i],cost:types[i]==='追加'?3:2}));
+      // 注与注也逐组完成：先把本组前、后区逐球抽完，再开始下一组。
+      for(let i=0;i<n;i++){
+        const frontDraw=drawBallsOneByOne(35,5,rng);
+        const backDraw=drawBallsOneByOne(12,2,rng);
+        rows.push({no:i+1,type:types[i],front:frontDraw.numbers,back:backDraw.numbers,cost:types[i]==='追加'?3:2,frontDrawOrder:frontDraw.drawOrder,backDrawOrder:backDraw.drawOrder,frontDrawSteps:frontDraw.steps,backDrawSteps:backDraw.steps});
+      }
       }
     }else{
       const strategy=$('strategy').value==='custom'?'balanced':$('strategy').value;
       const opt=optimizeSSQAllocation(budget,strategy), n=opt.lines, cost=opt.cost; if(n<1)return toast('请至少生成 1 注');
       if(cost>1000)return toast('投注金额不能超过 1000 元');
       if(cost>budget)return toast('当前分配超过你设置的预算');
-      const reds=Array.from({length:n},()=>drawBalls(33,6,rng)), blues=Array.from({length:n},()=>drawBalls(16,1,rng)[0]);
       const multipliers=[];for(let m=1;m<=3;m++)for(let k=0;k<opt.counts[m-1];k++)multipliers.push(m);
-      rows=reds.map((front,i)=>{const multiplier=multipliers[i];return {no:i+1,type:`${multiplier}倍`,multiplier,front,back:[blues[i]],cost:2*multiplier};});
+      for(let i=0;i<n;i++){
+        const redDraw=drawBallsOneByOne(33,6,rng);
+        const blueDraw=drawBallsOneByOne(16,1,rng);
+        const multiplier=multipliers[i];
+        rows.push({no:i+1,type:`${multiplier}倍`,multiplier,front:redDraw.numbers,back:blueDraw.numbers,cost:2*multiplier,frontDrawOrder:redDraw.drawOrder,backDrawOrder:blueDraw.drawOrder,frontDrawSteps:redDraw.steps,backDrawSteps:blueDraw.steps});
+      }
     }
     validateGeneratedRows(rng);
     rememberRows();
     invalidateCurrentExactProbability();
     render();
-    if(!silent)toast(`已逐球随机生成 ${rows.length} 注`);
+    if(!silent)toast(`已按“一球一抽、抽后删池”生成 ${rows.length} 注`);
     }catch(err){
       console.error(err);
       rows=[]; render(); toast(err.message||'生成失败，请调整过滤规则');
@@ -1404,14 +1448,21 @@
       [50,'balanced',[3,11,0]],[100,'balanced',[6,22,0]],[198,'balanced',[15,42,0]],[228,'balanced',[18,48,0]],
       [228,'prob',[114,0,0]],[228,'prize',[0,0,38]]
     ].every(([budget,mode,counts])=>{const x=optimizeSSQAllocation(budget,mode);return x.counts.every((v,i)=>v===counts[i])&&x.cost<=budget;});
-    const ok=dltTotal===21425712 && ssqTotal===17721088 && mapsOk && prizesOk && systemPrizeOk && mixedPlanOk && dltGot.every((v,i)=>v===dltExpected[i]) && ssqGot.every((v,i)=>v===ssqExpected[i]) && sysSingle.every((v,i)=>v===dltExpected[i]) && sysCheck.top2Count===21 && cryptoOk && dltPresetChecks && ssqPresetChecks;
+    let oneByOneOk=false;
+    try{
+      const requestedPoolSizes=[],testRng={int:max=>{requestedPoolSizes.push(max);return max-1;}};
+      const testDraw=drawBallsOneByOne(7,4,testRng);
+      validateOneByOneRecord(testDraw.numbers,testDraw.drawOrder,testDraw.steps,7,4,'自检球池');
+      oneByOneOk=JSON.stringify(requestedPoolSizes)===JSON.stringify([7,6,5,4])&&JSON.stringify(testDraw.drawOrder)===JSON.stringify([7,6,5,4]);
+    }catch(_err){oneByOneOk=false;}
+    const ok=dltTotal===21425712 && ssqTotal===17721088 && mapsOk && prizesOk && systemPrizeOk && mixedPlanOk && dltGot.every((v,i)=>v===dltExpected[i]) && ssqGot.every((v,i)=>v===ssqExpected[i]) && sysSingle.every((v,i)=>v===dltExpected[i]) && sysCheck.top2Count===21 && cryptoOk && oneByOneOk && dltPresetChecks && ssqPresetChecks;
     const el=$('auditStatus');
     if(ok){
       el.classList.remove('bad');
-      el.innerHTML='概率与奖金自检：<b>通过</b>。奖级矩阵、复式混合分配、多奖级累计、追加比例、完整开奖空间、模式分配及密码级随机源均已核验。';
+      el.innerHTML='概率、奖金与逐球机制自检：<b>通过</b>。已核验每抽 1 球后球池严格减 1、抽中球立即移除，以及奖级矩阵、复式累计、追加比例、完整开奖空间和密码级随机源。';
     }else{
       el.classList.add('bad');
-      el.textContent='内部自检未通过：奖级映射、组合数、复式覆盖、关键优化解或密码级随机源存在异常，请勿使用当前结果。';
+      el.textContent='内部自检未通过：逐球删池、奖级映射、组合数、复式覆盖、关键优化解或密码级随机源存在异常，请勿使用当前结果。';
     }
     return ok;
   }
@@ -1530,9 +1581,24 @@
     }catch(err){$('probStatus').textContent='浏览器不支持离线精确概率线程；无法保证概率精度。';}
   }
 
+  function drawAuditLine(label,drawOrder,steps){
+    if(!Array.isArray(drawOrder)||!Array.isArray(steps)||!drawOrder.length)return '';
+    const sizes=[steps[0].poolSizeBefore,...steps.map(s=>s.poolSizeAfter)];
+    return `<span class="draw-audit-line"><b>${label}</b>：${drawOrder.map(pad).join(' <span class="draw-audit-arrow">→</span> ')}；球池 ${sizes.join(' → ')}</span>`;
+  }
+  function renderDrawAudit(){
+    const el=$('drawAudit');
+    if(!el)return;
+    const source=game==='dlt'&&isDLTSystemMode()&&systemInfo&&systemInfo.groups.length?systemInfo.groups[0]:rows[0];
+    if(!source){el.innerHTML='<b>逐球抽取：</b>生成后会显示首组的实际出球顺序与球池缩减过程。';return;}
+    const firstLabel=game==='dlt'?'前区':'红球',secondLabel=game==='dlt'?'后区':'蓝球';
+    el.innerHTML=`<b>首组逐球轨迹（排序前）</b> · 每抽中 1 球立即从池中删除，再从剩余球中抽下一球；所有组执行同一流程。${drawAuditLine(firstLabel,source.frontDrawOrder,source.frontDrawSteps)}${drawAuditLine(secondLabel,source.backDrawOrder,source.backDrawSteps)}`;
+  }
+
   function render(){
     renderHitEstimate();
     renderPrizeSimulator();
+    renderDrawAudit();
     if(!rows.length){$('tableWrap').innerHTML='<div class="empty">点击“生成号码”开始</div>';return;}
 
     function renderGroup(title, groupRows, typeClass){
@@ -1553,7 +1619,7 @@
       if(isDLTSystemMode()&&systemInfo){
         html+=`<div class="system-ticket-summary"><b>复式投注结果 · ${systemModeText(systemInfo.betMode)}</b> · 预算 ¥${systemInfo.budget} · 实际 ¥${systemInfo.totalCost} · ${systemInfo.groups.length} 张复式票 · 基础 ${systemInfo.basicLines} 注 / 追加 ${systemInfo.addLines} 注。<br>下面按每张票显示号码池和投注类型；内部展开 ${systemInfo.totalLines} 个子注用于概率与奖金计算。</div><div class="system-ticket-list">`;
         systemInfo.groups.forEach((g,idx)=>{
-          html+=`<div class="system-ticket"><div class="system-ticket-head"><span class="system-ticket-title">第 ${idx+1} 张 · 前 ${g.frontCount} / 后 ${g.backCount}</span><span class="system-ticket-tag">${g.isPrimary?'主复式':g.lines===1?'单式补齐':'预算补齐复式'}</span><span class="system-ticket-meta">${g.isAdd?'追加':'基础'} · 展开 ${g.lines} 注 · ¥${g.cost}</span></div><div class="system-pool-row"><div class="system-pool-label">前区</div><div class="balls">${g.frontPool.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></div><div class="system-pool-row"><div class="system-pool-label">后区</div><div class="balls">${g.backPool.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></div></div>`;
+          html+=`<div class="system-ticket"><div class="system-ticket-head"><span class="system-ticket-title">第 ${idx+1} 张 · 前 ${g.frontCount} / 后 ${g.backCount}</span><span class="system-ticket-tag">${g.isPrimary?'主复式':g.lines===1?'单式补齐':'预算补齐复式'}</span><span class="system-ticket-meta">${g.isAdd?'追加':'基础'} · 展开 ${g.lines} 注 · ¥${g.cost}</span></div><div class="system-pool-row"><div class="system-pool-label">前区</div><div class="balls">${g.frontPool.map(n=>`<span class="ball front">${pad(n)}</span>`).join('')}</div></div><div class="system-pool-row"><div class="system-pool-label">后区</div><div class="balls">${g.backPool.map(n=>`<span class="ball back">${pad(n)}</span>`).join('')}</div></div><div class="system-draw-order">实际逐球顺序：前区 ${g.frontDrawOrder.map(pad).join(' → ')}；后区 ${g.backDrawOrder.map(pad).join(' → ')}</div></div>`;
         });
         html+='</div>';
       }else{
@@ -1944,9 +2010,10 @@
   });
   $('simRandomDraw').addEventListener('click',()=>{
     const rng=makeRng();
-    $('simFront').value=drawBalls(35,5,rng).map(pad).join(' ');
-    $('simBack').value=drawBalls(12,2,rng).map(pad).join(' ');
-    renderPrizeSimulator();toast('已逐球随机模拟一期开奖结果');
+    const frontDraw=drawBallsOneByOne(35,5,rng),backDraw=drawBallsOneByOne(12,2,rng);
+    $('simFront').value=frontDraw.numbers.map(pad).join(' ');
+    $('simBack').value=backDraw.numbers.map(pad).join(' ');
+    renderPrizeSimulator();toast('已按“一球一抽、抽后删池”模拟一期开奖');
   });
 
   $('presetBtn').addEventListener('click',preset);$('generateBtn').addEventListener('click',generate);$('copyBtn').addEventListener('click',copyAll);$('csvBtn').addEventListener('click',exportCSV);$('xlsxBtn').addEventListener('click',exportXLSX);
